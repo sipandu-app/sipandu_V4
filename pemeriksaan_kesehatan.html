@@ -1,0 +1,1358 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPM Panti - YASEHATI Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library untuk Ekspor Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0fdfa; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .sidebar-item.active { background-color: #0d9488; color: white; box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.3); }
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .loading-overlay.active { display: flex; }
+        input:focus, select:focus, textarea:focus { border-color: #14b8a6; ring: 2px; ring-color: #ccfbf1; outline: none; }
+        @media print { .no-print { display: none !important; } .print-container { padding: 0 !important; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f0fdfa; }
+        ::-webkit-scrollbar-thumb { background: #0d9488; border-radius: 10px; }
+        .sticky-thead th { position: sticky; top: 0; z-index: 10; background: #0d9488 !important; color: white !important; }
+        .emerald-toska-gradient { background: linear-gradient(135deg, #10b981 0%, #0d9488 100%); }
+        thead.emerald-toska-gradient th { color: white !important; }
+        
+        /* Dropdown Animation */
+        .dropdown-menu { display: none; transform-origin: top right; }
+        .dropdown-menu.active { display: block; animation: menuShow 0.2s ease-out; }
+        @keyframes menuShow {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="loading" class="loading-overlay">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mb-4"></div>
+            <p id="loading-text" class="text-[10px] font-black uppercase tracking-widest text-teal-700">Sinkronisasi Cloud...</p>
+        </div>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white border-r border-teal-100 flex flex-col hidden lg:flex no-print">
+            <div class="p-8 border-b border-teal-50">
+                <div class="flex items-center space-x-3 mb-8">
+                    <div class="w-10 h-10 emerald-toska-gradient rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                        <i class="fas fa-hand-holding-heart text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-black text-[9px] tracking-widest text-teal-400 uppercase mb-0">laYAnan SEHAT dalam pantI</h1>
+                        <div class="flex items-center">
+                            <span class="text-2xl font-extrabold tracking-tighter text-emerald-500 leading-none">SE</span>
+                            <span class="text-2xl font-extrabold tracking-tighter text-teal-900 leading-none">HATI</span>
+                        </div>
+                    </div>
+                   
+                </div>
+                
+                <select id="global-unit-filter" class="w-full bg-teal-50 border border-teal-100 rounded-xl p-3 text-sm font-bold text-teal-800 outline-none">
+                    <option value="Semua">Semua Unit</option>
+                    <option value="PPSDI Raharjo">PPSDI Raharjo</option>
+                    <option value="RPSLU Mojomulyo">RPSLU Mojomulyo</option>
+                    <option value="RPSA Pamardi Siwi">RPSA Pamardi Siwi</option>
+                    <option value="RPS PMKS Gondang">RPS PMKS Gondang</option>
+                </select>
+            </div>
+
+            <nav class="flex-1 p-6 space-y-2 overflow-y-auto">
+                <button id="nav-database" class="sidebar-item active w-full flex items-center p-4 rounded-2xl transition-all group">
+                    <i class="fas fa-users w-6"></i>
+                    <span class="font-bold text-sm ml-3 text-teal-800">Penerima Manfaat</span>
+                </button>
+                <button id="nav-pemeriksaan" class="sidebar-item w-full flex items-center p-4 rounded-2xl text-teal-600/60 hover:bg-teal-50 transition-all group">
+                    <i class="fas fa-heartbeat w-6"></i>
+                    <span class="font-bold text-sm ml-3 text-teal-800">Pemeriksaan Kesehatan</span>
+                </button>
+                <button id="nav-laporan" class="sidebar-item w-full flex items-center p-4 rounded-2xl text-teal-600/60 hover:bg-teal-50 transition-all group">
+                    <i class="fas fa-file-invoice w-6"></i>
+                    <span class="font-bold text-sm ml-3 text-teal-800">Cetak Laporan</span>
+                </button>
+            </nav>
+            
+            <div class="p-6 border-t border-teal-50">
+                 <div class="bg-teal-50/50 rounded-2xl p-4">
+                     <p class="text-[8px] font-black text-teal-400 uppercase tracking-widest mb-1"></p>
+                     <p class="text-[10px] font-bold text-teal-800 italic"></p>
+                 </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-teal-50/20">
+            <!-- Toolbar Manajemen Data -->
+            <div class="bg-white px-10 py-3 border-b border-teal-100 flex items-center justify-between no-print shadow-sm z-[100]">
+                <div class="flex items-center gap-3">
+                    <span class="text-[10px] font-black text-teal-800 uppercase tracking-widest mr-4 border-r border-teal-200 pr-4">Manajemen Data</span>
+                    
+                    <button id="btn-backup" class="flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-xl hover:bg-teal-100 transition-all border border-teal-100">
+                        <i class="fas fa-file-export text-xs"></i>
+                        <span class="text-[10px] font-black uppercase">Backup</span>
+                    </button>
+                    
+                    <label class="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-xl hover:bg-orange-100 transition-all border border-orange-100 cursor-pointer">
+                        <i class="fas fa-file-import text-xs"></i>
+                        <span class="text-[10px] font-black uppercase">Restore</span>
+                        <input type="file" id="restore-input" class="hidden" accept=".json">
+                    </label>
+
+                    <button id="btn-export-xlsx" class="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-all border border-emerald-100">
+                        <i class="fas fa-file-excel text-xs"></i>
+                        <span class="text-[10px] font-black uppercase">Excel</span>
+                    </button>
+
+                    <button id="btn-clear-medis" class="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                        <span class="text-[10px] font-black uppercase">Bersihkan Database</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div id="status-filter-container" class="flex bg-teal-100/50 p-1 rounded-xl">
+                         <button onclick="setStatusFilter('Aktif')" id="filter-aktif" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-white shadow-sm text-teal-600">Aktif</button>
+                         <button onclick="setStatusFilter('Semua')" id="filter-semua" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase text-teal-800/40">Semua</button>
+                    </div>
+                    <button id="header-btn" class="emerald-toska-gradient text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center shadow-lg shadow-teal-200">
+                        <i class="fas fa-plus-circle mr-2"></i> Tambah PM
+                    </button>
+                </div>
+            </div>
+
+            <header class="bg-white/80 backdrop-blur-md border-b border-teal-100 px-10 py-5 flex items-center justify-between no-print">
+                <div class="flex flex-col">
+                    <h2 id="current-title" class="text-2xl font-extrabold tracking-tight text-teal-900 leading-tight">Data Penerima Manfaat</h2>
+                    <div id="pm-stats-container" class="flex flex-wrap gap-2 mt-1">
+                        <span class="text-[9px] font-black px-2 py-0.5 bg-teal-900 text-white rounded-lg uppercase tracking-widest shadow-sm">Total Aktif: <span id="stat-total-aktif">0</span></span>
+                        <div id="unit-stats" class="flex gap-2"></div>
+                    </div>
+                </div>
+                <div class="flex-1 max-w-2xl mx-8 relative group no-print">
+                    <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-teal-300 group-focus-within:text-teal-600 transition-colors"></i>
+                    <input type="text" id="pm-search" placeholder="Cari Nama atau No. Registrasi PM..." class="w-full bg-teal-50/50 border border-teal-100 py-4 pl-12 pr-6 rounded-3xl text-sm font-bold text-teal-900 outline-none focus:bg-white focus:border-teal-300 focus:shadow-lg focus:shadow-teal-100 transition-all">
+                </div>
+            </header>
+
+            <section class="flex-1 overflow-y-auto p-6 lg:p-10">
+                <!-- Database Tab -->
+                <div id="tab-database" class="tab-content active">
+                    <div class="bg-white rounded-[2rem] shadow-sm border border-teal-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[800px]">
+                                <thead class="emerald-toska-gradient border-b border-teal-100 sticky-thead">
+                                    <tr class="text-[10px] font-black text-white uppercase tracking-widest">
+                                        <th class="px-4 py-5 w-[25%]">Nomor & Nama PM</th>
+                                        <th class="px-2 py-5 text-center w-[8%]">Kelola</th>
+                                        <th class="px-4 py-5 text-center">Status</th>
+                                        <th class="px-6 py-5">Penanggung Jawab</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pm-table-body" class="divide-y divide-teal-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pemeriksaan Tab -->
+                <div id="tab-pemeriksaan" class="tab-content">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-white p-4 rounded-3xl border border-teal-100 shadow-sm flex items-center space-x-4 w-fit">
+                                <i class="fas fa-calendar-day text-teal-600"></i>
+                                <input type="date" id="global-check-date" class="bg-transparent border-none font-bold text-teal-800 outline-none">
+                            </div>
+                            <button onclick="printMassReport()" class="bg-teal-900 text-white px-6 py-4 rounded-3xl font-black uppercase text-[10px] tracking-widest flex items-center shadow-xl shadow-teal-900/10 hover:bg-teal-800 transition-all">
+                                <i class="fas fa-print mr-2 text-teal-400"></i> Laporan Hari Ini
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-[2rem] shadow-sm border border-teal-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[1200px]">
+                                <thead class="emerald-toska-gradient border-b border-teal-100 sticky-thead">
+                                    <tr class="text-[9px] font-black text-white uppercase tracking-widest">
+                                        <th class="px-4 py-5 w-[20%]">Nama PM</th>
+                                        <th class="px-2 py-5 text-center w-[8%] text-white">Aksi</th>
+                                        <th class="px-4 py-5 text-center w-20 text-white">Status</th>
+                                        <th class="px-4 py-5 text-center text-white">Tensi</th>
+                                        <th class="px-4 py-5 text-center text-white">HR</th>
+                                        <th class="px-4 py-5 text-center text-white">Suhu</th>
+                                        <th class="px-4 py-5 text-center text-white">Berat</th>
+                                        <th class="px-4 py-5 text-center text-white">GDS</th>
+                                        <th class="px-6 py-5 text-white">Catatan Keluhan / Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="check-list-table-body" class="divide-y divide-teal-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Laporan Tab -->
+                <div id="tab-laporan" class="tab-content">
+                    <div class="bg-white rounded-[2rem] shadow-sm border border-teal-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[1000px]">
+                                <thead class="emerald-toska-gradient border-b border-teal-100 sticky-thead">
+                                    <tr class="text-[9px] font-black text-white uppercase tracking-widest">
+                                        <th class="px-4 py-5 w-[15%]">Tanggal</th>
+                                        <th class="px-4 py-5 w-[20%]">Unit Kerja</th>
+                                        <th class="px-4 py-5 text-center w-24">Jumlah PM</th>
+                                        <th class="px-4 py-5 text-center w-24">Diperiksa</th>
+                                        <th class="px-4 py-5 text-center bg-white/10">Sehat</th>
+                                        <th class="px-4 py-5 text-center bg-white/20">Pantauan</th>
+                                        <th class="px-4 py-5 text-center bg-white/10">Dirujuk</th>
+                                        <th class="px-4 py-5 text-center w-32">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="laporan-table-body" class="divide-y divide-teal-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Profil PM -->
+    <div id="modal-pm" class="fixed inset-0 bg-teal-900/40 backdrop-blur-sm z-[200] flex items-center justify-center hidden no-print">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden mx-4">
+            <div class="p-5 emerald-toska-gradient text-white flex justify-between items-center">
+                <h3 class="text-base font-black italic tracking-tight uppercase"><i class="fas fa-user-edit mr-2"></i> Profil PM</h3>
+                <button id="close-pm-modal" class="text-xl hover:rotate-90 transition-transform"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="form-pm" class="p-6 space-y-3 bg-white max-h-[75vh] overflow-y-auto">
+                <input type="hidden" id="pm-id-hidden">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-1">
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">No. Registrasi</label>
+                        <input type="text" id="pm-reg" placeholder=".... " class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs text-teal-900" required>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Unit Pelayanan</label>
+                        <select id="pm-unit" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs text-teal-900">
+                            <option value="PPSDI Raharjo">PPSDI Raharjo</option>
+                            <option value="RPSLU Mojomulyo">RPSLU Mojomulyo</option>
+                            <option value="RPSA Pamardi Siwi">RPSA Pamardi Siwi</option>
+                            <option value="RPS PMKS Gondang">RPS PMKS Gondang</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Nama Lengkap</label>
+                        <input type="text" id="pm-name" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs text-teal-900" required>
+                    </div>
+                    <div>
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Tempat Lahir</label>
+                        <input type="text" id="pm-pob" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Tgl Lahir</label>
+                        <input type="date" id="pm-dob" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Status PM</label>
+                        <select id="pm-status" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs">
+                            <option value="Aktif">Aktif</option>
+                            <option value="Tidak Aktif">Tidak Aktif</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[8px] font-black text-teal-800 uppercase mb-0.5 tracking-widest">Penanggung Jawab - Kontak</label>
+                        <input type="text" id="pm-family" placeholder="Dedi Isdiantoro - 0857554500054 "class="w-full bg-teal-100/20 border border-teal-200 p-2 rounded-xl font-bold text-xs text-teal-900">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[8px] font-black text-teal-600 uppercase mb-0.5">Riwayat Penyakit (Jika ada)</label>
+                        <textarea id="pm-chronic-illness" rows="2" class="w-full bg-teal-50/30 border border-teal-100 p-2 rounded-xl font-bold text-xs resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="pt-3 flex justify-end gap-2 sticky bottom-0 bg-white pb-3 border-t border-teal-50 mt-3">
+                    <button type="button" id="cancel-pm-btn" class="px-5 py-2 text-[9px] font-black uppercase text-teal-300 hover:text-teal-500 transition-colors">Batal</button>
+                    <button type="submit" class="emerald-toska-gradient text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] shadow-lg shadow-teal-200">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Medis (Record Harian) -->
+    <div id="modal-medical" class="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[201] flex items-center justify-center hidden no-print">
+        <div class="bg-white w-full max-w-6xl rounded-[2rem] shadow-2xl overflow-hidden mx-4 flex flex-col max-h-[90vh]">
+            <div class="px-8 py-5 bg-teal-900 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 emerald-toska-gradient rounded-xl flex items-center justify-center text-lg font-black italic shadow-lg">MED</div>
+                    <div>
+                        <h3 id="med-pm-name" class="font-black text-lg leading-tight text-white uppercase tracking-tighter">Nama Pasien</h3>
+                        <p id="med-pm-meta" class="text-[8px] text-teal-300 font-bold uppercase tracking-widest"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl border border-white/10">
+                        <label class="text-[8px] font-black text-teal-200 uppercase tracking-widest">Tgl Periksa:</label>
+                        <input type="date" id="med-date" class="bg-transparent border-none font-black text-xs text-white outline-none">
+                    </div>
+                    <button id="close-med-modal" class="bg-white/10 w-9 h-9 rounded-full hover:bg-white/20 transition-all flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-hidden flex flex-col lg:flex-row bg-teal-50/10">
+                <!-- Form Input -->
+                <div class="flex-1 p-5 overflow-y-auto">
+                    <form id="form-medical" class="space-y-4">
+                        <input type="hidden" id="med-pm-id">
+                        <input type="hidden" id="med-record-id">
+                        
+                        <div class="bg-teal-50 border border-teal-100 p-3.5 rounded-2xl flex items-start gap-3">
+                            <div class="bg-teal-100 w-7 h-7 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-clipboard-list text-teal-600 text-[10px]"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-[8px] font-black text-teal-700 uppercase tracking-widest mb-0.5">Penyakit Penyerta</h4>
+                                <p id="med-pm-chronic" class="text-[10px] font-bold text-teal-900 leading-tight italic"></p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-[1.5rem] border border-teal-100 shadow-sm">
+                            <h4 class="text-[9px] font-black text-teal-400 uppercase tracking-widest mb-3 flex items-center">
+                                <span class="w-4 h-[1.5px] bg-teal-600 mr-2"></span> Vital Signs & Data Fisik
+                            </h4>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="text-[8px] font-bold text-rose-600 uppercase block mb-1.5">Tensi (mmHg)</label>
+                                    <input type="text" id="med-td" placeholder="120/80" class="w-full bg-rose-50 border border-rose-100 p-3 rounded-xl font-black text-xs text-center text-rose-900 focus:ring-2 focus:ring-rose-200 outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="text-[8px] font-bold text-orange-600 uppercase block mb-1.5">HR (bpm)</label>
+                                    <input type="number" id="med-hr" placeholder="80" class="w-full bg-orange-50 border border-orange-100 p-3 rounded-xl font-black text-xs text-center text-orange-900 focus:ring-2 focus:ring-orange-200 outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="text-[8px] font-bold text-amber-600 uppercase block mb-1.5">Suhu (°C)</label>
+                                    <input type="number" step="0.1" id="med-temp" placeholder="36.5" class="w-full bg-amber-50 border border-amber-100 p-3 rounded-xl font-black text-xs text-center text-amber-900 focus:ring-2 focus:ring-amber-200 outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="text-[8px] font-bold text-sky-600 uppercase block mb-1.5">BB (kg)</label>
+                                    <input type="number" step="0.1" id="med-weight" placeholder="0" class="w-full bg-sky-50 border border-sky-100 p-3 rounded-xl font-black text-xs text-center text-sky-900 focus:ring-2 focus:ring-sky-200 outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[8px] font-bold text-indigo-600 uppercase block mb-1.5">GDS</label>
+                                    <input type="number" id="med-sugar" placeholder="100" class="w-full bg-indigo-50 border border-indigo-100 p-3 rounded-xl font-black text-xs text-center text-indigo-900 focus:ring-2 focus:ring-indigo-200 outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                <div>
+                                    <label class="text-[8px] font-black text-teal-600 uppercase block mb-1.5 tracking-widest">Kondisi Umum</label>
+                                    <select id="med-status" class="w-full bg-teal-50/20 border border-teal-100 p-3 rounded-xl font-black text-xs appearance-none cursor-pointer text-teal-900">
+                                        <option value="Sehat">Stabil / Normal</option>
+                                        <option value="Dalam Pantauan">Perlu Observasi</option>
+                                        <option value="Dirujuk ke RS">Rujuk Rumah Sakit</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-1 md:col-span-2">
+                                    <label class="text-[8px] font-black text-teal-600 uppercase block mb-1.5 tracking-widest">Catatan Keluhan / Tindakan Medis</label>
+                                    <textarea id="med-complaint" rows="2" class="w-full bg-teal-50/20 border border-teal-100 p-3.5 rounded-xl font-bold text-xs resize-none text-teal-900" placeholder="Contoh: Mengeluh pusing, diberikan paracetamol..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button type="submit" class="flex-1 emerald-toska-gradient text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-teal-200 hover:brightness-110 transition-all">
+                                <i class="fas fa-save mr-2"></i> Simpan / Update Data
+                            </button>
+                            <button type="button" onclick="printIndividualReport()" class="bg-teal-900 text-white px-6 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all hover:bg-teal-800">
+                                <i class="fas fa-file-pdf mr-2"></i> Cetak Kartu
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <!-- History List -->
+                <div class="w-full lg:w-[380px] bg-teal-50/50 border-l border-teal-100 flex flex-col overflow-hidden">
+                    <div class="p-5 pb-3 shrink-0 border-b bg-white/50 backdrop-blur-sm">
+                        <h4 class="text-[10px] font-black text-teal-900 uppercase tracking-widest flex items-center justify-between">
+                            <span>Riwayat Pemeriksaan</span>
+                            <span id="history-count" class="bg-teal-600 text-white px-2 py-0.5 rounded-md text-[8px]">0</span>
+                        </h4>
+                    </div>
+                    <div id="med-history-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Tanda Tangan Laporan -->
+    <div id="modal-signer" class="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[250] flex items-center justify-center hidden no-print">
+        <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden mx-4">
+            <div class="p-6 bg-teal-900 text-white flex justify-between items-center">
+                <h3 class="text-sm font-black uppercase tracking-widest"><i class="fas fa-file-signature mr-2"></i> Pengesahan Laporan</h3>
+                <button id="close-signer-modal" class="hover:rotate-90 transition-transform"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="form-signer" class="p-8 space-y-4">
+                <div>
+                    <label class="block text-[9px] font-black text-teal-600 uppercase mb-2 tracking-widest">Tanggal Laporan</label>
+                    <input type="date" id="signer-date" class="w-full bg-teal-50 border border-teal-100 p-3 rounded-xl font-bold text-xs text-teal-900 focus:ring-2 focus:ring-teal-200 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black text-teal-600 uppercase mb-2 tracking-widest">Nama Dokter Pemeriksa</label>
+                    <input type="text" id="signer-doctor" placeholder="dr. ...................." class="w-full bg-teal-50 border border-teal-100 p-3 rounded-xl font-bold text-xs text-teal-900 focus:ring-2 focus:ring-teal-200 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black text-teal-600 uppercase mb-2 tracking-widest">Nama Petugas Pencatat</label>
+                    <input type="text" id="signer-officer" placeholder="Petugas ...................." class="w-full bg-teal-50 border border-teal-100 p-3 rounded-xl font-bold text-xs text-teal-900 focus:ring-2 focus:ring-teal-200 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black text-teal-600 uppercase mb-2 tracking-widest">Kepala PPS Raharjo (Mengetahui)</label>
+                    <input type="text" id="signer-head" placeholder="Nama Kepala PPS Raharjo ...................." class="w-full bg-teal-50 border border-teal-100 p-3 rounded-xl font-bold text-xs text-teal-900 focus:ring-2 focus:ring-teal-200 outline-none" required>
+                </div>
+                <div class="pt-4">
+                    <button type="submit" class="w-full emerald-toska-gradient text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-teal-200 hover:brightness-110 transition-all">
+                        <i class="fas fa-print mr-2"></i> Lanjutkan Mencetak
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 right-10 emerald-toska-gradient text-white px-6 py-4 rounded-2xl shadow-2xl z-[300] opacity-0 transition-all pointer-events-none text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+        <i id="toast-icon" class="fas fa-check-circle text-teal-200"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- SUPABASE SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // CONFIG SUPABASE
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const TABLE_PM = "pm_list";
+        const TABLE_MEDIS = "kesehatan_harian";
+        
+        let supabaseClient;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Gagal inisialisasi Supabase Client:", e);
+        }
+
+        let dataPM = [];
+        let dataMedical = {}; 
+        let currentFilter = 'Semua';
+        let currentStatusFilter = 'Aktif'; 
+
+        const setLoading = (v, text = "Sinkronisasi Cloud...") => {
+            const el = document.getElementById('loading');
+            if (el) {
+                document.getElementById('loading-text').innerText = text;
+                el.classList.toggle('active', v);
+            }
+        };
+        
+        const showToast = (m, type = 'success') => {
+            const el = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = m;
+            document.getElementById('toast-icon').className = type === 'error' ? 'fas fa-exclamation-circle text-red-300' : 'fas fa-check-circle text-teal-200';
+            el.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            setTimeout(() => el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'), 4000);
+        };
+
+        const calculateAge = (dob) => {
+            if (!dob) return '-';
+            const birthDate = new Date(dob);
+            const today = new Date();
+            let years = today.getFullYear() - birthDate.getFullYear();
+            if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) years--;
+            return years >= 0 ? `${years} Thn` : '0 Thn';
+        };
+
+        const formatDateIndo = (dateStr) => {
+            if (!dateStr) return '-';
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const d = new Date(dateStr);
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        };
+
+        const updateStats = () => {
+            const aktifPM = dataPM.filter(p => (p.status || 'Aktif') === 'Aktif');
+            const totalAktif = aktifPM.length;
+            
+            // Hitung per Unit
+            const units = {};
+            aktifPM.forEach(p => {
+                const u = p.unit || 'Tanpa Unit';
+                units[u] = (units[u] || 0) + 1;
+            });
+
+            document.getElementById('stat-total-aktif').innerText = totalAktif;
+            
+            const unitStatsHTML = Object.entries(units).map(([name, count]) => {
+                // Ambil inisial unit untuk tampilan ringkas
+                const shortName = name.replace('PPSDI ', '').replace('RPSLU ', '').replace('RPSA ', '').replace('RPS ', '');
+                return `<span class="text-[9px] font-black px-2 py-0.5 bg-teal-100 text-teal-700 rounded-lg uppercase tracking-widest border border-teal-200 shadow-sm">${shortName}: ${count}</span>`;
+            }).join('');
+            
+            document.getElementById('unit-stats').innerHTML = unitStatsHTML;
+        };
+
+        // --- MANAJEMEN DATA (SUPABASE) ---
+        const sync = async () => {
+            if (!supabaseClient) return;
+            setLoading(true);
+            try {
+                // Fetch PM List
+                const { data: pmData, error: pmError } = await supabaseClient
+                    .from(TABLE_PM)
+                    .select('*')
+                    .order('name', { ascending: true });
+                
+                if (pmError) throw pmError;
+                dataPM = pmData || [];
+
+                // Fetch Medis Harian
+                const { data: medData, error: medError } = await supabaseClient
+                    .from(TABLE_MEDIS)
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (medError) throw medError;
+                
+                const grouped = {};
+                (medData || []).forEach(r => {
+                    if (!grouped[r.pm_id]) grouped[r.pm_id] = [];
+                    grouped[r.pm_id].push({
+                        ...r,
+                        pmId: r.pm_id // Mapping for compatibility
+                    });
+                });
+                dataMedical = grouped;
+
+                updateStats();
+                renderPMTable();
+                renderPemeriksaan();
+                renderLaporanTable();
+                
+                const modal = document.getElementById('modal-medical');
+                if (!modal.classList.contains('hidden')) {
+                    const pmId = document.getElementById('med-pm-id').value;
+                    renderMedHistoryList(pmId);
+                }
+            } catch (err) {
+                console.error("Sync Error:", err);
+                showToast("Gagal sinkronisasi data", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const renderPMTable = () => {
+            let filtered = dataPM;
+            const searchTerm = document.getElementById('pm-search').value.toLowerCase();
+            
+            if (searchTerm) {
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.reg.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (currentFilter !== 'Semua') filtered = filtered.filter(p => p.unit === currentFilter);
+            if (currentStatusFilter !== 'Semua') filtered = filtered.filter(p => (p.status || 'Aktif') === currentStatusFilter);
+
+            document.getElementById('pm-table-body').innerHTML = filtered.map((p, index) => `
+                <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-sky-100/50 transition-colors">
+                    <td class="px-4 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="font-bold text-sm text-teal-950 truncate max-w-[200px]">${p.name}</div>
+                            <div class="text-[9px] font-black px-1.5 py-0.5 bg-teal-600 text-white rounded-md">${calculateAge(p.dob)}</div>
+                        </div>
+                        <div class="text-[9px] text-teal-400 font-black tracking-widest uppercase">${p.reg}</div>
+                    </td>
+                    <td class="px-2 py-4 text-center">
+                        <button onclick="editPM('${p.id}')" class="w-8 h-8 bg-teal-50 text-teal-400 hover:emerald-toska-gradient hover:text-white rounded-xl transition-all shadow-sm"><i class="fas fa-cog text-xs"></i></button>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <span class="text-[8px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest ${(p.status || 'Aktif') === 'Aktif' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}">
+                            ${p.status || 'Aktif'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-[10px] font-bold text-teal-800 flex items-center gap-2">
+                             <div class="w-6 h-6 bg-teal-50 rounded-lg flex items-center justify-center text-[8px] text-teal-400"><i class="fas fa-user-shield"></i></div>
+                             ${p.family || '-'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" class="py-20 text-center text-[10px] font-black uppercase text-teal-200">Belum ada data penerima manfaat</td></tr>';
+        };
+
+        const renderPemeriksaan = () => {
+            const targetDate = document.getElementById('global-check-date').value;
+            const searchTerm = document.getElementById('pm-search').value.toLowerCase();
+            
+            let filtered = dataPM.filter(p => (p.status || 'Aktif') === 'Aktif');
+            
+            if (searchTerm) {
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.reg.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            if (currentFilter !== 'Semua') filtered = filtered.filter(p => p.unit === currentFilter);
+            
+            document.getElementById('check-list-table-body').innerHTML = filtered.map((p, index) => {
+                const record = (dataMedical[p.id] || []).find(h => h.date === targetDate);
+                const isChecked = !!record;
+                const statusColor = record?.status === 'Dirujuk ke RS' ? 'bg-rose-500' : (record?.status === 'Dalam Pantauan' ? 'bg-amber-400' : 'bg-teal-500');
+                const statusBadge = isChecked ? `<div class="w-3 h-3 rounded-full ${statusColor} mx-auto"></div>` : `<div class="w-3 h-3 rounded-full bg-teal-100/50 mx-auto"></div>`;
+
+                return `
+                    <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-sky-100/30 transition-colors">
+                        <td class="px-4 py-4">
+                            <div class="flex items-center gap-2">
+                                <div class="font-bold text-xs text-teal-900 truncate max-w-[180px]">${p.name}</div>
+                                <div class="text-[8px] font-black px-1 py-0.5 bg-teal-500 text-white rounded">${calculateAge(p.dob)}</div>
+                            </div>
+                            <div class="text-[8px] font-black text-teal-400 uppercase">${p.reg}</div>
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                            <button onclick="openMedicalModal('${p.id}', '${targetDate}')" class="px-4 py-1.5 rounded-xl ${isChecked ? 'bg-teal-900' : 'emerald-toska-gradient'} text-white font-black uppercase text-[8px] tracking-widest transition-all">
+                                ${isChecked ? 'Detail' : 'Mulai'}
+                            </button>
+                        </td>
+                        <td class="px-4 py-4 text-center">${statusBadge}</td>
+                        <td class="px-4 py-4 text-center font-black text-xs ${isChecked ? 'text-teal-900' : 'text-teal-100'}">${isChecked ? record.td : '--/--'}</td>
+                        <td class="px-4 py-4 text-center font-black text-xs ${isChecked ? 'text-orange-600' : 'text-teal-100'}">${isChecked ? (record.hr || '-') : '--'}</td>
+                        <td class="px-4 py-4 text-center font-black text-xs ${isChecked ? 'text-amber-600' : 'text-teal-100'}">${isChecked ? record.temp : '--'}</td>
+                        <td class="px-4 py-4 text-center font-black text-xs ${isChecked ? 'text-sky-600' : 'text-teal-100'}">${isChecked ? (record.weight || '-') : '--'}</td>
+                        <td class="px-4 py-4 text-center font-black text-xs ${isChecked ? 'text-indigo-600' : 'text-teal-100'}">${isChecked ? (record.sugar || '-') : '--'}</td>
+                        <td class="px-6 py-4">
+                            <div class="text-[10px] text-teal-700 font-medium line-clamp-2 max-w-[250px]">
+                                ${isChecked ? (record.complaint || '<span class="text-teal-200">Tidak ada catatan</span>') : '--'}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="9" class="py-20 text-center text-[10px] font-black uppercase text-teal-200">Belum ada data pemeriksaan</td></tr>';
+        };
+
+        // PIN Keamanan
+        const SECURITY_PIN = "8888";
+
+        const verifyPin = () => {
+            const input = prompt("Masukkan PIN Keamanan untuk melanjutkan:");
+            if (input === SECURITY_PIN) return true;
+            if (input !== null) showToast("PIN Salah!", "error");
+            return false;
+        };
+
+        // Backup JSON
+        document.getElementById('btn-backup').onclick = async () => {
+            if (!verifyPin()) return;
+            setLoading(true, "Mengekspor JSON...");
+            try {
+                const backup = {
+                    pm: dataPM,
+                    medical: Object.values(dataMedical).flat(),
+                    timestamp: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `YASEHATI_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                showToast("Berhasil mencadangkan data JSON");
+            } catch (err) {
+                showToast("Gagal melakukan backup", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // Restore JSON
+        document.getElementById('restore-input').onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!verifyPin()) {
+                e.target.value = '';
+                return;
+            }
+            
+            setLoading(true, "Memulihkan Data...");
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (!data.pm && !data.medical) throw new Error("Format tidak valid");
+
+                    let successCount = 0;
+                    const CHUNK_SIZE = 10; // Ukuran kecil untuk stabilitas
+                    
+                    // Restore PM (Penerima Manfaat)
+                    if (data.pm && Array.isArray(data.pm)) {
+                        // Hilangkan duplikasi REG di dalam file backup itu sendiri
+                        const uniquePMMap = new Map();
+                        data.pm.forEach(p => {
+                            if (p.reg) uniquePMMap.set(p.reg, p);
+                        });
+                        
+                        const pmToRestore = Array.from(uniquePMMap.values()).map(p => {
+                            const pData = { ...p };
+                            
+                            // Normalisasi mapping kolom chronicIllness -> chronic_illness
+                            if ('chronicIllness' in pData) {
+                                pData.chronic_illness = pData.chronicIllness;
+                                delete pData.chronicIllness;
+                            }
+                            
+                            // JANGAN hapus pData.id agar relasi data medis tetap terjaga
+                            delete pData.created_at;
+                            delete pData.updated_at;
+                            
+                            return pData;
+                        });
+
+                        for (let i = 0; i < pmToRestore.length; i += CHUNK_SIZE) {
+                            const chunk = pmToRestore.slice(i, i + CHUNK_SIZE);
+                            // Gunakan onConflict: 'id' atau 'reg' untuk menghindari duplicate key
+                            const { error } = await supabaseClient.from(TABLE_PM).upsert(chunk, { onConflict: 'id' });
+                            if (error) {
+                                // Jika gagal karena ID bentrok dengan REG lain, coba upsert berdasarkan REG
+                                const { error: retryError } = await supabaseClient.from(TABLE_PM).upsert(chunk, { onConflict: 'reg' });
+                                if (retryError) throw new Error(`PM Chunk Error: ${retryError.message}`);
+                            }
+                            successCount += chunk.length;
+                        }
+                    }
+
+                    // Restore Medis (Kesehatan Harian)
+                    if (data.medical && Array.isArray(data.medical)) {
+                        const medToRestore = data.medical.map(m => {
+                            const mData = { ...m };
+                            
+                            // Normalisasi mapping kolom pmId -> pm_id
+                            if ('pmId' in mData) {
+                                mData.pm_id = mData.pmId;
+                                delete mData.pmId;
+                            }
+                            
+                            // Normalisasi tipe data numerik untuk menghindari error "invalid input syntax for type integer: """
+                            // Pastikan nilai string kosong diubah menjadi null agar Supabase menerimanya sebagai kolom opsional
+                            const numericFields = ['hr', 'sugar', 'temp', 'weight'];
+                            numericFields.forEach(field => {
+                                if (field in mData) {
+                                    if (mData[field] === "" || mData[field] === null || mData[field] === undefined) {
+                                        mData[field] = null;
+                                    } else {
+                                        mData[field] = Number(mData[field]);
+                                    }
+                                }
+                            });
+                            
+                            // Hapus kolom sistem, tapi biarkan ID untuk menghindari duplikasi jika restore ulang
+                            delete mData.created_at;
+                            delete mData.updated_at;
+                            
+                            return mData;
+                        });
+
+                        for (let i = 0; i < medToRestore.length; i += CHUNK_SIZE) {
+                            const chunk = medToRestore.slice(i, i + CHUNK_SIZE);
+                            const { error } = await supabaseClient.from(TABLE_MEDIS).upsert(chunk, { onConflict: 'id' });
+                            if (error) throw new Error(`Medical Chunk Error: ${error.message}`);
+                            successCount += chunk.length;
+                        }
+                    }
+                    
+                    showToast(`Berhasil memulihkan ${successCount} data`);
+                    await sync();
+                } catch (err) {
+                    console.error("Restore Error:", err);
+                    showToast(err.message, "error");
+                } finally {
+                    setLoading(false);
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // Export Excel (XLSX)
+        document.getElementById('btn-export-xlsx').onclick = () => {
+            setLoading(true, "Menyiapkan File Excel...");
+            try {
+                // Sheet 1: Database PM
+                const wsPM = XLSX.utils.json_to_sheet(dataPM.map(p => ({
+                    "ID Reg": p.reg,
+                    "Nama PM": p.name,
+                    "Unit": p.unit,
+                    "Status": p.status || 'Aktif',
+                    "Tempat Lahir": p.pob || '-',
+                    "Tanggal Lahir": p.dob || '-',
+                    "Usia": calculateAge(p.dob),
+                    "Penanggung Jawab": p.family || '-',
+                    "Riwayat Kronis": p.chronic_illness || '-'
+                })));
+
+                // Sheet 2: Riwayat Medis Keseluruhan
+                const medDataList = [];
+                Object.values(dataMedical).forEach(records => {
+                    records.forEach(r => {
+                        const p = dataPM.find(x => x.id === r.pm_id);
+                        medDataList.push({
+                            "Tanggal": r.date,
+                            "ID Reg": p ? p.reg : 'N/A',
+                            "Nama PM": p ? p.name : 'N/A',
+                            "Unit": p ? p.unit : 'N/A',
+                            "Tensi": r.td,
+                            "HR": r.hr || '-',
+                            "Suhu": r.temp,
+                            "BB": r.weight || '-',
+                            "GDS": r.sugar || '-',
+                            "Status": r.status || 'Sehat',
+                            "Catatan/Tindakan": r.complaint || '-'
+                        });
+                    });
+                });
+                
+                medDataList.sort((a,b) => b.Tanggal.localeCompare(a.Tanggal));
+                const wsMed = XLSX.utils.json_to_sheet(medDataList);
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, wsPM, "Database PM");
+                XLSX.utils.book_append_sheet(wb, wsMed, "Riwayat Medis");
+
+                XLSX.writeFile(wb, `SIPM_YASEHATI_REKAP_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showToast("Rekap Excel berhasil diunduh");
+            } catch (err) {
+                showToast("Gagal membuat file Excel", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // Clear Database (Medis Only)
+        document.getElementById('btn-clear-medis').onclick = async () => {
+            if (!verifyPin()) return;
+            
+            const confirm1 = confirm("PERINGATAN!\n\nAnda akan menghapus SELURUH data hasil pemeriksaan kesehatan.\nTindakan ini tidak dapat dibatalkan.\n\nApakah Anda yakin?");
+            if (!confirm1) return;
+
+            const confirm2 = confirm("KONFIRMASI TERAKHIR\n\nData yang sudah dihapus akan hilang selamanya dari Cloud Supabase.\nPastikan Anda sudah melakukan BACKUP JSON terlebih dahulu.\n\nLanjutkan penghapusan?");
+            if (!confirm2) return;
+
+            setLoading(true, "Membersihkan Database...");
+            try {
+                // Supabase delete requires a filter, we use .neq('id', 0) to target all records
+                const { error } = await supabaseClient
+                    .from(TABLE_MEDIS)
+                    .delete()
+                    .neq('id', 0);
+
+                if (error) throw error;
+                
+                showToast("Berhasil membersihkan database pemeriksaan");
+                await sync();
+            } catch (err) {
+                console.error("Clear Error:", err);
+                showToast("Gagal membersihkan data: " + err.message, "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        window.renderMedHistoryList = (pmId) => {
+            const history = (dataMedical[pmId] || []).sort((a,b) => b.date.localeCompare(a.date));
+            document.getElementById('history-count').innerText = history.length;
+            document.getElementById('med-history-list').innerHTML = history.map(h => {
+                const statusColors = {
+                    'Sehat': 'bg-emerald-50 border-emerald-100 text-emerald-700',
+                    'Dalam Pantauan': 'bg-amber-50 border-amber-100 text-amber-700',
+                    'Dirujuk ke RS': 'bg-rose-50 border-rose-100 text-rose-700'
+                };
+                const cardColor = statusColors[h.status] || 'bg-white border-teal-100';
+
+                return `
+                <div class="${cardColor} p-5 rounded-3xl border shadow-sm relative group hover:shadow-md transition-all">
+                    <div class="absolute top-4 right-4 flex gap-2">
+                        <button onclick="loadRecordToForm('${pmId}', '${h.id}')" class="text-[9px] font-black uppercase bg-white/80 hover:bg-white px-3 py-1.5 rounded-lg transition-colors border border-black/5 shadow-sm">
+                            <i class="fas fa-edit mr-1 text-teal-600"></i> Edit
+                        </button>
+                        <button onclick="deleteMedicalRecord('${h.id}', '${pmId}')" class="text-[9px] font-black uppercase bg-white/80 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-black/5 shadow-sm">
+                            <i class="fas fa-trash text-rose-400 group-hover:text-inherit"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="px-3 py-1 bg-white/60 rounded-lg text-[10px] font-black text-teal-800 border border-black/5">${h.date}</div>
+                        <span class="text-[8px] font-black uppercase">${h.status || 'Sehat'}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 border-b border-black/5 pb-3 mb-2">
+                        <div><p class="text-[7px] text-black/40 font-bold uppercase">Tensi</p><p class="text-[10px] font-black text-rose-600">${h.td}</p></div>
+                        <div><p class="text-[7px] text-black/40 font-bold uppercase">Suhu</p><p class="text-[10px] font-black text-amber-600">${h.temp}°C</p></div>
+                        <div><p class="text-[7px] text-black/40 font-bold uppercase">GDS</p><p class="text-[10px] font-black text-indigo-600">${h.sugar || '-'}</p></div>
+                        <div><p class="text-[7px] text-black/40 font-bold uppercase">HR</p><p class="text-[10px] font-black text-orange-600">${h.hr || '-'}</p></div>
+                        <div><p class="text-[7px] text-black/40 font-bold uppercase">Berat</p><p class="text-[10px] font-black text-sky-600">${h.weight || '-'}</p></div>
+                    </div>
+                    <div>
+                        <p class="text-[8px] text-black/40 font-bold uppercase mb-1">Catatan:</p>
+                        <p class="text-[10px] font-bold text-slate-700 italic leading-snug">${h.complaint || '-'}</p>
+                    </div>
+                </div>
+            `}).join('') || '<div class="text-center py-20 text-[10px] text-teal-200 font-black uppercase">Belum Ada Riwayat</div>';
+        };
+
+        window.loadRecordToForm = (pmId, recordId) => {
+            const records = dataMedical[pmId] || [];
+            const r = records.find(x => x.id === recordId);
+            if (!r) return;
+            document.getElementById('med-record-id').value = r.id;
+            document.getElementById('med-date').value = r.date;
+            document.getElementById('med-td').value = r.td;
+            document.getElementById('med-hr').value = r.hr || '';
+            document.getElementById('med-temp').value = r.temp;
+            document.getElementById('med-weight').value = r.weight || '';
+            document.getElementById('med-sugar').value = r.sugar || '';
+            document.getElementById('med-status').value = r.status || 'Sehat';
+            document.getElementById('med-complaint').value = r.complaint || '';
+        };
+
+        window.openMedicalModal = (pmId, date) => {
+            const p = dataPM.find(x => x.id === pmId);
+            if (!p) return;
+            document.getElementById('med-pm-id').value = pmId;
+            document.getElementById('med-pm-name').innerText = p.name;
+            document.getElementById('med-pm-meta').innerText = `${p.reg} • ${p.unit} • ${calculateAge(p.dob)}`;
+            document.getElementById('med-pm-chronic').innerText = p.chronic_illness || "Tidak ada riwayat penyakit kronis yang dicatat.";
+            const record = (dataMedical[pmId] || []).find(h => h.date === date);
+            if (record) {
+                loadRecordToForm(pmId, record.id);
+            } else {
+                document.getElementById('med-record-id').value = '';
+                document.getElementById('med-date').value = date;
+                document.getElementById('med-td').value = '';
+                document.getElementById('med-hr').value = '';
+                document.getElementById('med-temp').value = '';
+                document.getElementById('med-weight').value = '';
+                document.getElementById('med-sugar').value = '';
+                document.getElementById('med-status').value = 'Sehat';
+                document.getElementById('med-complaint').value = '';
+            }
+            renderMedHistoryList(pmId);
+            document.getElementById('modal-medical').classList.remove('hidden');
+        };
+
+        window.printIndividualReport = () => {
+            document.getElementById('signer-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-signer').dataset.printType = 'individual';
+            document.getElementById('modal-signer').classList.remove('hidden');
+        };
+
+        window.printMassReport = (date, unit) => {
+            if (date) document.getElementById('global-check-date').value = date;
+            if (unit) document.getElementById('global-unit-filter').value = unit;
+            
+            document.getElementById('signer-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-signer').dataset.printType = 'mass';
+            document.getElementById('modal-signer').classList.remove('hidden');
+        };
+
+        document.getElementById('form-signer').onsubmit = (e) => {
+            e.preventDefault();
+            const date = document.getElementById('signer-date').value;
+            const doctor = document.getElementById('signer-doctor').value;
+            const officer = document.getElementById('signer-officer').value;
+            const head = document.getElementById('signer-head').value;
+            const type = document.getElementById('modal-signer').dataset.printType;
+            
+            document.getElementById('modal-signer').classList.add('hidden');
+            
+            if (type === 'individual') {
+                executePrintIndividual(doctor, officer, head, date);
+            } else {
+                executePrintMass(doctor, officer, head, date);
+            }
+        };
+
+        const executePrintIndividual = (doctor, officer, head, date) => {
+             const pmId = document.getElementById('med-pm-id').value;
+             const p = dataPM.find(x => x.id === pmId);
+             const history = (dataMedical[pmId] || []).sort((a,b) => b.date.localeCompare(a.date));
+             
+             const win = window.open('', '_blank');
+            win.document.write(`
+                <html><head><title>Kartu Medis - ${p.name}</title>
+                <style>
+                    body { font-family: sans-serif; padding: 40px; color: #1e293b; }
+                    .header { border-bottom: 3px solid #0d9488; padding-bottom: 15px; margin-bottom: 25px; }
+                    h2 { margin: 0; color: #0d9488; letter-spacing: -0.5px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 10px; font-size: 10.5px; text-align: left; vertical-align: top; }
+                    th { background-color: #f8fafc; color: #0d9488; font-weight: bold; text-transform: uppercase; }
+                    .meta-box { background: #f0fdfa; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 11px; }
+                    .signature-area { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-start; }
+                    .sig-box { text-align: left; width: 30%; font-size: 11px; }
+                    .sig-box p { margin: 0; line-height: 1.4; }
+                    .sig-space { height: 70px; }
+                </style>
+                </head><body>
+                <div class="header"><h2>KARTU RIWAYAT KESEHATAN PENERIMA MANFAAT</h2></div>
+                <div class="meta-box">
+                    <strong>Nama:</strong> ${p.name}<br>
+                    <strong>ID:</strong> ${p.reg}<br>
+                    <strong>Unit:</strong> ${p.unit}<br>
+                    <strong>TTL:</strong> ${p.pob}, ${p.dob} (${calculateAge(p.dob)})<br>
+                    <strong>Penyakit Kronis:</strong> ${p.chronic_illness || '-'}
+                </div>
+                <table><thead><tr><th width="80">Tanggal</th><th width="60">Tensi</th><th width="40">HR</th><th width="40">Temp</th><th width="40">BB</th><th width="40">GDS</th><th>Status</th><th>Catatan & Tindakan</th></tr></thead>
+                <tbody>${history.map(h=>`<tr><td>${h.date}</td><td>${h.td}</td><td>${h.hr||'-'}</td><td>${h.temp}°C</td><td>${h.weight||'-'}</td><td>${h.sugar||'-'}</td><td>${h.status}</td><td style="font-style:italic;">${h.complaint || '-'}</td></tr>`).join('')}</tbody></table>
+                
+                <div class="signature-area">
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>Mengetahui,</p>
+                        <p>Kepala PPS Raharjo</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${head} )</strong></p>
+                    </div>
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>&nbsp;</p>
+                        <p>Dokter Pemeriksa,</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${doctor} )</strong></p>
+                    </div>
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>Sragen, ${formatDateIndo(date)}</p>
+                        <p>Petugas Pencatat</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${officer} )</strong></p>
+                    </div>
+                </div>
+                </body></html>
+            `);
+            win.document.close(); win.print();
+        };
+
+        const executePrintMass = (doctor, officer, head, date) => {
+             const targetDate = document.getElementById('global-check-date').value;
+             const unit = document.getElementById('global-unit-filter').value;
+             let filtered = dataPM.filter(p => (p.status || 'Aktif') === 'Aktif');
+             if (unit !== 'Semua') filtered = filtered.filter(p => p.unit === unit);
+ 
+             const win = window.open('', '_blank');
+            win.document.write(`
+                <html><head><title>Rekap Medis ${targetDate}</title>
+                <style>
+                    body { font-family: sans-serif; padding: 20px; }
+                    h2 { color: #0d9488; text-align: center; margin-bottom: 5px; }
+                    p { text-align: center; margin-top: 0; font-size: 12px; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #aaa; padding: 6px; font-size: 9px; text-align: left; vertical-align: top; }
+                    th { background: #f1f5f9; text-transform: uppercase; font-weight: 800; }
+                    .center { text-align: center; }
+                    .signature-area { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+                    .sig-box { text-align: left; width: 180px; font-size: 10px; }
+                    .sig-box p { margin: 0; line-height: 1.4; }
+                    .sig-space { height: 60px; }
+                </style>
+                </head><body>
+                <h2>LAPORAN PEMERIKSAAN KESEHATAN BERKALA</h2>
+                <p>Tanggal: <strong>${targetDate}</strong> | Unit Kerja: <strong>${unit}</strong></p>
+                <table><thead><tr><th width="30">No</th><th>Nama PM</th><th class="center" width="60">Tensi</th><th class="center" width="40">HR</th><th class="center" width="40">Temp</th><th class="center" width="40">BB</th><th class="center" width="40">GDS</th><th width="80">Status</th><th>Catatan / Tindakan Medis</th></tr></thead>
+                <tbody>${filtered.map((p, i) => {
+                    const r = (dataMedical[p.id] || []).find(h => h.date === targetDate);
+                    return `<tr><td class="center">${i+1}</td><td><strong>${p.name}</strong><br>${p.reg}</td><td class="center">${r?r.td:'-'}</td><td class="center">${r?r.hr||'-':'-'}</td><td class="center">${r?r.temp:'-'}</td><td class="center">${r?r.weight||'-':'-'}</td><td class="center">${r?r.sugar||'-':'-'}</td><td>${r?r.status:'-'}</td><td>${r?(r.complaint || '-'):'-'}</td></tr>`;
+                }).join('')}</tbody></table>
+                
+                <div class="signature-area">
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>Mengetahui,</p>
+                        <p>Kepala PPS Raharjo</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${head} )</strong></p>
+                    </div>
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>&nbsp;</p>
+                        <p>Dokter Pemeriksa,</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${doctor} )</strong></p>
+                    </div>
+                    <div class="sig-box">
+                        <p>&nbsp;</p>
+                        <p>Sragen, ${formatDateIndo(date)}</p>
+                        <p>Petugas Pencatat</p>
+                        <div class="sig-space"></div>
+                        <p><strong>( ${officer} )</strong></p>
+                    </div>
+                </div>
+                </body></html>
+            `);
+            win.document.close(); win.print();
+        };
+
+        // Fungsi helper untuk generate ID unik (seperti format lama) jika diperlukan
+        const generateUID = () => {
+            return 'ID-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        };
+
+        window.deleteMedicalRecord = async (id, pmId) => {
+            if (!confirm("Apakah Anda yakin ingin menghapus data pemeriksaan ini?")) return;
+            setLoading(true, "Menghapus Data...");
+            try {
+                const { error } = await supabaseClient.from(TABLE_MEDIS).delete().eq('id', id);
+                if (error) throw error;
+                showToast("Data Pemeriksaan Berhasil Dihapus");
+                await sync();
+                renderMedHistoryList(pmId);
+            } catch (err) {
+                console.error("Delete Error:", err);
+                showToast("Gagal menghapus data", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        document.getElementById('form-medical').onsubmit = async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            const pmId = document.getElementById('med-pm-id').value;
+            const recId = document.getElementById('med-record-id').value;
+            
+            // Fungsi helper untuk menangani nilai numerik agar tidak error saat kosong
+            const parseNum = (val, isFloat = false) => {
+                if (val === "" || val === null || val === undefined) return null;
+                const parsed = isFloat ? parseFloat(val) : parseInt(val);
+                return isNaN(parsed) ? null : parsed;
+            };
+
+            const data = {
+                pm_id: pmId, 
+                date: document.getElementById('med-date').value,
+                td: document.getElementById('med-td').value, 
+                hr: parseNum(document.getElementById('med-hr').value),
+                temp: parseNum(document.getElementById('med-temp').value, true), 
+                weight: parseNum(document.getElementById('med-weight').value, true), 
+                sugar: parseNum(document.getElementById('med-sugar').value), 
+                status: document.getElementById('med-status').value,
+                complaint: document.getElementById('med-complaint').value
+            };
+            try {
+                let error;
+                if(recId) {
+                    const res = await supabaseClient.from(TABLE_MEDIS).update(data).eq('id', recId);
+                    error = res.error;
+                } else {
+                    // Berikan ID manual karena kolom ID adalah TEXT (PRIMARY KEY)
+                    const newData = { id: generateUID(), ...data };
+                    const res = await supabaseClient.from(TABLE_MEDIS).insert(newData);
+                    error = res.error;
+                }
+                
+                if (error) throw error;
+                
+                showToast("Data Medis Berhasil Disimpan");
+                document.getElementById('med-record-id').value = ''; 
+                document.getElementById('modal-medical').classList.add('hidden');
+                await sync();
+            } catch(err) { 
+                console.error("Save Medical Error:", err);
+                showToast("Gagal: " + (err.message || "Kesalahan Database"), "error"); 
+            }
+            finally { setLoading(false); }
+        };
+
+        document.getElementById('form-pm').onsubmit = async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            const id = document.getElementById('pm-id-hidden').value;
+            const data = {
+                reg: document.getElementById('pm-reg').value, 
+                unit: document.getElementById('pm-unit').value,
+                name: document.getElementById('pm-name').value, 
+                pob: document.getElementById('pm-pob').value, 
+                dob: document.getElementById('pm-dob').value,
+                status: document.getElementById('pm-status').value, 
+                family: document.getElementById('pm-family').value,
+                chronic_illness: document.getElementById('pm-chronic-illness').value
+            };
+            try {
+                let error;
+                if(id) {
+                    const res = await supabaseClient.from(TABLE_PM).update(data).eq('id', id);
+                    error = res.error;
+                } else {
+                    // Berikan ID manual karena kolom ID adalah TEXT (PRIMARY KEY)
+                    const newData = { id: generateUID(), ...data };
+                    const res = await supabaseClient.from(TABLE_PM).insert(newData);
+                    error = res.error;
+                }
+
+                if (error) throw error;
+
+                document.getElementById('modal-pm').classList.add('hidden');
+                showToast("Profil PM Diperbarui");
+                await sync();
+            } catch(err) { 
+                console.error("Save PM Error:", err);
+                showToast("Gagal: " + (err.message || "Kesalahan Database"), "error"); 
+            }
+            finally { setLoading(false); }
+        };
+
+        window.editPM = (id) => {
+            const p = dataPM.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('pm-id-hidden').value = p.id;
+            document.getElementById('pm-reg').value = p.reg;
+            document.getElementById('pm-unit').value = p.unit;
+            document.getElementById('pm-name').value = p.name;
+            document.getElementById('pm-pob').value = p.pob || '';
+            document.getElementById('pm-dob').value = p.dob || '';
+            document.getElementById('pm-status').value = p.status || 'Aktif';
+            document.getElementById('pm-family').value = p.family || '';
+            document.getElementById('pm-chronic-illness').value = p.chronic_illness || '';
+            document.getElementById('modal-pm').classList.remove('hidden');
+        };
+
+        const switchTab = (tabId) => {
+            const tabs = ['database', 'pemeriksaan', 'laporan'];
+            tabs.forEach(t => {
+                const navEl = document.getElementById(`nav-${t}`);
+                const tabEl = document.getElementById(`tab-${t}`);
+                if (navEl) navEl.classList.toggle('active', t === tabId);
+                if (tabEl) tabEl.classList.toggle('active', t === tabId);
+            });
+
+            const titles = {
+                 'database': "Data Penerima Manfaat",
+                 'pemeriksaan': "Laporan Pemeriksaan",
+                 'laporan': "Cetak Laporan"
+             };
+            document.getElementById('current-title').innerText = titles[tabId];
+            
+            const isDatabase = tabId === 'database';
+            document.getElementById('header-btn').classList.toggle('hidden', !isDatabase);
+            document.getElementById('status-filter-container').classList.toggle('hidden', !isDatabase);
+            
+            if (tabId === 'laporan') renderLaporanTable();
+        };
+
+        document.getElementById('nav-database').onclick = () => switchTab('database');
+        document.getElementById('nav-pemeriksaan').onclick = () => switchTab('pemeriksaan');
+        document.getElementById('nav-laporan').onclick = () => switchTab('laporan');
+
+        const renderLaporanTable = () => {
+            const reportMap = {}; // date -> unit -> stats
+            
+            // Hitung total PM aktif per unit
+            const activePMsPerUnit = {};
+            dataPM.filter(p => (p.status || 'Aktif') === 'Aktif').forEach(p => {
+                const u = p.unit || 'Tanpa Unit';
+                activePMsPerUnit[u] = (activePMsPerUnit[u] || 0) + 1;
+            });
+
+            // Agregasi data medis
+            Object.values(dataMedical).flat().forEach(record => {
+                const pm = dataPM.find(p => p.id === record.pm_id);
+                if (!pm) return;
+                
+                const date = record.date;
+                const unit = pm.unit || 'Tanpa Unit';
+                
+                if (!reportMap[date]) reportMap[date] = {};
+                if (!reportMap[date][unit]) {
+                    reportMap[date][unit] = {
+                        checked: 0,
+                        sehat: 0,
+                        pantauan: 0,
+                        rujuk: 0
+                    };
+                }
+                
+                reportMap[date][unit].checked++;
+                if (record.status === 'Sehat') reportMap[date][unit].sehat++;
+                else if (record.status === 'Dalam Pantauan') reportMap[date][unit].pantauan++;
+                else if (record.status === 'Dirujuk ke RS') reportMap[date][unit].rujuk++;
+            });
+
+            // Flatten dan Sort
+            const reportList = [];
+            Object.entries(reportMap).forEach(([date, units]) => {
+                Object.entries(units).forEach(([unit, stats]) => {
+                    reportList.push({ date, unit, totalPM: activePMsPerUnit[unit] || 0, ...stats });
+                });
+            });
+            reportList.sort((a, b) => b.date.localeCompare(a.date));
+
+            document.getElementById('laporan-table-body').innerHTML = reportList.map((r, index) => `
+                <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-sky-100/30 transition-colors">
+                    <td class="px-4 py-4 font-bold text-teal-900 text-xs">${formatDateIndo(r.date)}</td>
+                    <td class="px-4 py-4 text-xs font-bold text-teal-800">${r.unit}</td>
+                    <td class="px-4 py-4 text-center font-black text-xs text-slate-500">${r.totalPM}</td>
+                    <td class="px-4 py-4 text-center font-black text-xs text-teal-600">${r.checked}</td>
+                    <td class="px-4 py-4 text-center font-black text-xs text-emerald-600 bg-emerald-50/30">${r.sehat}</td>
+                    <td class="px-4 py-4 text-center font-black text-xs text-amber-600 bg-amber-50/30">${r.pantauan}</td>
+                    <td class="px-4 py-4 text-center font-black text-xs text-rose-600 bg-rose-50/30">${r.rujuk}</td>
+                    <td class="px-4 py-4 text-center">
+                        <button onclick="printMassReport('${r.date}', '${r.unit}')" class="px-4 py-1.5 bg-teal-900 text-white rounded-xl font-black uppercase text-[8px] tracking-widest hover:bg-teal-800 transition-all shadow-lg shadow-teal-900/10">
+                            <i class="fas fa-print mr-1 text-teal-400"></i> Cetak
+                        </button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="8" class="py-20 text-center text-[10px] font-black uppercase text-teal-200">Belum ada data laporan</td></tr>';
+        };
+
+        window.setStatusFilter = (s) => { 
+            currentStatusFilter = s; 
+            document.getElementById('filter-aktif').className = s === 'Aktif' ? 'px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-white shadow-sm text-teal-600' : 'px-4 py-1.5 rounded-lg text-[10px] font-black uppercase text-teal-800/40';
+            document.getElementById('filter-semua').className = s === 'Semua' ? 'px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-white shadow-sm text-teal-600' : 'px-4 py-1.5 rounded-lg text-[10px] font-black uppercase text-teal-800/40';
+            renderPMTable(); 
+        };
+
+        document.getElementById('global-unit-filter').onchange = (e) => { currentFilter = e.target.value; renderPMTable(); renderPemeriksaan(); };
+        document.getElementById('pm-search').oninput = () => { renderPMTable(); renderPemeriksaan(); };
+        document.getElementById('global-check-date').onchange = () => renderPemeriksaan();
+        document.getElementById('close-pm-modal').onclick = () => document.getElementById('modal-pm').classList.add('hidden');
+        document.getElementById('close-med-modal').onclick = () => document.getElementById('modal-medical').classList.add('hidden');
+        document.getElementById('close-signer-modal').onclick = () => document.getElementById('modal-signer').classList.add('hidden');
+        document.getElementById('cancel-pm-btn').onclick = () => document.getElementById('modal-pm').classList.add('hidden');
+        document.getElementById('header-btn').onclick = () => { document.getElementById('form-pm').reset(); document.getElementById('pm-id-hidden').value = ''; document.getElementById('modal-pm').classList.remove('hidden'); };
+
+        const init = async () => {
+            await sync();
+            if (document.getElementById('global-check-date')) {
+                document.getElementById('global-check-date').value = new Date().toISOString().split('T')[0];
+            }
+        };
+        init();
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>

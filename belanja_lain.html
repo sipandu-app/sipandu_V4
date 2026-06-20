@@ -1,0 +1,1188 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BELANJA LAINNYA - SIPANDU</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+            border: 2px solid #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .tab-active {
+            background-color: white;
+            color: #f97316;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #f97316;
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+            outline: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Modern table styling */
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 800;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-10">
+
+    <!-- Notification Toast -->
+    <div id="toast"
+        class="fixed top-6 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 rounded-full shadow-2xl font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 opacity-0 pointer-events-none transition-all duration-300 translate-y-[-20px]">
+        <div id="toast-icon"></div>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- PIN Verification Modal -->
+    <div id="pin-modal"
+        class="fixed inset-0 z-[1100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-[320px] rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 animate-in">
+            <div class="text-center">
+                <div
+                    class="w-16 h-16 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+                <h3 class="font-black text-sm uppercase text-slate-800 tracking-tight">Verifikasi PIN Akses</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-widest">Gunakan PIN Admin (888)
+                </p>
+                <input type="password" id="pin-input" maxlength="4"
+                    class="w-full text-center text-4xl tracking-[0.5em] font-black py-4 bg-slate-50 rounded-2xl border-2 border-slate-100 mt-6 focus:border-orange-500 transition-all outline-none"
+                    placeholder="••••">
+                <div class="grid grid-cols-2 gap-3 mt-8">
+                    <button onclick="closePinModal()"
+                        class="py-4 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl hover:bg-slate-200 transition-all">Batal</button>
+                    <button onclick="confirmPinAction()"
+                        class="py-4 bg-orange-500 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-orange-100 hover:bg-orange-600 transition-all">Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Modal -->
+    <div id="print-modal"
+        class="fixed inset-0 z-[1100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-[350px] rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 animate-in">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="p-3 bg-orange-50 text-orange-600 rounded-2xl shadow-inner"><i data-lucide="printer"
+                        class="w-6 h-6"></i></div>
+                <div>
+                    <h3 class="font-black text-[12px] uppercase text-slate-800 leading-none">Konfigurasi Cetak</h3>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Realisasi
+                        Belanja</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block px-1">Tanggal Cetak</label>
+                    <input type="date" id="print-date"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-bold outline-none focus:border-orange-500">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block px-1">Nama Penerima</label>
+                    <input type="text" id="print-receiver" placeholder="Nama lengkap..."
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-bold outline-none focus:border-orange-500">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closePrintModal()"
+                        class="flex-1 py-4 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl">Batal</button>
+                    <button onclick="generateReport()"
+                        class="flex-1 py-4 bg-orange-600 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-orange-100">Cetak
+                        PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-orange-600 border-b border-orange-700 sticky top-0 z-50 shadow-xl px-6 py-4">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-white p-2.5 rounded-2xl shadow-lg shadow-orange-900/20">
+                    <i data-lucide="shopping-cart" class="text-orange-600 w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-[13px] font-black text-white tracking-tight leading-none uppercase">SIPANDU -
+                        BELANJA LAINNYA</h1>
+                    <p class="text-[8px] font-bold text-orange-100 mt-1.5 uppercase tracking-widest opacity-80">
+                        Pencatatan Belanja Barang & Jasa Operasional</p>
+                </div>
+            </div>
+
+            <nav class="bg-orange-700/50 p-1 rounded-xl border border-white/10 backdrop-blur-md flex gap-1">
+                <button onclick="switchTab('input')" id="tab-input"
+                    class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all hover:bg-white/10 text-orange-100">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Input
+                </button>
+                <button onclick="switchTab('history')" id="tab-history"
+                    class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all hover:bg-white/10 text-orange-100 tab-active">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i> Riwayat
+                </button>
+                <button onclick="switchTab('database')" id="tab-database"
+                    class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all hover:bg-white/10 text-orange-100">
+                    <i data-lucide="database" class="w-4 h-4"></i> Database
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-8">
+        <!-- Input Section -->
+        <div id="section-input" class="hidden animate-in">
+            <div class="max-w-4xl mx-auto">
+                <form id="belanja-form"
+                    class="glass-card rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                    <div class="bg-orange-600 p-8 text-white flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-black uppercase tracking-tight" id="form-title">Input Belanja Baru
+                            </h2>
+                            <p class="text-[9px] font-bold text-orange-100 uppercase tracking-[0.2em] mt-1 opacity-70">
+                                Pastikan data sesuai dengan bukti pembayaran</p>
+                        </div>
+                        <div class="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
+                            <i data-lucide="file-edit" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+
+                    <div class="p-8 space-y-6">
+                        <input type="hidden" id="entry-id">
+
+                        <!-- Row 1: Unit & Tanggal -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Unit
+                                    Kerja</label>
+                                <select id="unit_kerja"
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    required>
+                                    <option value="">Pilih Unit Kerja...</option>
+                                    <option value="PPSDI Raharjo">PPSDI Raharjo</option>
+                                    <option value="RPSLU Mojomulyo">RPSLU Mojomulyo</option>
+                                    <option value="RPSA Pamardi Siwi">RPSA Pamardi Siwi</option>
+                                    <option value="RPS PMKS Gondang">RPS PMKS Gondang</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Tanggal
+                                    Belanja</label>
+                                <input type="date" id="tanggal_belanja"
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    required>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: No BP & Kategori -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Nomor BP /
+                                    Bukti</label>
+                                <input type="text" id="nomor_bp" placeholder="Contoh: BP-001/X/2026"
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Kategori
+                                    Belanja</label>
+                                <select id="jenis_belanja"
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    required>
+                                    <option value="">Pilih Kategori...</option>
+                                    <option value="Belanja Bahan Kebersihan">Belanja Bahan Kebersihan</option>
+                                    <option value="Belanja Alat Tulis Kantor">Belanja Alat Tulis Kantor</option>
+                                    <option value="Belanja Bahan Obat-obatan">Belanja Bahan Obat-obatan</option>
+                                    <option value="Belanja Perlengkapan Mandi PM">Belanja Perlengkapan Mandi PM</option>
+                                    <option value="Belanja Alat Listrik">Belanja Alat Listrik</option>
+                                    <option value="Belanja Makan Minum Harian">Belanja Makan Minum Harian</option>
+                                    <option value="Lainnya">Lainnya...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Uraian -->
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Uraian Barang
+                                / Jasa</label>
+                            <textarea id="uraian" rows="3" placeholder="Rincian barang atau jasa yang dibeli..."
+                                class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all resize-none"
+                                required></textarea>
+                        </div>
+
+                        <!-- Row 4: Penyedia & Penerima -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Nama Toko
+                                    / Penyedia</label>
+                                <input type="text" id="penyedia" placeholder="Nama toko atau vendor..."
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Penerima
+                                    Barang</label>
+                                <input type="text" id="penerima_barang" placeholder="Nama penanggung jawab..."
+                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    required>
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Kalkulasi (Volume, Satuan, Harga) -->
+                        <div
+                            class="bg-orange-50/50 p-6 rounded-xl border border-orange-100 flex flex-wrap items-end gap-6 shadow-inner">
+                            <div class="w-32">
+                                <label
+                                    class="text-[9px] font-black text-orange-800/60 uppercase mb-2 block px-1">Volume</label>
+                                <input type="number" id="volume" step="any"
+                                    class="w-full h-11 px-4 bg-white border border-orange-200 rounded-xl text-[12px] font-black text-slate-700"
+                                    placeholder="0" required>
+                            </div>
+                            <div class="w-32">
+                                <label
+                                    class="text-[9px] font-black text-orange-800/60 uppercase mb-2 block px-1">Satuan</label>
+                                <select id="satuan"
+                                    class="w-full h-11 px-4 bg-white border border-orange-200 rounded-xl text-[11px] font-black text-slate-700">
+                                    <option value="Pcs">Pcs</option>
+                                    <option value="Paket">Paket</option>
+                                    <option value="Unit">Unit</option>
+                                    <option value="Set">Set</option>
+                                    <option value="Botol">Botol</option>
+                                    <option value="Lusin">Lusin</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="Liter">Liter</option>
+                                </select>
+                            </div>
+                            <div class="flex-1 min-w-[150px]">
+                                <label class="text-[9px] font-black text-orange-800/60 uppercase mb-2 block px-1">Harga
+                                    Satuan (Rp)</label>
+                                <input type="text" id="harga_satuan"
+                                    class="w-full h-11 px-4 bg-white border border-orange-200 rounded-xl text-[12px] font-black text-slate-700"
+                                    placeholder="0" required>
+                            </div>
+                            <div class="w-full md:w-auto md:ml-auto text-right">
+                                <span
+                                    class="text-[8px] font-black text-orange-600 uppercase tracking-widest block mb-1">Total
+                                    Realisasi</span>
+                                <span id="nominal-display" class="text-2xl font-black text-slate-900 leading-none">Rp
+                                    0</span>
+                            </div>
+                        </div>
+
+                        <!-- Row 6: Dokumentasi -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-3 block px-1">Foto
+                                    Dokumentasi (Maks 4)</label>
+                                <div class="grid grid-cols-4 gap-3">
+                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                        onclick="triggerPhotoUpload(0)">
+                                        <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
+                                                class="w-5 h-5"></i></div>
+                                        <img class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl"
+                                            id="preview-0">
+                                        <button type="button" onclick="clearPhoto(event, 0)"
+                                            class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
+                                                data-lucide="x" class="w-3 h-3"></i></button>
+                                    </div>
+                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                        onclick="triggerPhotoUpload(1)">
+                                        <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
+                                                class="w-5 h-5"></i></div>
+                                        <img class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl"
+                                            id="preview-1">
+                                        <button type="button" onclick="clearPhoto(event, 1)"
+                                            class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
+                                                data-lucide="x" class="w-3 h-3"></i></button>
+                                    </div>
+                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                        onclick="triggerPhotoUpload(2)">
+                                        <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
+                                                class="w-5 h-5"></i></div>
+                                        <img class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl"
+                                            id="preview-2">
+                                        <button type="button" onclick="clearPhoto(event, 2)"
+                                            class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
+                                                data-lucide="x" class="w-3 h-3"></i></button>
+                                    </div>
+                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                        onclick="triggerPhotoUpload(3)">
+                                        <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
+                                                class="w-5 h-5"></i></div>
+                                        <img class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl"
+                                            id="preview-3">
+                                        <button type="button" onclick="clearPhoto(event, 3)"
+                                            class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
+                                                data-lucide="x" class="w-3 h-3"></i></button>
+                                    </div>
+                                </div>
+                                <input type="file" id="file-photo" hidden accept="image/*"
+                                    onchange="handlePhotoFile(event)">
+                            </div>
+
+                            <div>
+                                <label class="text-[9px] font-black text-slate-400 uppercase mb-3 block px-1">Dokumen
+                                    Pendukung (PDF)</label>
+                                <div id="pdf-upload-box"
+                                    class="h-[76px] border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center bg-slate-50 cursor-pointer hover:bg-white hover:border-orange-500 transition-all group overflow-hidden"
+                                    onclick="triggerPdfUpload()">
+                                    <div class="flex flex-col items-center gap-1 text-slate-300 group-hover:text-orange-500 transition-colors"
+                                        id="pdf-empty-state">
+                                        <i data-lucide="file-up" class="w-6 h-6"></i>
+                                        <span class="text-[8px] font-black uppercase tracking-widest">Klik untuk Upload
+                                            PDF</span>
+                                    </div>
+                                    <div class="hidden w-full h-full px-5 flex items-center gap-3 bg-orange-50"
+                                        id="pdf-success-state">
+                                        <div
+                                            class="p-2 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-100">
+                                            <i data-lucide="check" class="w-4 h-4"></i></div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[9px] font-black text-orange-900 uppercase truncate">Dokumen
+                                                Terupload</p>
+                                            <p class="text-[7px] font-bold text-orange-600 uppercase">Klik untuk
+                                                mengganti</p>
+                                        </div>
+                                        <button onclick="clearPdf(event)"
+                                            class="p-2 text-orange-300 hover:text-rose-500 transition-colors"><i
+                                                data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                                <input type="file" id="file-pdf" hidden accept=".pdf" onchange="handlePdfFile(event)">
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-4 pt-6 border-t border-slate-100">
+                            <button type="button" onclick="resetForm()"
+                                class="px-8 py-4 bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all">Reset
+                                / Batal</button>
+                            <button type="submit" id="save-btn"
+                                class="flex-1 py-4 bg-orange-600 text-white font-black text-[11px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-orange-100 hover:bg-orange-700 transition-all flex items-center justify-center gap-3">
+                                <i data-lucide="save" class="w-5 h-5"></i> Simpan Data
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div id="section-history" class="animate-in">
+            <div class="space-y-6">
+                <!-- Advanced Filter Bar -->
+                <div
+                    class="bg-orange-600 p-4 rounded-xl shadow-xl shadow-orange-900/20 flex flex-wrap items-center gap-4 border border-orange-500">
+                    <div class="flex-1 min-w-[250px] relative">
+                        <i data-lucide="search"
+                            class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                        <input type="text" id="search-input" placeholder="Cari uraian, penyedia, atau penerima..."
+                            class="w-full h-12 pl-12 pr-4 bg-white border border-transparent rounded-xl text-[11px] font-black text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-orange-400 transition-all outline-none">
+                    </div>
+
+                    <div class="w-48">
+                        <select id="filter-unit"
+                            class="w-full h-12 px-4 bg-white border border-transparent rounded-xl text-[10px] font-black text-slate-800 appearance-none cursor-pointer focus:ring-2 focus:ring-orange-400 transition-all outline-none">
+                            <option value="Semua" class="text-slate-800">Semua Unit</option>
+                            <option value="PPSDI Raharjo" class="text-slate-800">PPSDI Raharjo</option>
+                            <option value="RPSLU Mojomulyo" class="text-slate-800">RPSLU Mojomulyo</option>
+                            <option value="RPSA Pamardi Siwi" class="text-slate-800">RPSA Pamardi Siwi</option>
+                            <option value="RPS PMKS Gondang" class="text-slate-800">RPS PMKS Gondang</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-3 bg-white px-5 rounded-xl border border-transparent h-12">
+                        <input type="month" id="filter-start"
+                            class="bg-transparent text-[10px] font-black text-slate-800 outline-none">
+                        <span class="text-slate-400 text-[9px] font-black">S/D</span>
+                        <input type="month" id="filter-end"
+                            class="bg-transparent text-[10px] font-black text-slate-800 outline-none">
+                    </div>
+
+                    <button onclick="resetFilters()"
+                        class="h-12 w-12 flex items-center justify-center bg-orange-700/50 hover:bg-orange-800 rounded-xl text-white transition-all border border-white/10 shadow-inner"
+                        title="Reset Filter">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+
+                    <div class="h-8 w-px bg-white/20 mx-1 hidden lg:block"></div>
+
+                    <button onclick="exportExcel()"
+                        class="h-12 px-6 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border border-emerald-500">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Excel
+                    </button>
+                </div>
+
+                <!-- Stats Summary -->
+                <div class="flex flex-wrap justify-end gap-6 px-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-orange-100 rounded-2xl text-orange-600 shadow-inner"><i
+                                data-lucide="database" class="w-4 h-4"></i></div>
+                        <div>
+                            <p class="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">Total Entri</p>
+                            <p id="stat-count" class="text-sm font-black text-slate-900 leading-none">0</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-emerald-100 rounded-2xl text-emerald-600 shadow-inner"><i
+                                data-lucide="banknote" class="w-4 h-4"></i></div>
+                        <div>
+                            <p class="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">Akumulasi
+                                Realisasi</p>
+                            <p id="stat-total" class="text-sm font-black text-slate-900 leading-none">Rp 0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto no-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-100">
+                                    <th class="px-6 py-5 text-center w-16">No</th>
+                                    <th class="px-6 py-5">Unit & Tanggal</th>
+                                    <th class="px-6 py-5">Uraian & Kategori</th>
+                                    <th class="px-6 py-5">Vendor & Penerima</th>
+                                    <th class="px-6 py-5 text-right">Volume</th>
+                                    <th class="px-6 py-5 text-right">Total (Rp)</th>
+                                    <th class="px-6 py-5 text-center w-32">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="divide-y divide-slate-50">
+                                <!-- Data rows injected here -->
+                                <tr>
+                                    <td colspan="7" class="px-6 py-20 text-center">
+                                        <div class="flex flex-col items-center gap-4 text-slate-300">
+                                            <i data-lucide="loader-2"
+                                                class="w-10 h-10 animate-spin text-orange-500"></i>
+                                            <p class="text-[10px] font-black uppercase tracking-widest">Menghubungkan ke
+                                                Database...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Section -->
+        <div id="section-database" class="hidden animate-in">
+            <div class="max-w-2xl mx-auto py-10">
+                <div class="bg-white rounded-[3rem] shadow-2xl p-12 border border-slate-200 text-center space-y-10">
+                    <div
+                        class="w-24 h-24 bg-orange-50 text-orange-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
+                        <i data-lucide="database-zap" class="w-12 h-12"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Manajemen Cloud
+                            Storage</h3>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-xs mx-auto leading-relaxed">
+                            Ekspor dan Impor Data Terpusat SIPANDU</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                        <button onclick="requestBackup()"
+                            class="group flex flex-col items-center gap-5 p-10 bg-slate-50 border border-slate-100 rounded-[2.5rem] hover:bg-orange-600 hover:text-white transition-all shadow-sm active:scale-95">
+                            <div
+                                class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:bg-white/20 transition-colors">
+                                <i data-lucide="download" class="w-8 h-8 text-orange-600 group-hover:text-white"></i>
+                            </div>
+                            <span class="font-black text-[9px] uppercase tracking-widest">Backup JSON</span>
+                        </button>
+
+                        <button onclick="requestRestore()"
+                            class="group flex flex-col items-center gap-5 p-10 bg-slate-50 border border-slate-100 rounded-[2.5rem] hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95">
+                            <div
+                                class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:bg-white/20 transition-colors">
+                                <i data-lucide="upload-cloud"
+                                    class="w-8 h-8 text-emerald-600 group-hover:text-white"></i>
+                            </div>
+                            <span class="font-black text-[9px] uppercase tracking-widest">Restore JSON</span>
+                        </button>
+                    </div>
+
+                    <input type="file" id="restore-input" hidden accept=".json" onchange="processRestore(event)">
+
+                    <div class="pt-10 border-t border-slate-100 flex flex-col items-center gap-2">
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Database ID:</p>
+                        <span
+                            class="bg-orange-50 px-4 py-1.5 rounded-full text-[9px] font-black text-orange-600 border border-orange-100 shadow-sm">yewkffbatvrbtfliikia.supabase.co</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const DB_TABLE = 'belanja_lainnya';
+        const PIN_ADMIN = "888";
+
+        // Cloudinary
+        const CLOUDINARY_CLOUD = "dkxehjgu0";
+        const CLOUDINARY_PRESET = "belanja_pakaian"; // Shared preset
+
+        // --- STATE ---
+        let rawData = [];
+        let currentTab = 'history';
+        let photos = [null, null, null, null];
+        let documentUrl = null;
+        let isSubmitting = false;
+        let pinCallback = null;
+
+        // --- INITIALIZATION ---
+        async function init() {
+            lucide.createIcons();
+            setupAutoCalculate();
+            await fetchData();
+            switchTab('history');
+        }
+
+        function setupAutoCalculate() {
+            const vol = document.getElementById('volume');
+            const hs = document.getElementById('harga_satuan');
+            const display = document.getElementById('nominal-display');
+
+            const calculate = () => {
+                const v = parseFloat(vol.value) || 0;
+                const h = parseFloat(hs.value.replace(/\D/g, "")) || 0;
+                display.innerText = "Rp " + formatRibuan(v * h);
+            };
+
+            vol.addEventListener('input', calculate);
+            hs.addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                e.target.value = formatRibuan(v);
+                calculate();
+            });
+        }
+
+        // --- DATABASE OPS ---
+        async function fetchData() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLE)
+                    .select('*')
+                    .order('nomor_bp', { ascending: false, nullsFirst: false })
+                    .order('tanggal_belanja', { ascending: false });
+
+                if (error) throw error;
+                rawData = data || [];
+                renderTable();
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                showToast("Gagal memuat data!", "error");
+            }
+        }
+
+        function renderTable() {
+            const body = document.getElementById('table-body');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const unit = document.getElementById('filter-unit').value;
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
+
+            let filtered = rawData.filter(item => {
+                const matchSearch = (item.uraian?.toLowerCase() || "").includes(search) ||
+                    (item.penyedia?.toLowerCase() || "").includes(search) ||
+                    (item.penerima_barang?.toLowerCase() || "").includes(search);
+                const matchUnit = unit === 'Semua' || item.unit_kerja === unit;
+
+                let matchDate = true;
+                if (start || end) {
+                    const itemMonth = item.tanggal_belanja?.substring(0, 7);
+                    if (start && itemMonth < start) matchDate = false;
+                    if (end && itemMonth > end) matchDate = false;
+                }
+                return matchSearch && matchUnit && matchDate;
+            });
+
+            // Update Stats
+            document.getElementById('stat-count').innerText = filtered.length;
+            const totalVal = filtered.reduce((acc, curr) => acc + (parseFloat(curr.nominal) || 0), 0);
+            document.getElementById('stat-total').innerText = "Rp " + formatRibuan(totalVal);
+
+            if (filtered.length === 0) {
+                body.innerHTML = `<tr><td colspan="7" class="px-6 py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">Tidak ada data ditemukan</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = filtered.map((item, idx) => `
+                <tr class="group hover:bg-slate-50 transition-all ${item.is_locked ? 'bg-slate-50/50 opacity-70' : ''}">
+                    <td class="px-6 py-5 text-center font-black text-slate-300 text-[10px]">${idx + 1}</td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[9px] font-black text-orange-600 uppercase tracking-tighter">${item.unit_kerja}</span>
+                            <span class="text-[11px] font-bold text-slate-800 flex items-center gap-1.5"><i data-lucide="calendar" class="w-3 h-3 opacity-30"></i> ${item.tanggal_belanja}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col gap-1 max-w-xs">
+                            <span class="text-[11px] font-black text-slate-800 leading-snug line-clamp-2 uppercase">${item.uraian}</span>
+                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <i data-lucide="tag" class="w-3 h-3 opacity-50"></i> ${item.jenis_belanja || 'UMUM'}
+                                ${item.document_url ? '<i data-lucide="file-text" class="w-3 h-3 text-emerald-500"></i>' : ''}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] font-bold text-slate-700 flex items-center gap-1.5"><i data-lucide="store" class="w-3 h-3 opacity-30"></i> ${item.penyedia}</span>
+                            <span class="text-[8px] font-black text-slate-400 uppercase flex items-center gap-1.5"><i data-lucide="user" class="w-3 h-3 opacity-30"></i> ${item.penerima_barang}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 text-right">
+                        <span class="inline-block px-3 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase">${item.volume} ${item.satuan}</span>
+                    </td>
+                    <td class="px-6 py-5 text-right font-black text-slate-900 text-[11px]">Rp ${formatRibuan(item.nominal)}</td>
+                    <td class="px-6 py-5">
+                        <div class="flex justify-center gap-1.5">
+                            <button onclick="requestPrint(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-sky-500 hover:text-white transition-all shadow-sm" title="Cetak Report"><i data-lucide="printer" class="w-4 h-4"></i></button>
+                            ${!item.is_locked ? `
+                                <button onclick="editEntry(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm" title="Ubah Data"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="requestLock(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="Kunci Data"><i data-lucide="unlock" class="w-4 h-4"></i></button>
+                                <button onclick="requestDelete(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Hapus Data"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            ` : `
+                                <button onclick="requestLock(${idx}, true)" class="p-2 bg-slate-900 text-orange-400 rounded-xl hover:bg-orange-500 hover:text-white transition-all shadow-sm" title="Buka Kunci"><i data-lucide="lock" class="w-4 h-4"></i></button>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- FORM LOGIC ---
+        document.getElementById('belanja-form').onsubmit = async (e) => {
+            e.preventDefault();
+            if (isSubmitting) return;
+
+            const btn = document.getElementById('save-btn');
+            const id = document.getElementById('entry-id').value;
+            const hs = parseFloat(document.getElementById('harga_satuan').value.replace(/\D/g, "")) || 0;
+            const vol = parseFloat(document.getElementById('volume').value) || 0;
+
+            const payload = {
+                unit_kerja: document.getElementById('unit_kerja').value,
+                tanggal_belanja: document.getElementById('tanggal_belanja').value,
+                nomor_bp: document.getElementById('nomor_bp').value,
+                jenis_belanja: document.getElementById('jenis_belanja').value,
+                uraian: document.getElementById('uraian').value,
+                penyedia: document.getElementById('penyedia').value,
+                penerima_barang: document.getElementById('penerima_barang').value,
+                volume: vol,
+                satuan: document.getElementById('satuan').value,
+                harga_satuan: hs,
+                nominal: hs * vol,
+                photos: photos.filter(p => p !== null),
+                document_url: documentUrl,
+                updated_at: new Date().toISOString()
+            };
+
+            try {
+                isSubmitting = true;
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Menyimpan...`;
+                lucide.createIcons();
+
+                let error;
+                if (id) {
+                    ({ error } = await supabaseClient.from(DB_TABLE).update(payload).eq('id', id));
+                } else {
+                    ({ error } = await supabaseClient.from(DB_TABLE).insert([payload]));
+                }
+
+                if (error) throw error;
+                showToast("Data Berhasil Disimpan!", "success");
+                resetForm();
+                await fetchData();
+                switchTab('history');
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal menyimpan: " + err.message, "error");
+            } finally {
+                isSubmitting = false;
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i> Simpan Data`;
+                lucide.createIcons();
+            }
+        };
+
+        function editEntry(idx) {
+            const item = rawData[idx]; // Fixed logic for edit
+            if (!item) return;
+
+            document.getElementById('form-title').innerText = "Edit Data Belanja";
+            document.getElementById('entry-id').value = item.id;
+            document.getElementById('unit_kerja').value = item.unit_kerja;
+            document.getElementById('tanggal_belanja').value = item.tanggal_belanja;
+            document.getElementById('nomor_bp').value = item.nomor_bp;
+            document.getElementById('jenis_belanja').value = item.jenis_belanja;
+            document.getElementById('uraian').value = item.uraian;
+            document.getElementById('penyedia').value = item.penyedia;
+            document.getElementById('penerima_barang').value = item.penerima_barang;
+            document.getElementById('volume').value = item.volume;
+            document.getElementById('satuan').value = item.satuan;
+            document.getElementById('harga_satuan').value = formatRibuan(item.harga_satuan);
+
+            // Set photos
+            photos = [null, null, null, null];
+            (item.photos || []).forEach((url, i) => { if (i < 4) photos[i] = url; });
+            updatePhotoUI();
+
+            // Set PDF
+            documentUrl = item.document_url;
+            updatePdfUI();
+
+            document.getElementById('nominal-display').innerText = "Rp " + formatRibuan(item.nominal);
+            switchTab('input');
+        }
+
+        // --- MEDIA HANDLERS (Cloudinary) ---
+        let currentPhotoIdx = -1;
+        function triggerPhotoUpload(idx) {
+            currentPhotoIdx = idx;
+            document.getElementById('file-photo').click();
+        }
+
+        async function handlePhotoFile(e) {
+            const file = e.target.files[0];
+            if (!file || currentPhotoIdx === -1) return;
+
+            const slot = document.querySelectorAll('.photo-slot')[currentPhotoIdx];
+            slot.classList.add('opacity-50');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_PRESET);
+
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/upload`, {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+                if (data.secure_url) {
+                    photos[currentPhotoIdx] = data.secure_url;
+                    updatePhotoUI();
+                }
+            } catch (err) { showToast("Gagal upload foto", "error"); }
+            finally { slot.classList.remove('opacity-50'); e.target.value = ''; }
+        }
+
+        function updatePhotoUI() {
+            photos.forEach((url, i) => {
+                const img = document.getElementById('preview-' + i);
+                const box = img.parentElement;
+                const btn = box.querySelector('button');
+                const placeholder = box.querySelector('div');
+
+                if (url) {
+                    img.src = url;
+                    img.classList.remove('hidden');
+                    btn.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    img.classList.add('hidden');
+                    btn.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                }
+            });
+        }
+
+        function clearPhoto(e, idx) {
+            e.stopPropagation();
+            photos[idx] = null;
+            updatePhotoUI();
+        }
+
+        function triggerPdfUpload() { document.getElementById('file-pdf').click(); }
+        async function handlePdfFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const box = document.getElementById('pdf-upload-box');
+            box.classList.add('opacity-50');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_PRESET);
+
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/upload`, {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+                if (data.secure_url) {
+                    documentUrl = data.secure_url;
+                    updatePdfUI();
+                }
+            } catch (err) { showToast("Gagal upload PDF", "error"); }
+            finally { box.classList.remove('opacity-50'); e.target.value = ''; }
+        }
+
+        function updatePdfUI() {
+            const empty = document.getElementById('pdf-empty-state');
+            const success = document.getElementById('pdf-success-state');
+            if (documentUrl) {
+                empty.classList.add('hidden');
+                success.classList.remove('hidden');
+            } else {
+                empty.classList.remove('hidden');
+                success.classList.add('hidden');
+            }
+        }
+
+        function clearPdf(e) {
+            e.stopPropagation();
+            documentUrl = null;
+            updatePdfUI();
+        }
+
+        // --- SECURITY (PIN) ---
+        function requestDelete(idx) {
+            const item = rawData[idx];
+            openPinModal(() => deleteConfirm(item.id));
+        }
+
+        function requestLock(idx, isLocked = false) {
+            const item = rawData[idx];
+            openPinModal(() => lockConfirm(item.id, !isLocked));
+        }
+
+        function openPinModal(callback) {
+            pinCallback = callback;
+            document.getElementById('pin-modal').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            pinCallback = null;
+        }
+
+        async function confirmPinAction() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin !== PIN_ADMIN) {
+                showToast("PIN Akses Salah!", "error");
+                return;
+            }
+            if (pinCallback) await pinCallback();
+            closePinModal();
+        }
+
+        async function deleteConfirm(id) {
+            try {
+                const { error } = await supabaseClient.from(DB_TABLE).delete().eq('id', id);
+                if (error) throw error;
+                showToast("Data Dihapus!", "success");
+                await fetchData();
+            } catch (err) { showToast("Gagal menghapus", "error"); }
+        }
+
+        async function lockConfirm(id, status) {
+            try {
+                const { error } = await supabaseClient.from(DB_TABLE).update({ is_locked: status }).eq('id', id);
+                if (error) throw error;
+                showToast(status ? "Data Terkunci!" : "Kunci Dibuka!", "success");
+                await fetchData();
+            } catch (err) { showToast("Gagal mengubah status kunci", "error"); }
+        }
+
+        // --- UI UTILS ---
+        function switchTab(tab) {
+            currentTab = tab;
+            ['input', 'history', 'database'].forEach(t => {
+                document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
+                document.getElementById('tab-' + t).classList.toggle('tab-active', t === tab);
+            });
+            if (tab === 'history') fetchData();
+            lucide.createIcons();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-unit').value = 'Semua';
+            document.getElementById('filter-start').value = '';
+            document.getElementById('filter-end').value = '';
+            renderTable();
+        }
+
+        function formatRibuan(v) {
+            if (!v) return "0";
+            const s = v.toString().replace(/\D/g, "");
+            return new Intl.NumberFormat('id-ID').format(s);
+        }
+
+        function showToast(msg, type = 'success') {
+            const el = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = msg;
+            el.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 rounded-full shadow-2xl font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 transition-all duration-300 opacity-100 translate-y-0 ${type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white'}`;
+
+            iconEl.innerHTML = type === 'error' ? '<i data-lucide="alert-circle" class="w-4 h-4"></i>' : '<i data-lucide="check-circle" class="w-4 h-4"></i>';
+            lucide.createIcons();
+
+            setTimeout(() => {
+                el.classList.add('opacity-0', '-translate-y-4');
+                el.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        function resetForm() {
+            document.getElementById('belanja-form').reset();
+            document.getElementById('entry-id').value = '';
+            document.getElementById('form-title').innerText = "Input Belanja Baru";
+            document.getElementById('nominal-display').innerText = "Rp 0";
+            photos = [null, null, null, null];
+            documentUrl = null;
+            updatePhotoUI();
+            updatePdfUI();
+        }
+
+        // --- DATABASE MANAGEMENT ---
+        function requestBackup() {
+            openPinModal(() => {
+                const blob = new Blob([JSON.stringify(rawData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `BACKUP_BELANJA_LAIN_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                showToast("Backup berhasil diunduh");
+            });
+        }
+
+        function requestRestore() { openPinModal(() => document.getElementById('restore-input').click()); }
+
+        async function processRestore(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const json = JSON.parse(ev.target.result);
+                    let dataToRestore = null;
+
+                    if (Array.isArray(json)) {
+                        dataToRestore = json;
+                    } else if (json.reports && Array.isArray(json.reports)) {
+                        dataToRestore = json.reports;
+                    }
+
+                    if (!dataToRestore) throw new Error("Format data tidak valid!");
+
+                    showToast(`Memproses ${dataToRestore.length} data...`, "success");
+
+                    // Chunking restore
+                    for (let i = 0; i < dataToRestore.length; i += 20) {
+                        const chunk = dataToRestore.slice(i, i + 20).map(item => {
+                            const { id, created_at, updated_at, ...clean } = item;
+                            return { 
+                                ...clean, 
+                                unit_kerja: clean.unit_kerja || clean.unitPelayanan || 'PPSDI Raharjo Sragen',
+                                updated_at: new Date().toISOString() 
+                            };
+                        });
+                        const { error } = await supabaseClient.from(DB_TABLE).insert(chunk);
+                        if (error) throw error;
+                    }
+                    showToast("Restore Berhasil!", "success");
+                    await fetchData();
+                } catch (err) { showToast("Gagal Restore: " + err.message, "error"); }
+                finally { e.target.value = ''; }
+            };
+            reader.readAsText(file);
+        }
+
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+
+        function exportExcel() {
+            if (rawData.length === 0) return showToast("Tidak ada data!", "error");
+            const worksheet = XLSX.utils.json_to_sheet(rawData.map((item, idx) => ({
+                "No": idx + 1,
+                "Unit": item.unit_kerja,
+                "Tanggal": item.tanggal_belanja,
+                "No BP": item.nomor_bp,
+                "Kategori": item.jenis_belanja,
+                "Uraian": item.uraian,
+                "Penyedia": item.penyedia,
+                "Penerima": item.penerima_barang,
+                "Volume": item.volume,
+                "Satuan": item.satuan,
+                "Harga": item.harga_satuan,
+                "Total": item.nominal
+            })));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Belanja Lainnya");
+            XLSX.writeFile(workbook, `REKAP_BELANJA_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        // --- PRINTING ---
+        let currentPrintIdx = -1;
+        function requestPrint(idx) {
+            currentPrintIdx = idx;
+            const item = rawData[idx];
+            document.getElementById('print-modal').classList.remove('hidden');
+            document.getElementById('print-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('print-receiver').value = item.penerima_barang;
+        }
+
+        function closePrintModal() { document.getElementById('print-modal').classList.add('hidden'); }
+
+        function generateReport() {
+            const item = rawData[currentPrintIdx];
+            const date = document.getElementById('print-date').value;
+            const receiver = document.getElementById('print-receiver').value;
+            const formattedDate = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const activePhotos = (item.photos || []).filter(p => p);
+
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html>
+                <head>
+                    <title>SIPANDU - LAPORAN REALISASI</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+                        @page { size: 215mm 330mm; margin: 15mm 20mm; }
+                        body { font-family: 'Inter', sans-serif; padding: 0; margin: 0; font-size: 11pt; color: #000; line-height: 1.5; }
+                        .title { text-align: center; font-weight: 900; font-size: 16pt; text-decoration: underline; text-transform: uppercase; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        th { text-align: left; width: 180px; padding: 8px 0; font-weight: 400; border-bottom: 1px solid #eee; }
+                        td { padding: 8px 0; font-weight: 700; border-bottom: 1px solid #eee; }
+                        .total-box { border: 2px solid #000; padding: 15px; text-align: center; font-weight: 900; font-size: 14pt; margin: 20px 0; background: #f8fafc !important; -webkit-print-color-adjust: exact; }
+                        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
+                        .photo-grid img { width: 100%; height: 250px; object-fit: cover; border: 1px solid #ccc; border-radius: 8px; }
+                        .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
+                        .sig-box { width: 250px; text-align: center; }
+                        .sig-name { margin-top: 70px; font-weight: 900; text-decoration: underline; text-transform: uppercase; }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">DOKUMENTASI REALISASI BELANJA</div>
+                    <table>
+                        <tr><th>Unit Kerja</th><td>: ${item.unit_kerja}</td></tr>
+                        <tr><th>Tanggal Belanja</th><td>: ${item.tanggal_belanja}</td></tr>
+                        <tr><th>Nomor BP / Bukti</th><td>: ${item.nomor_bp || '-'}</td></tr>
+                        <tr><th>Kategori</th><td>: ${item.jenis_belanja}</td></tr>
+                        <tr><th>Uraian Detail</th><td>: ${item.uraian}</td></tr>
+                        <tr><th>Penyedia / Toko</th><td>: ${item.penyedia}</td></tr>
+                        <tr><th>Volume & Harga</th><td>: ${item.volume} ${item.satuan} x Rp ${formatRibuan(item.harga_satuan)}</td></tr>
+                    </table>
+                    <div class="total-box">TOTAL PEMBAYARAN: Rp ${formatRibuan(item.nominal)}</div>
+                    <div class="photo-grid">
+                        ${activePhotos.map(p => `<img src="${p}" />`).join('')}
+                    </div>
+                    <div class="signature">
+                        <div class="sig-box">
+                            Sragen, ${formattedDate}<br/>Penerima Barang,<br/><br/>
+                            <p class="sig-name">${receiver}</p>
+                        </div>
+                    </div>
+                    <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }<\/script>
+                </body>
+                </html>
+            `);
+            win.document.close();
+            closePrintModal();
+        }
+
+        // --- SEARCH LISTENERS ---
+        document.getElementById('search-input').addEventListener('input', renderTable);
+        document.getElementById('filter-unit').addEventListener('change', renderTable);
+        document.getElementById('filter-start').addEventListener('change', renderTable);
+        document.getElementById('filter-end').addEventListener('change', renderTable);
+
+        // START
+        init();
+    </script>
+</body>
+
+</html>

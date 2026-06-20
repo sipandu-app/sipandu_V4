@@ -1,0 +1,1634 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BEND 23 - Daftar Belanja</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        html { font-size: 13px; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        #main-table { table-layout: fixed; width: 100%; min-width: 1000px; }
+        
+        #table-head th { 
+            position: sticky; 
+            top: 0; 
+            z-index: 50; 
+            background-color: #0f172a;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10">
+
+    <header class="bg-slate-900 sticky top-0 z-[100] px-4 py-2 text-white shadow-2xl border-b-2 border-emerald-500">
+        <div class="container mx-auto px-2 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="bg-emerald-500 p-1 rounded-xl -rotate-6 shadow-xl"><i data-lucide="shopping-bag" class="w-4 h-4 text-slate-900"></i></div>
+                    <div>
+                        <h1 class="text-base font-black italic tracking-tighter uppercase leading-none">BEND-<span class="text-emerald-400 font-black italic text-[16px] ml-0.5">23</span></h1>
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5"></p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center gap-1 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50">
+                            <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> Settings
+                    </button>
+                    <button onclick="switchTab('nomor-surat')" id="tab-nomor-surat" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Nomor Surat
+                    </button>
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 bg-emerald-500 text-slate-900">
+                        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> CETAK BEND23
+                    </button>
+                    <button onclick="switchTab('rekap')" id="tab-rekap" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i> Rekap UNIT KERJA
+                    </button>
+                    <a href="apbd.html" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> REALISASI
+                    </a>
+                </nav>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-end">
+                    <div class="hidden text-[8px] text-slate-500 uppercase font-black tracking-widest">Data di DB: <span id="db-count" class="text-emerald-500">0</span></div>
+                    <div id="total-belanja" class="text-sm font-mono font-black text-emerald-400 leading-none tracking-tighter">Rp 0</div>
+                </div>
+                <div class="h-6 w-[1px] bg-slate-800"></div>
+                <button onclick="init()" class="p-2 hover:bg-slate-800 rounded-lg transition-all text-slate-400 hover:text-white">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Dashboard Tab -->
+        <div id="content-dashboard" class="tab-content">
+            <!-- Filter Bar -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 space-y-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bulan</label>
+                        <select id="filter-bulan" onchange="handleFilterChange()" class="bg-slate-50 text-slate-900 text-[11px] font-bold px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all">
+                            <option value="0">Januari</option>
+                            <option value="1">Februari</option>
+                            <option value="2">Maret</option>
+                            <option value="3">April</option>
+                            <option value="4">Mei</option>
+                            <option value="5">Juni</option>
+                            <option value="6">Juli</option>
+                            <option value="7">Agustus</option>
+                            <option value="8">September</option>
+                            <option value="9">Oktober</option>
+                            <option value="10">November</option>
+                            <option value="11">Desember</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tahun</label>
+                        <select id="filter-tahun" onchange="handleFilterChange()" class="bg-slate-50 text-slate-900 text-[11px] font-bold px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all">
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Hierarchy Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Program</label>
+                        <select id="h-filter-program" onchange="handleHierarchyChange('program')" class="bg-slate-50 text-slate-900 text-[10px] font-bold px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all truncate">
+                            <option value="all">SEMUA PROGRAM</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Kegiatan</label>
+                        <select id="h-filter-kegiatan" onchange="handleHierarchyChange('kegiatan')" class="bg-slate-50 text-slate-900 text-[10px] font-bold px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all truncate">
+                            <option value="all">SEMUA KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sub Kegiatan</label>
+                        <select id="h-filter-sub_kegiatan" onchange="handleHierarchyChange('sub_kegiatan')" class="bg-slate-50 text-slate-900 text-[10px] font-bold px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all truncate">
+                            <option value="all">SEMUA SUB KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Rekening</label>
+                        <select id="h-filter-rekening" onchange="handleHierarchyChange('rekening')" class="bg-slate-50 text-slate-900 text-[10px] font-bold px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all truncate">
+                            <option value="all">SEMUA REKENING</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto no-scrollbar">
+                    <table id="main-table" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-amber-400 text-[10px] font-black uppercase tracking-wider">
+                                <th class="px-4 py-4 w-[150px] border-r border-slate-800">Rekening</th>
+                                <th class="px-4 py-4 border-r border-slate-800">Uraian Belanja</th>
+                                <th class="px-4 py-4 w-[180px] border-r border-slate-800">Penerima</th>
+                                <th class="px-4 py-4 w-[120px] border-r border-slate-800">Tanggal</th>
+                                <th class="px-4 py-4 w-[150px] border-r border-slate-800">No BP</th>
+                                <th class="px-4 py-4 w-[120px] text-right border-r border-slate-800">Nominal</th>
+                                <th class="px-4 py-4 w-[90px] text-right border-r border-slate-800">PPN</th>
+                                <th class="px-4 py-4 w-[90px] text-right border-r border-slate-800">PPH</th>
+                                <th class="px-4 py-4 w-[100px] text-center bg-emerald-900">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-100">
+                            <!-- Data injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rekap Tab -->
+        <div id="content-rekap" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="text-emerald-500"></i> Rekapitulasi Belanja Per Unit Kerja
+                    </h2>
+                    <div class="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-500 uppercase tracking-widest">
+                        Tahun: <span id="rekap-tahun-label">2025</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[10px] border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-amber-400 uppercase tracking-widest">
+                                <th class="px-3 py-3 text-left border border-slate-800">Bulan</th>
+                                <th class="px-3 py-3 text-right border border-slate-800">PPS RAHARJO</th>
+                                <th class="px-3 py-3 text-right border border-slate-800">RPS PAMARDI SIWI</th>
+                                <th class="px-3 py-3 text-right border border-slate-800">RPS MOJOMULYO</th>
+                                <th class="px-3 py-3 text-right border border-slate-800">RPS GONDANG</th>
+                                <th class="px-3 py-3 text-right border border-slate-800 bg-emerald-900 text-white">JUMLAH</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rekap-body" class="divide-y divide-slate-100">
+                            <!-- Data injected by JS -->
+                        </tbody>
+                        <tfoot id="rekap-footer">
+                            <!-- Totals injected by JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nomor Surat Tab -->
+        <div id="content-nomor-surat" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                        <i data-lucide="file-text" class="text-emerald-500"></i> Nomor & Tanggal Surat BEND-23
+                    </h2>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Tambah Tanggal:</label>
+                            <input type="date" id="add-nomor-surat-date" class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold w-40 outline-none focus:border-emerald-500">
+                            <button onclick="addNewNomorSuratDate()" class="bg-emerald-500 text-white p-1.5 rounded-lg hover:bg-emerald-600 transition-all">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <button onclick="saveNomorSurat()" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-lg">
+                            <i data-lucide="save" class="w-4 h-4"></i> Simpan
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[10px] border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-amber-400 uppercase tracking-widest">
+                                <th class="px-3 py-3 text-left border border-slate-800 w-32">Tanggal</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">PPS RAHARJO</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS PAMARDI SIWI</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS MOJOMULYO</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS GONDANG</th>
+                                <th class="px-3 py-3 text-center border border-slate-800 w-16">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nomor-surat-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic rows based on dates -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="content-settings" class="tab-content hidden">
+            <!-- Pin Overlay for Settings -->
+            <div id="settings-pin-overlay" class="max-w-5xl mx-auto bg-white/80 backdrop-blur-md rounded-3xl p-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 min-h-[400px]">
+                <div class="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-emerald-500 shadow-2xl mb-6 animate-bounce">
+                    <i data-lucide="lock" class="w-10 h-10"></i>
+                </div>
+                <h3 class="text-xl font-black uppercase tracking-tighter text-slate-900 mb-2">Halaman Terkunci</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Masukkan PIN Otoritas untuk Mengakses Pengaturan</p>
+                
+                <div class="flex gap-3 mb-8">
+                    <input type="password" id="settings-pin-input" maxlength="3" class="w-48 h-16 bg-slate-100 border-2 border-slate-200 rounded-2xl text-center text-4xl font-black tracking-[0.5em] outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner" placeholder="***">
+                </div>
+                
+                <button onclick="verifySettingsPin()" class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-3 hover:bg-emerald-600 transition-all shadow-xl active:scale-95">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i> Buka Pengaturan
+                </button>
+            </div>
+
+            <!-- Settings Content (Initially Hidden) -->
+            <div id="settings-actual-content" class="hidden max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2 text-slate-900">
+                        <i data-lucide="user-cog" class="text-emerald-500"></i> Pengaturan Pejabat
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kuasa Pengguna Anggaran (KPA)</label>
+                            <input type="text" id="set-kpa-nama" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[12px] font-bold px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all" placeholder="Nama KPA">
+                            <input type="text" id="set-kpa-nip" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[11px] font-mono px-4 py-2 rounded-xl border border-slate-200 mt-1" placeholder="NIP KPA">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">PPTK</label>
+                            <input type="text" id="set-pptk-nama" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[12px] font-bold px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all" placeholder="Nama PPTK">
+                            <input type="text" id="set-pptk-nip" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[11px] font-mono px-4 py-2 rounded-xl border border-slate-200 mt-1" placeholder="NIP PPTK">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bendahara Pengeluaran Pembantu</label>
+                            <input type="text" id="set-bendahara-nama" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[12px] font-bold px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all" placeholder="Nama Bendahara">
+                            <input type="text" id="set-bendahara-nip" onchange="saveSettings()" class="bg-slate-50 text-slate-900 text-[11px] font-mono px-4 py-2 rounded-xl border border-slate-200 mt-1" placeholder="NIP Bendahara">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2 text-slate-900">
+                            <i data-lucide="file-text" class="text-emerald-500"></i> Dokumen DPA per Kegiatan
+                        </h2>
+                        <button onclick="addDpaRow()" class="bg-emerald-500 text-slate-900 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-2 hover:bg-emerald-400 transition-all">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah DPA
+                        </button>
+                    </div>
+                    
+                    <div class="">
+                        <table class="w-full text-[10px] border-collapse table-fixed">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-900 uppercase font-black">
+                                    <th class="px-3 py-2 text-left border border-slate-200 w-[45%]">Nama Kegiatan</th>
+                                    <th class="px-3 py-2 text-left border border-slate-200 w-[22.5%]">DPA Murni (No & Tgl)</th>
+                                    <th class="px-3 py-2 text-left border border-slate-200 w-[22.5%]">DPA Perubahan (No & Tgl)</th>
+                                    <th class="px-3 py-2 text-center border border-slate-200 w-16">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dpa-settings-body">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button onclick="saveSettings()" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-lg">
+                            <i data-lucide="save" class="w-4 h-4"></i> Simpan Semua Pengaturan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Pindah Unit -->
+    <div id="modal-move" class="fixed inset-0 z-[1000] hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in duration-200">
+            <div class="bg-slate-900 p-6 text-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-emerald-500 p-2 rounded-xl text-slate-900 shadow-lg"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div>
+                    <div>
+                        <h3 class="font-black uppercase tracking-tighter text-sm">Pindah Unit Kerja</h3>
+                        <p id="move-modal-uraian" class="text-[9px] font-bold uppercase text-emerald-400 line-clamp-1 max-w-[200px]"></p>
+                    </div>
+                </div>
+                <button onclick="closeMoveModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 grid grid-cols-1 gap-3">
+                <button onclick="selectTargetUnit('1')" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-2xl transition-all group text-left">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-emerald-100 group-hover:scale-110 transition-all font-black text-emerald-600">1</div>
+                    <span class="text-[11px] font-black uppercase text-slate-600 group-hover:text-emerald-700">PPS RAHARJO</span>
+                </button>
+                <button onclick="selectTargetUnit('2')" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-2xl transition-all group text-left">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-emerald-100 group-hover:scale-110 transition-all font-black text-emerald-600">2</div>
+                    <span class="text-[11px] font-black uppercase text-slate-600 group-hover:text-emerald-700">RPS PAMARDI SIWI</span>
+                </button>
+                <button onclick="selectTargetUnit('3')" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-2xl transition-all group text-left">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-emerald-100 group-hover:scale-110 transition-all font-black text-emerald-600">3</div>
+                    <span class="text-[11px] font-black uppercase text-slate-600 group-hover:text-emerald-700">RPS MOJOMULYO</span>
+                </button>
+                <button onclick="selectTargetUnit('4')" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-2xl transition-all group text-left">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-emerald-100 group-hover:scale-110 transition-all font-black text-emerald-600">4</div>
+                    <span class="text-[11px] font-black uppercase text-slate-600 group-hover:text-emerald-700">RPS GONDANG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        let supa = null;
+        const appId = 'SIPD_PAGU_ADVANCED_v2';
+        const BULAN_LIST = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        let currentTrxId = null;
+        let currentTrxData = null;
+
+        let state = {
+            data: { pagu: [], realisasi: [] },
+            collapsedUnits: new Set(), // Track collapsed Sub UKs
+            nomorSurat: {}, // Store { dateString: { unitKey: { no: '', tgl: '' } } }
+            settings: {
+                kpaNama: 'SITO RESMI, AKS, MM',
+                kpaNip: '19750924 199803 2 002',
+                pptkNama: '-',
+                pptkNip: '-',
+                bendaharaNama: 'HANIK SUHARTINI, SE',
+                bendaharaNip: '19710314 199303 2 004',
+                dpaList: [
+                    { id: Date.now(), program: 'PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI', kegiatan: 'Administrasi Umum Perangkat Daerah', nomor: '30 Desember 2025 - 00606/DPPA/2026' }
+                ]
+            },
+            filters: {
+                bulan: new Date().getMonth(),
+                tahun: 2026, // Set default ke 2025 karena data biasanya ada di tahun anggaran aktif
+                subUk: 'all',
+                hierarchy: {
+                    program: 'all',
+                    kegiatan: 'all',
+                    sub_kegiatan: 'all',
+                    rekening: 'all'
+                }
+            }
+        };
+
+        const subUkMap = {
+            '1': { ids: ['DI', '1', 1], keywords: ['RAHARJO'], name: 'PPS RAHARJO' },
+            '2': { ids: ['PA', '2', 2], keywords: ['PAMARDI'], name: 'RPS PAMARDI SIWI' },
+            '3': { ids: ['LU', '3', 3], keywords: ['MOJOMULYO'], name: 'RPS MOJOMULYO' },
+            '4': { ids: ['PMKS', '4', 4], keywords: ['GONDANG'], name: 'RPS GONDANG' }
+        };
+
+        const formatRupiah = (num) => {
+            if (num === undefined || num === null || num === '' || num === 0) return '0';
+            const val = typeof num === 'string' ? parseInt(num.replace(/[^0-9]/g, '')) : num;
+            return new Intl.NumberFormat('id-ID').format(val);
+        };
+
+        const getUnitKey = (r) => {
+            const unitCodes = r.subUk || [];
+            const keterangan = (r.keterangan || "").toUpperCase();
+            
+            let matchedUnits = [];
+            ['1', '2', '3', '4'].forEach(key => {
+                const map = subUkMap[key];
+                const matchCode = unitCodes.some(c => map.ids.includes(c));
+                const matchKeyword = map.keywords.some(k => keterangan.includes(k));
+                if (matchCode || matchKeyword) {
+                    matchedUnits.push(key);
+                }
+            });
+
+            if (matchedUnits.length > 1) return '1'; // Shared items go to PPS Raharjo
+            if (matchedUnits.length === 1) return matchedUnits[0];
+            return 'none';
+        };
+
+        const formatDateIndo = (dateStr) => {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const day = parts[2];
+            const monthIdx = parseInt(parts[1]) - 1;
+            const year = parts[0];
+            const monthName = BULAN_LIST[monthIdx] ? BULAN_LIST[monthIdx].toLowerCase() : parts[1];
+            return `${parseInt(day)} ${monthName} ${year}`;
+        };
+
+        async function init() {
+            const dbCountEl = document.getElementById('db-count');
+            try {
+                if (dbCountEl) dbCountEl.innerText = "Menghubungkan...";
+                
+                // Load Settings from LocalStorage
+                const savedSettings = localStorage.getItem('bend23_settings');
+                if (savedSettings) {
+                    state.settings = JSON.parse(savedSettings);
+                }
+                updateSettingsUI();
+
+                // Load Nomor Surat from LocalStorage
+                const savedNomorSurat = localStorage.getItem('bend23_nomor_surat');
+                if (savedNomorSurat) {
+                    state.nomorSurat = JSON.parse(savedNomorSurat);
+                }
+
+                // Sync dropdowns with state
+                document.getElementById('filter-bulan').value = state.filters.bulan;
+                document.getElementById('filter-tahun').value = state.filters.tahun;
+
+                if (typeof supabase === 'undefined') {
+                    throw new Error("Library Supabase tidak dimuat. Periksa koneksi internet.");
+                }
+
+                if (!supa) {
+                    supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+                
+                const { data, error } = await supa
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', appId)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                // Load Config Data (Nomor Surat & Settings)
+                const { data: configData } = await supa
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', appId + '_config')
+                    .maybeSingle();
+
+                if (configData) {
+                    if (configData.pagu) state.nomorSurat = configData.pagu;
+                    if (configData.realisasi) {
+                        state.settings = configData.realisasi;
+                        updateSettingsUI();
+                    }
+                }
+
+                if (data) {
+                    state.data = {
+                        pagu: data.pagu || [],
+                        realisasi: data.realisasi || []
+                    };
+                    
+                    if (dbCountEl) dbCountEl.innerText = state.data.realisasi.length;
+                    
+                    updateHierarchyDropdowns();
+                    render();
+                    renderNomorSurat(); // Selalu render tabel nomor surat setelah data dimuat
+                } else {
+                    if (dbCountEl) dbCountEl.innerText = "0 (App ID Tidak Ditemukan)";
+                    render(); // Call render anyway to show empty state
+                }
+            } catch (err) {
+                console.error("Supabase Init Error:", err);
+                if (dbCountEl) dbCountEl.innerText = "Gagal: " + err.message;
+                render(); // Call render anyway to show error/empty
+            }
+            lucide.createIcons();
+        }
+
+        function switchTab(tabId) {
+            // Update UI
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            
+            // Update Tab Buttons
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-emerald-500', 'text-slate-900');
+                b.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            });
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            activeTab.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            activeTab.classList.add('bg-emerald-500', 'text-slate-900');
+            
+            if (tabId === 'dashboard') render();
+            if (tabId === 'rekap') renderRekap();
+            if (tabId === 'nomor-surat') renderNomorSurat();
+            lucide.createIcons();
+        }
+
+        function updateSettingsUI() {
+            document.getElementById('set-kpa-nama').value = state.settings.kpaNama;
+            document.getElementById('set-kpa-nip').value = state.settings.kpaNip;
+            document.getElementById('set-pptk-nama').value = state.settings.pptkNama;
+            document.getElementById('set-pptk-nip').value = state.settings.pptkNip;
+            document.getElementById('set-bendahara-nama').value = state.settings.bendaharaNama;
+            document.getElementById('set-bendahara-nip').value = state.settings.bendaharaNip;
+            renderDpaSettingsTable();
+        }
+
+        function renderDpaSettingsTable() {
+            const body = document.getElementById('dpa-settings-body');
+            
+            // Get all unique kegiatan with hierarchy info for sorting
+            const kegiatanMap = new Map();
+            state.data.realisasi.forEach(r => {
+                const path = findHierarchy(state.data.pagu, r.rekeningId);
+                if (path && path.length >= 2) {
+                    const kName = path[1].uraian;
+                    if (!kegiatanMap.has(kName)) {
+                        kegiatanMap.set(kName, {
+                            name: kName,
+                            sortKey: `${path[0].kode}-${path[1].kode}`
+                        });
+                    }
+                }
+            });
+            
+            const sortedKegiatan = Array.from(kegiatanMap.values())
+                .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+            body.innerHTML = (state.settings.dpaList || []).map(dpa => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="border border-slate-200 p-2">
+                        <select onchange="updateDpaValue(${dpa.id}, 'kegiatan', this.value)" class="w-full p-2 outline-none bg-transparent font-bold text-slate-900 text-[10px] truncate">
+                            <option value="">Pilih Kegiatan...</option>
+                            ${sortedKegiatan.map(k => `<option value="${k.name}" ${dpa.kegiatan === k.name ? 'selected' : ''}>${k.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="border border-slate-200 p-2">
+                        <input type="text" onchange="updateDpaValue(${dpa.id}, 'nomor_murni', this.value)" class="w-full p-2 outline-none bg-transparent font-mono text-slate-900 text-[10px] font-bold" placeholder="No & Tgl Murni" value="${dpa.nomor_murni || ''}">
+                    </td>
+                    <td class="border border-slate-200 p-2">
+                        <input type="text" onchange="updateDpaValue(${dpa.id}, 'nomor_perubahan', this.value)" class="w-full p-2 outline-none bg-transparent font-mono text-slate-900 text-[10px] font-bold" placeholder="No & Tgl Perubahan" value="${dpa.nomor_perubahan || ''}">
+                    </td>
+                    <td class="border border-slate-200 text-center">
+                        <button onclick="removeDpaRow(${dpa.id})" class="text-rose-600 hover:text-rose-800 p-2 hover:bg-rose-50 rounded-xl transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addDpaRow() {
+            if (!state.settings.dpaList) state.settings.dpaList = [];
+            state.settings.dpaList.push({
+                id: Date.now(),
+                kegiatan: '',
+                nomor_murni: '',
+                nomor_perubahan: ''
+            });
+            renderDpaSettingsTable();
+        }
+
+        function removeDpaRow(id) {
+            state.settings.dpaList = state.settings.dpaList.filter(d => d.id !== id);
+            renderDpaSettingsTable();
+        }
+
+        function updateDpaValue(id, field, value) {
+            const dpa = state.settings.dpaList.find(d => d.id === id);
+            if (dpa) dpa[field] = value;
+        }
+
+        async function saveSettings() {
+            state.settings.kpaNama = document.getElementById('set-kpa-nama').value;
+            state.settings.kpaNip = document.getElementById('set-kpa-nip').value;
+            state.settings.pptkNama = document.getElementById('set-pptk-nama').value;
+            state.settings.pptkNip = document.getElementById('set-pptk-nip').value;
+            state.settings.bendaharaNama = document.getElementById('set-bendahara-nama').value;
+            state.settings.bendaharaNip = document.getElementById('set-bendahara-nip').value;
+            
+            localStorage.setItem('bend23_settings', JSON.stringify(state.settings));
+            
+            try {
+                if (supa) {
+                    const { error } = await supa
+                        .from('sipd_main_document')
+                        .upsert({ 
+                            app_id: appId + '_config', 
+                            pagu: state.nomorSurat, // Pertahankan nomor surat yang ada
+                            realisasi: state.settings
+                        }, { onConflict: 'app_id' });
+
+                    if (error) throw error;
+                }
+                alert("Pengaturan Berhasil Disimpan ke Database");
+            } catch (err) {
+                console.error("Save Settings Error:", err);
+                alert("Pengaturan tersimpan di lokal, tapi gagal ke database: " + err.message);
+            }
+        }
+
+        function verifySettingsPin() {
+            const input = document.getElementById('settings-pin-input');
+            const pin = input.value;
+            if (pin === '888') {
+                document.getElementById('settings-pin-overlay').classList.add('hidden');
+                document.getElementById('settings-actual-content').classList.remove('hidden');
+                input.value = '';
+            } else {
+                alert("PIN Salah! Akses Ditolak.");
+                input.value = '';
+            }
+        }
+
+        function switchTab(tabId) {
+            // Update UI
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            
+            // Handle Settings PIN Protection
+            if (tabId === 'settings') {
+                document.getElementById('settings-pin-overlay').classList.remove('hidden');
+                document.getElementById('settings-actual-content').classList.add('hidden');
+                setTimeout(() => document.getElementById('settings-pin-input').focus(), 100);
+            }
+            
+            // Update Tab Buttons
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-emerald-500', 'text-slate-900');
+                b.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            });
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            activeTab.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            activeTab.classList.add('bg-emerald-500', 'text-slate-900');
+            
+            if (tabId === 'rekap') renderRekap();
+            lucide.createIcons();
+        }
+
+        function renderRekap() {
+            const rekapBody = document.getElementById('rekap-body');
+            const rekapFooter = document.getElementById('rekap-footer');
+            document.getElementById('rekap-tahun-label').innerText = state.filters.tahun;
+
+            // Initialize matrix [Month][Unit]
+            const matrix = Array.from({ length: 12 }, () => ({
+                '1': 0, '2': 0, '3': 0, '4': 0, 'total': 0
+            }));
+
+            const unitTotals = { '1': 0, '2': 0, '3': 0, '4': 0, 'grandTotal': 0 };
+
+            state.data.realisasi.forEach(r => {
+                const parsed = parseDate(r.tanggal);
+                if (!parsed || parsed.year !== state.filters.tahun) return;
+
+                const unitKey = getUnitKey(r);
+
+                if (unitKey !== 'none') {
+                    const nilai = parseInt(r.nilai) || 0;
+                    matrix[parsed.month][unitKey] += nilai;
+                    matrix[parsed.month].total += nilai;
+                    unitTotals[unitKey] += nilai;
+                    unitTotals.grandTotal += nilai;
+                }
+            });
+
+            let htmlBody = '';
+            BULAN_LIST.forEach((bulan, idx) => {
+                const m = matrix[idx];
+                htmlBody += `
+                    <tr class="hover:bg-slate-50 transition-all">
+                        <td class="px-3 py-3 font-black uppercase text-slate-500 border-r border-slate-100">${bulan}</td>
+                        <td class="px-3 py-3 text-right font-mono">${formatRupiah(m['1'])}</td>
+                        <td class="px-3 py-3 text-right font-mono">${formatRupiah(m['2'])}</td>
+                        <td class="px-3 py-3 text-right font-mono">${formatRupiah(m['3'])}</td>
+                        <td class="px-3 py-3 text-right font-mono">${formatRupiah(m['4'])}</td>
+                        <td class="px-3 py-3 text-right font-mono font-black text-emerald-600 bg-emerald-50">${formatRupiah(m.total)}</td>
+                    </tr>
+                `;
+            });
+
+            const htmlFooter = `
+                <tr class="bg-slate-900 text-white font-black uppercase">
+                    <td class="px-3 py-4 border-r border-slate-800">JUMLAH TOTAL</td>
+                    <td class="px-3 py-4 text-right font-mono text-amber-400">${formatRupiah(unitTotals['1'])}</td>
+                    <td class="px-3 py-4 text-right font-mono text-amber-400">${formatRupiah(unitTotals['2'])}</td>
+                    <td class="px-3 py-4 text-right font-mono text-amber-400">${formatRupiah(unitTotals['3'])}</td>
+                    <td class="px-3 py-4 text-right font-mono text-amber-400">${formatRupiah(unitTotals['4'])}</td>
+                    <td class="px-3 py-4 text-right font-mono text-white bg-emerald-700">${formatRupiah(unitTotals.grandTotal)}</td>
+                </tr>
+            `;
+
+            rekapBody.innerHTML = htmlBody;
+            rekapFooter.innerHTML = htmlFooter;
+        }
+
+        function renderNomorSurat() {
+            const body = document.getElementById('nomor-surat-body');
+            
+            // Sort dates descending (newest first)
+            const sortedDates = Object.keys(state.nomorSurat).sort((a, b) => b.localeCompare(a));
+
+            let html = '';
+            sortedDates.forEach(dateStr => {
+                const dateData = state.nomorSurat[dateStr] || {};
+                
+                // Format YYYY-MM-DD to DD-MM-YYYY for display
+                const parts = dateStr.split('-');
+                const displayDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-all">
+                        <td class="px-3 py-4 font-black text-emerald-600 border-r border-slate-100 bg-slate-50/50 text-[12px] mono">${displayDate}</td>
+                        ${['1', '2', '3', '4'].map(unitKey => {
+                            const val = dateData[unitKey] || ''; // Only string now
+                            return `
+                                <td class="px-3 py-2 border-r border-slate-100">
+                                    <input type="text" 
+                                        onchange="updateNomorSuratData('${dateStr}', '${unitKey}', this.value)"
+                                        value="${val}"
+                                        placeholder="Nomor Surat..."
+                                        class="w-full bg-slate-50 border border-slate-200 rounded px-2 py-2 text-[10px] font-bold outline-none focus:border-emerald-500 transition-all">
+                                </td>
+                            `;
+                        }).join('')}
+                        <td class="px-3 py-2 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="editNomorSuratDate('${dateStr}')" class="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-xl transition-all">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="removeNomorSuratDate('${dateStr}')" class="text-rose-600 hover:text-rose-800 p-2 hover:bg-rose-50 rounded-xl transition-all">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (sortedDates.length === 0) {
+                html = `<tr><td colspan="6" class="py-12 text-center text-slate-400 italic font-black uppercase tracking-widest opacity-30">Belum ada data tanggal. Gunakan menu "Tambah Tanggal" di atas.</td></tr>`;
+            }
+
+            body.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function addNewNomorSuratDate() {
+            const input = document.getElementById('add-nomor-surat-date');
+            const dateStr = input.value; // YYYY-MM-DD from date picker
+            
+            if (!dateStr) {
+                alert("Pilih tanggal terlebih dahulu!");
+                return;
+            }
+
+            if (state.nomorSurat[dateStr]) {
+                alert("Tanggal ini sudah ada dalam daftar.");
+                return;
+            }
+
+            // Initialize new date entry with empty strings for each unit
+            state.nomorSurat[dateStr] = {
+                '1': '',
+                '2': '',
+                '3': '',
+                '4': ''
+            };
+
+            input.value = '';
+            renderNomorSurat();
+        }
+
+        function editNomorSuratDate(oldDateStr) {
+            const newDateStr = prompt("Masukkan tanggal baru (YYYY-MM-DD):", oldDateStr);
+            if (newDateStr && newDateStr !== oldDateStr) {
+                if (state.nomorSurat[newDateStr]) {
+                    alert("Tanggal baru sudah ada dalam daftar!");
+                    return;
+                }
+                state.nomorSurat[newDateStr] = state.nomorSurat[oldDateStr];
+                delete state.nomorSurat[oldDateStr];
+                renderNomorSurat();
+            }
+        }
+
+        function removeNomorSuratDate(dateStr) {
+            const parts = dateStr.split('-');
+            const displayDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+            if (confirm(`Hapus data untuk tanggal ${displayDate}?`)) {
+                delete state.nomorSurat[dateStr];
+                renderNomorSurat();
+            }
+        }
+
+        function updateNomorSuratData(dateStr, unitKey, value) {
+            if (!state.nomorSurat[dateStr]) state.nomorSurat[dateStr] = {};
+            state.nomorSurat[dateStr][unitKey] = value;
+        }
+
+        function updateNomorSuratFromDashboard(unitKey, type, value) {
+            const filterMonthStr = (state.filters.bulan + 1).toString().padStart(2, '0');
+            const filterYearStr = state.filters.tahun.toString();
+            
+            const matchingDates = Object.keys(state.nomorSurat)
+                .filter(d => d.slice(5,7) === filterMonthStr && d.slice(0,4) === filterYearStr)
+                .sort((a, b) => b.localeCompare(a));
+            
+            if (matchingDates.length > 0) {
+                const latestDate = matchingDates[0];
+                if (type === 'no') {
+                    state.nomorSurat[latestDate][unitKey] = value;
+                }
+                // Catatan: Tanggal tidak diupdate otomatis ke DB karena formatnya string Indo di dashboard
+            }
+        }
+
+        async function saveNomorSurat() {
+             try {
+                 localStorage.setItem('bend23_nomor_surat', JSON.stringify(state.nomorSurat));
+                 
+                 if (supa) {
+                     const { error } = await supa
+                         .from('sipd_main_document')
+                         .upsert({ 
+                             app_id: appId + '_config', 
+                             pagu: state.nomorSurat,
+                             realisasi: state.settings // Simpan juga settings saat ini agar sinkron
+                         }, { onConflict: 'app_id' });
+
+                     if (error) throw error;
+                 }
+                 
+                 alert("Data Nomor & Tanggal Surat Berhasil Disimpan ke Database");
+             } catch (err) {
+                 console.error("Save Nomor Surat Error:", err);
+                 alert("Gagal menyimpan ke database, tapi tersimpan di lokal: " + err.message);
+             }
+         }
+
+        function handleFilterChange() {
+            state.filters.bulan = parseInt(document.getElementById('filter-bulan').value);
+            state.filters.tahun = parseInt(document.getElementById('filter-tahun').value);
+            
+            // Re-render active tab content
+            if (!document.getElementById('content-dashboard').classList.contains('hidden')) render();
+            if (!document.getElementById('content-rekap').classList.contains('hidden')) renderRekap();
+            if (!document.getElementById('content-nomor-surat').classList.contains('hidden')) renderNomorSurat();
+        }
+
+        function handleHierarchyChange(level) {
+            const val = document.getElementById(`h-filter-${level}`).value;
+            state.filters.hierarchy[level] = val;
+
+            // Reset lower levels
+            if (level === 'program') {
+                state.filters.hierarchy.kegiatan = 'all';
+                state.filters.hierarchy.sub_kegiatan = 'all';
+                state.filters.hierarchy.rekening = 'all';
+            } else if (level === 'kegiatan') {
+                state.filters.hierarchy.sub_kegiatan = 'all';
+                state.filters.hierarchy.rekening = 'all';
+            } else if (level === 'sub_kegiatan') {
+                state.filters.hierarchy.rekening = 'all';
+            }
+
+            updateHierarchyDropdowns();
+            render();
+        }
+
+        function updateHierarchyDropdowns() {
+            const levels = ['program', 'kegiatan', 'sub_kegiatan', 'rekening'];
+            
+            levels.forEach((level, idx) => {
+                const select = document.getElementById(`h-filter-${level}`);
+                let options = [];
+
+                if (level === 'program') {
+                    options = state.data.pagu;
+                } else {
+                    const parentLevel = levels[idx - 1];
+                    const parentId = state.filters.hierarchy[parentLevel];
+                    
+                    if (parentId === 'all') {
+                        options = []; // Can't show children if parent is not selected
+                    } else {
+                        const parent = findInTree(state.data.pagu, parentId);
+                        options = parent ? (parent.children || []) : [];
+                    }
+                }
+
+                // Keep "all" option
+                const currentVal = state.filters.hierarchy[level];
+                select.innerHTML = `<option value="all">SEMUA ${level.replace('_', ' ').toUpperCase()}</option>` + 
+                    options.map(opt => `<option value="${opt.id}" ${opt.id === currentVal ? 'selected' : ''}>${opt.kode} - ${opt.uraian}</option>`).join('');
+            });
+        }
+
+        function findInTree(items, id) {
+            for (const item of items) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findInTree(item.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function getAllChildIds(item) {
+            let ids = [item.id];
+            if (item.children) item.children.forEach(c => ids = ids.concat(getAllChildIds(c)));
+            return ids;
+        }
+
+        function getProgramIds(items, targetProgramName) {
+            let ids = [];
+            const targetUpper = targetProgramName.toUpperCase().replace('REHABILITASI SOSIAL - ', '');
+            
+            items.forEach(item => {
+                const uraian = (item.uraian || "").toUpperCase();
+                
+                // Pencocokan lebih longgar namun terarah
+                let isMatch = uraian.includes(targetUpper);
+                
+                if (!isMatch) {
+                    // Cari kata kunci unik (misal: "Disabilitas", "Lanjut Usia")
+                    const keywords = targetUpper.split(' ').filter(w => w.length > 5);
+                    if (keywords.length > 0) {
+                        isMatch = keywords.every(k => uraian.includes(k));
+                    }
+                }
+
+                if (isMatch) {
+                    ids = ids.concat(getAllChildIds(item));
+                } else if (item.children) {
+                    ids = ids.concat(getProgramIds(item.children, targetProgramName));
+                }
+            });
+            return ids;
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            // Handle YYYY-MM-DD or DD/MM/YYYY
+            const parts = dateStr.split(/[-/.]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    // YYYY-MM-DD
+                    return {
+                        year: parseInt(parts[0]),
+                        month: parseInt(parts[1]) - 1,
+                        day: parseInt(parts[2])
+                    };
+                } else if (parts[2].length === 4) {
+                    // DD-MM-YYYY
+                    return {
+                        year: parseInt(parts[2]),
+                        month: parseInt(parts[1]) - 1,
+                        day: parseInt(parts[0])
+                    };
+                }
+            }
+            // Fallback to native Date if format is unusual
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return null;
+            return {
+                year: d.getFullYear(),
+                month: d.getMonth(),
+                day: d.getDate()
+            };
+        }
+
+        function findHierarchy(list, targetId, path = []) {
+            for (const item of list) {
+                const currentPath = [...path, item];
+                if (item.id === targetId) return currentPath;
+                if (item.children) {
+                    const found = findHierarchy(item.children, targetId, currentPath);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function toggleUnit(unitKey) {
+            if (state.collapsedUnits.has(unitKey)) {
+                state.collapsedUnits.delete(unitKey);
+            } else {
+                state.collapsedUnits.add(unitKey);
+            }
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById('table-body');
+            if (!state.data.realisasi || state.data.realisasi.length === 0) {
+                container.innerHTML = `<tr><td colspan="8" class="py-24 text-center opacity-30 italic font-black uppercase tracking-[0.4em] text-[11px] text-slate-400">Database Realisasi Kosong</td></tr>`;
+                document.getElementById('total-belanja').innerText = "Rp 0";
+                return;
+            }
+
+            let filtered = [];
+
+            // 1. Initial Filtering by Month and Year
+            filtered = state.data.realisasi.filter(r => {
+                const parsed = parseDate(r.tanggal);
+                if (!parsed) return false;
+                return parsed.month === state.filters.bulan && parsed.year === state.filters.tahun;
+            });
+
+            // 2. Hierarchy Filtering
+            const h = state.filters.hierarchy;
+            let activeHierarchyId = 'all';
+            if (h.rekening !== 'all') activeHierarchyId = h.rekening;
+            else if (h.sub_kegiatan !== 'all') activeHierarchyId = h.sub_kegiatan;
+            else if (h.kegiatan !== 'all') activeHierarchyId = h.kegiatan;
+            else if (h.program !== 'all') activeHierarchyId = h.program;
+
+            if (activeHierarchyId !== 'all') {
+                const parent = findInTree(state.data.pagu, activeHierarchyId);
+                if (parent) {
+                    const allowedIds = getAllChildIds(parent);
+                    filtered = filtered.filter(r => allowedIds.includes(r.rekeningId));
+                }
+            }
+
+            // Grouping by Sub UK
+            const groupedByUnit = {
+                '1': [], // PPS Raharjo
+                '2': [], // RPS Pamardi Siwi
+                '3': [], // RPS Mojomulyo
+                '4': [], // RPS Gondang
+                'none': [] // Tanpa Unit
+            };
+
+            filtered.forEach(r => {
+                const unitKey = getUnitKey(r);
+                groupedByUnit[unitKey].push(r);
+            });
+
+            let html = '';
+            let globalTotal = 0;
+
+            Object.keys(groupedByUnit).forEach(unitKey => {
+                const items = groupedByUnit[unitKey];
+                if (items.length === 0 && unitKey !== 'none') return;
+
+                // Sort items by activity/sub-activity hierarchy (Penunjang priority)
+                items.sort((a, b) => {
+                    const getSortInfo = (id) => {
+                        const path = findHierarchy(state.data.pagu, id);
+                        if (!path) return { key: 'ZZZ', isPenunjang: false };
+                        const fullCode = path.map(p => p.kode).join('-');
+                        const programName = path[0] ? (path[0].uraian || "").toUpperCase() : "";
+                        const isPenunjang = programName.includes("PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI");
+                        return { key: fullCode, isPenunjang };
+                    };
+                    const infoA = getSortInfo(a.rekeningId);
+                    const infoB = getSortInfo(b.rekeningId);
+                    if (infoA.isPenunjang && !infoB.isPenunjang) return -1;
+                    if (!infoA.isPenunjang && infoB.isPenunjang) return 1;
+                    return infoA.key.localeCompare(infoB.key);
+                });
+
+                const unitName = unitKey === 'none' ? 'TANPA UNIT / BELUM DISET' : subUkMap[unitKey].name;
+                const bgColor = unitKey === 'none' ? 'bg-slate-100' : 'bg-emerald-50';
+                const textColor = unitKey === 'none' ? 'text-slate-500' : 'text-emerald-700';
+
+                // Calculate Unit Total
+                const unitTotal = items.reduce((sum, r) => sum + (parseInt(r.nilai) || 0), 0);
+                const isCollapsed = state.collapsedUnits.has(unitKey);
+
+                const filterMonthStr = (state.filters.bulan + 1).toString().padStart(2, '0');
+                const filterYearStr = state.filters.tahun.toString();
+                
+                // Fetch saved Nomor & Tgl Surat for this unit from the latest entry in the filtered month
+                let savedNo = '';
+                let savedTgl = '';
+                
+                const matchingDates = Object.keys(state.nomorSurat)
+                    .filter(d => d.slice(5,7) === filterMonthStr && d.slice(0,4) === filterYearStr)
+                    .sort((a, b) => b.localeCompare(a));
+                
+                if (matchingDates.length > 0) {
+                    const latestDate = matchingDates[0];
+                    savedNo = state.nomorSurat[latestDate][unitKey] || '';
+                    savedTgl = formatDateIndo(latestDate);
+                }
+
+                // Unit Header Row (Double click to toggle)
+                html += `
+                    <tr ondblclick="toggleUnit('${unitKey}')" class="${bgColor} font-black text-[10px] uppercase tracking-widest border-y-2 border-slate-200 cursor-pointer select-none hover:brightness-95 transition-all">
+                        <td colspan="9" class="px-4 py-3 ${textColor}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-down'}" class="w-3 h-3"></i>
+                                    <i data-lucide="layout-grid" class="w-3 h-3"></i>
+                                    SUB UK: ${unitName}
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span>${items.length} BARIS</span>
+                                    <span class="bg-white/50 px-2 py-1 rounded border border-current font-mono">TOTAL: Rp ${formatRupiah(unitTotal)}</span>
+                                    
+                                    <div class="flex items-center gap-2 px-3 border-x border-slate-200">
+                                        <div class="flex flex-col">
+                                            <input type="text" id="no-surat-${unitKey}" value="${savedNo}" onchange="updateNomorSuratFromDashboard('${unitKey}', 'no', this.value)" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-32 outline-none focus:border-emerald-500" placeholder="Nomor Surat...">
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <input type="text" id="tgl-surat-${unitKey}" value="${savedTgl}" onchange="updateNomorSuratFromDashboard('${unitKey}', 'tgl', this.value)" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-28 outline-none focus:border-emerald-500" placeholder="Tanggal Surat...">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="event.stopPropagation(); printFilteredData('${unitKey}')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-slate-900 transition-all font-black uppercase text-[9px]">
+                                            <i data-lucide="filter" class="w-3 h-3"></i> Cetak
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                if (isCollapsed) return;
+
+                // Group items by hierarchy (Program -> Kegiatan -> Sub Kegiatan)
+                const hierarchyGroups = {};
+                items.forEach(r => {
+                    const path = findHierarchy(state.data.pagu, r.rekeningId);
+                    let groupId = 'none';
+                    let groupInfo = { program: '-', kegiatan: '-', sub_kegiatan: '-' };
+                    
+                    if (path && path.length >= 3) {
+                        groupId = `${path[0].id}-${path[1].id}-${path[2].id}`;
+                        groupInfo = {
+                            program: `${path[0].kode} - ${path[0].uraian}`,
+                            kegiatan: `${path[1].kode} - ${path[1].uraian}`,
+                            sub_kegiatan: `${path[2].kode} - ${path[2].uraian}`,
+                            path: path
+                        };
+                    }
+                    
+                    if (!hierarchyGroups[groupId]) {
+                        hierarchyGroups[groupId] = { info: groupInfo, items: [] };
+                    }
+                    hierarchyGroups[groupId].items.push(r);
+                });
+
+                Object.keys(hierarchyGroups).forEach(groupId => {
+                    const group = hierarchyGroups[groupId];
+                    const gInfo = group.info;
+                    
+                    // Hierarchy Header Row - REMOVED (Hide black bar per user request)
+
+                    group.items.forEach(r => {
+                        const nilai = parseInt(r.nilai) || 0;
+                        const ppn = parseInt(r.ppn) || 0;
+                        const pph = parseInt(r.pph) || 0;
+                        globalTotal += nilai;
+
+                        // Get Rekening Code from Pagu
+                        let kodeRekening = '-';
+                        if (r.rekeningId) {
+                            const rek = findInTree(state.data.pagu, r.rekeningId);
+                            if (rek) kodeRekening = rek.kode;
+                        }
+
+                        html += `
+                            <tr class="hover:bg-slate-50 transition-colors text-[11px] font-bold text-slate-700">
+                                <td class="px-4 py-3 border-r border-slate-100 font-mono text-emerald-600">${kodeRekening}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 uppercase leading-tight text-slate-900">${r.keterangan || '-'}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 uppercase text-slate-600">${r.penerima || '-'}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 font-mono text-slate-500">${r.tanggal}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 font-mono text-blue-600">${r.noBp || '-'}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 text-right font-mono text-slate-900">${formatRupiah(nilai)}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 text-right font-mono text-orange-500">${formatRupiah(ppn)}</td>
+                                <td class="px-4 py-3 border-r border-slate-100 text-right font-mono text-orange-500">${formatRupiah(pph)}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button onclick="openMoveModal('${r.id}', '${(r.keterangan || "-").replace(/'/g, "\\'")}', '${r.tanggal}', '${nilai}')" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] uppercase font-black flex items-center gap-1 mx-auto">
+                                        <i data-lucide="arrow-right-left" class="w-3 h-3"></i> Pindah
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+            });
+
+            if (html === '') {
+                container.innerHTML = `<tr><td colspan="9" class="py-24 text-center opacity-30 italic font-black uppercase tracking-[0.4em] text-[11px] text-slate-400">Data Belanja Tidak Ditemukan</td></tr>`;
+            } else {
+                container.innerHTML = html + `
+                    <tr class="bg-slate-900 text-white font-black text-[12px] uppercase sticky bottom-0">
+                        <td colspan="5" class="px-4 py-4 text-right tracking-tighter">TOTAL BELANJA</td>
+                        <td class="px-4 py-4 text-right font-mono text-amber-400 border-r border-slate-800">${formatRupiah(globalTotal)}</td>
+                        <td colspan="3" class="bg-slate-800"></td>
+                    </tr>
+                `;
+            }
+            document.getElementById('total-belanja').innerText = `Rp ${formatRupiah(globalTotal)}`;
+            lucide.createIcons();
+        }
+
+        async function openMoveModal(trxId, uraian, tanggal, nilai) {
+            currentTrxId = trxId;
+            currentTrxData = { id: trxId, uraian: uraian, tanggal: tanggal, nilai: nilai };
+            document.getElementById('move-modal-uraian').innerText = uraian;
+            document.getElementById('modal-move').classList.remove('hidden');
+        }
+
+        function closeMoveModal() {
+            document.getElementById('modal-move').classList.add('hidden');
+            currentTrxId = null;
+        }
+
+        async function selectTargetUnit(unitId) {
+            if (!currentTrxId) return;
+            
+            let newSubUk = [];
+            if (unitId === '1') newSubUk = ['DI'];
+            else if (unitId === '2') newSubUk = ['PA'];
+            else if (unitId === '3') newSubUk = ['LU'];
+            else if (unitId === '4') newSubUk = ['PMKS'];
+            else if (unitId === '0') newSubUk = [];
+
+            try {
+                const dbCountEl = document.getElementById('db-count');
+                const originalText = dbCountEl.innerText;
+                dbCountEl.innerText = "Memproses...";
+                
+                closeMoveModal();
+
+                // Get current data
+                const { data: currentDoc } = await supa.from('sipd_main_document').select('*').eq('app_id', appId).maybeSingle();
+                if (!currentDoc) {
+                    dbCountEl.innerText = originalText;
+                    return;
+                }
+
+                const updatedRealisasi = currentDoc.realisasi || [];
+                
+                // Pencarian lebih kuat: Cek ID, atau kombinasi Keterangan + Tanggal + Nilai
+                const idx = updatedRealisasi.findIndex(r => {
+                    const matchId = r.id && currentTrxId && String(r.id) === String(currentTrxId);
+                    const matchFields = r.keterangan === currentTrxData.uraian && 
+                                       r.tanggal === currentTrxData.tanggal && 
+                                       String(r.nilai) === String(currentTrxData.nilai);
+                    return matchId || matchFields;
+                });
+
+                if (idx !== -1) {
+                    updatedRealisasi[idx].subUk = newSubUk;
+                    
+                    const { error } = await supa
+                        .from('sipd_main_document')
+                        .update({ realisasi: updatedRealisasi })
+                        .eq('app_id', appId);
+
+                    if (error) throw error;
+                    
+                    // Update state local
+                    const stateIdx = state.data.realisasi.findIndex(r => {
+                        const matchId = r.id && currentTrxId && String(r.id) === String(currentTrxId);
+                        const matchFields = r.keterangan === currentTrxData.uraian && 
+                                           r.tanggal === currentTrxData.tanggal && 
+                                           String(r.nilai) === String(currentTrxData.nilai);
+                        return matchId || matchFields;
+                    });
+                    if (stateIdx !== -1) state.data.realisasi[stateIdx].subUk = newSubUk;
+                    
+                    alert("Data Berhasil Dipindahkan");
+                    init(); 
+                } else {
+                    alert("Data tidak ditemukan di database. Pastikan data belum dihapus atau diubah di halaman lain.");
+                    dbCountEl.innerText = originalText;
+                }
+            } catch (err) {
+                console.error("Move Error:", err);
+                alert("Gagal memindahkan data: " + err.message);
+                init();
+            }
+        }
+
+        function printFilteredData(unitKeyFilter = null) {
+            const h = state.filters.hierarchy;
+            let filtered = state.data.realisasi.filter(r => {
+                const parsed = parseDate(r.tanggal);
+                if (!parsed) return false;
+                const matchDate = parsed.month === state.filters.bulan && parsed.year === state.filters.tahun;
+                
+                let activeHierarchyId = 'all';
+                if (h.rekening !== 'all') activeHierarchyId = h.rekening;
+                else if (h.sub_kegiatan !== 'all') activeHierarchyId = h.sub_kegiatan;
+                else if (h.kegiatan !== 'all') activeHierarchyId = h.kegiatan;
+                else if (h.program !== 'all') activeHierarchyId = h.program;
+
+                let matchHierarchy = true;
+                if (activeHierarchyId !== 'all') {
+                    const parent = findInTree(state.data.pagu, activeHierarchyId);
+                    if (parent) {
+                        const allowedIds = getAllChildIds(parent);
+                        matchHierarchy = allowedIds.includes(r.rekeningId);
+                    }
+                }
+                return matchDate && matchHierarchy;
+            });
+
+            if (filtered.length === 0) return alert("Tidak ada data terfilter untuk dicetak.");
+
+            // Group by unit first
+            const unitGroups = {};
+            filtered.forEach(r => {
+                const unitKey = getUnitKey(r);
+                if (!unitGroups[unitKey]) unitGroups[unitKey] = [];
+                unitGroups[unitKey].push(r);
+            });
+
+            let fullHTML = '';
+            const targetUnits = unitKeyFilter ? [unitKeyFilter] : Object.keys(unitGroups);
+            
+            targetUnits.forEach(unitKey => {
+                const items = unitGroups[unitKey];
+                if (!items) return;
+                
+                // Group by Kode Rekening murni (not sub-activity)
+                const rekeningGroups = {};
+                items.forEach(r => {
+                    const groupId = r.rekeningId || 'none';
+                    if (!rekeningGroups[groupId]) rekeningGroups[groupId] = [];
+                    rekeningGroups[groupId].push(r);
+                });
+
+                Object.keys(rekeningGroups).forEach((rekeningId) => {
+                    if (rekeningId === 'none') return;
+                    fullHTML += `<div style="position: relative; page-break-after: always; min-height: 31cm;">
+                        ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
+                        <div class="watermark">Printed By Sipandu</div>
+                    </div>`;
+                });
+            });
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Cetak Terfilter BEND-23</title>
+                    <style>
+                        body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; color: #000; margin: 0; padding: 0; }
+                        .header-box { border: 1.5px solid #000; padding: 3px 10px; display: inline-block; float: right; margin-right: 2.5%; font-weight: bold; text-align: center; }
+                        .clear { clear: both; }
+                        .title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0 2px 0; font-size: 11px; }
+                        .nomor { text-align: center; margin-bottom: 10px; font-size: 11px; }
+                        .info-table { width: 95%; margin: 0 auto 10px auto; border-collapse: collapse; }
+                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 10px; }
+                        .info-table td:first-child { width: 100px; }
+                        .info-table td:nth-child(2) { width: 8px; }
+                        .statement { margin: 0 auto 20px auto; width: 95%; text-align: justify; font-size: 10px; }
+                        table.main-table { width: 95%; margin: 0 auto 10px auto; border-collapse: collapse; table-layout: fixed; }
+                        table.main-table th, table.main-table td { border: 1px solid #000; padding: 3px 4px; word-wrap: break-word; }
+                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 9.5px; }
+                        table.main-table td { font-size: 9.5px; }
+                        .footer-table { width: 95%; margin: 15px auto 0 auto; border-collapse: collapse; }
+                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 10px; }
+                        .sig-space { height: 60px; }
+                        .bold { font-weight: bold; }
+                        .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
+                        tfoot { display: table-row-group; }
+                        @media print { 
+                            @page { 
+                                size: 215mm 330mm; 
+                                margin: 1cm; 
+                            } 
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${fullHTML}
+                    <script>window.onload = function() { window.print(); }<\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function generateBend23HTML(unitKey, rekeningId, items) {
+            const unit = subUkMap[unitKey] || { name: 'TANPA UNIT' };
+            const path = findHierarchy(state.data.pagu, items[0].rekeningId);
+            const programName = path ? path[0].uraian : '';
+            const kegiatanName = path ? path[1].uraian : '';
+
+            // Find matching DPA from settings list
+            let matchedDpa = state.settings.dpaList.find(d => 
+                kegiatanName.toUpperCase() === (d.kegiatan || "").toUpperCase()
+            );
+
+            // Determine which DPA number to use (use Perubahan if available, else Murni)
+            let dpaNumber = "-";
+            if (matchedDpa) {
+                dpaNumber = matchedDpa.nomor_perubahan || matchedDpa.nomor_murni || matchedDpa.nomor || "-";
+            }
+
+            // Get custom No Surat and Tanggal from unit header inputs
+            const noSuratEl = document.getElementById(`no-surat-${unitKey}`);
+            const tglSuratEl = document.getElementById(`tgl-surat-${unitKey}`);
+            const customNoSurat = (noSuratEl && noSuratEl.value) || '062/049.a/2026';
+            const customTglSurat = (tglSuratEl && tglSuratEl.value) || '30 Desember 2025';
+
+            const info = {
+                organisasi: "1.06.0.00.0.00.01 - Dinas Sosial",
+                subUnit: unit.name,
+                dpa: dpaNumber,
+                program: path ? `${path[0].kode} - ${path[0].uraian}` : '-',
+                kegiatan: path ? `${path[1].kode} - ${path[1].uraian}` : '-',
+                subKegiatan: path ? `${path[2].uraian}` : '-',
+            };
+
+            const dateStr = customTglSurat;
+
+            let tableRows = '';
+            let totalNilai = 0;
+            let totalPPN = 0;
+            let totalPPH = 0;
+            items.forEach((r, idx) => {
+                const nilai = parseInt(r.nilai) || 0;
+                const ppn = parseInt(r.ppn) || 0;
+                const pph = parseInt(r.pph) || 0;
+                totalNilai += nilai;
+                totalPPN += ppn;
+                totalPPH += pph;
+                const rek = findInTree(state.data.pagu, r.rekeningId);
+                const kodeRek = rek ? rek.kode : '-';
+                
+                tableRows += `
+                    <tr>
+                        <td style="text-align: center;">${idx + 1}</td>
+                        <td style="text-align: center;">${kodeRek}</td>
+                        <td style="text-align: left;">${r.keterangan || '-'}</td>
+                        <td style="text-align: left;">${r.penerima || '-'}</td>
+                        <td style="text-align: center;">${r.tanggal}</td>
+                        <td style="text-align: center;">${r.noBp || '-'}</td>
+                        <td style="text-align: right;">${formatRupiah(nilai)}</td>
+                        <td style="text-align: right;">${formatRupiah(ppn)}</td>
+                        <td style="text-align: right;">${formatRupiah(pph)}</td>
+                    </tr>
+                `;
+            });
+
+            return `
+                <div class="header-box">
+                    BEND - 23<br>
+                    <span style="font-size: 8px; font-weight: normal;">Format SPTB Untuk SPM TU</span>
+                </div>
+                <div class="clear"></div>
+                
+                <div class="title">SURAT PERNYATAAN TANGGUNG JAWAB BELANJA</div>
+                <div class="nomor">Nomor : ${customNoSurat}</div>
+
+                <table class="info-table">
+                    <tr><td>Organisasi</td><td>:</td><td>${info.organisasi}</td></tr>
+                    <tr><td>Tanggal / No. DPA</td><td>:</td><td>${info.dpa}</td></tr>
+                    <tr><td>Program</td><td>:</td><td>${info.program}</td></tr>
+                    <tr><td>Kegiatan</td><td>:</td><td>${info.kegiatan}</td></tr>
+                    <tr><td>Sub Kegiatan</td><td>:</td><td>${info.subKegiatan}</td></tr>
+                    <tr><td></td><td></td><td>${info.subUnit} SRAGEN</td></tr>
+                </table>
+
+                <div class="statement">
+                    Yang bertandatangan dibawah ini Kuasa Pengguna Anggaran (KPA) ${info.subUnit} menyatakan bahwa,
+                    saya bertanggung jawab secara formal and material atas segala pengeluaran yang telah dibayar lunas oleh Bendahara Pengeluaran Pembantu
+                    kepada yang berhak menerima serta kebenaran perhitungan and setoran Pajak yang dipungut atas pembayaran tersebut dengan perincian
+                    sebagai berikut :
+                </div>
+
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 20px;">No.</th>
+                            <th rowspan="2" style="width: 70px;">Kode Rekening</th>
+                            <th rowspan="2">Uraian</th>
+                            <th rowspan="2" style="width: 100px;">Penerima</th>
+                            <th colspan="2" style="width: 140px;">B u k t i</th>
+                            <th rowspan="2" style="width: 80px;">Jumlah</th>
+                            <th colspan="2" style="width: 100px;">Pajak dipungut</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 65px;">Tanggal</th>
+                            <th style="width: 75px;">Nomor</th>
+                            <th style="width: 50px;">PPN</th>
+                            <th style="width: 50px;">PPh</th>
+                        </tr>
+                        <tr style="font-size: 8px;">
+                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bold">
+                            <td colspan="6" style="text-align: center; text-transform: uppercase;">J u m l a h</td>
+                            <td style="text-align: right;">${formatRupiah(totalNilai)}</td>
+                            <td style="text-align: right;">${formatRupiah(totalPPN)}</td>
+                            <td style="text-align: right;">${formatRupiah(totalPPH)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <table class="footer-table">
+                    <tr>
+                        <td></td>
+                        <td>Sragen, ${dateStr}</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Mengetahui<br>
+                            Kuasa Pengguna Anggaran
+                            <div class="sig-space"></div>
+                                <span class="bold" style="text-decoration: underline;">${state.settings.kpaNama}</span><br>
+                                NIP. ${state.settings.kpaNip}
+                            </td>
+                            <td>
+                                <br>
+                                Bendahara Pengeluaran Pembantu
+                                <div class="sig-space"></div>
+                                <span class="bold" style="text-decoration: underline;">${state.settings.bendaharaNama}</span><br>
+                                NIP. ${state.settings.bendaharaNip}
+                            </td>
+                    </tr>
+                </table>
+                <div class="watermark">Printed By Sipandu</div>
+            `;
+        }
+
+        function printBend23(unitKey, groupId) {
+            const unit = subUkMap[unitKey] || { name: 'TANPA UNIT' };
+            let filtered = state.data.realisasi.filter(r => {
+                const parsed = parseDate(r.tanggal);
+                if (!parsed) return false;
+                return parsed.month === state.filters.bulan && parsed.year === state.filters.tahun;
+            });
+
+            const items = filtered.filter(r => {
+                const path = findHierarchy(state.data.pagu, r.rekeningId);
+                if (!path || path.length < 3) return groupId === 'none';
+                const gId = `${path[0].id}-${path[1].id}-${path[2].id}`;
+                return gId === groupId;
+            });
+
+            if (items.length === 0) return;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Cetak BEND-23 - ${unit.name}</title>
+                    <style>
+                        body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; color: #000; margin: 0; padding: 0; }
+                        .header-box { border: 1.5px solid #000; padding: 3px 10px; display: inline-block; float: right; margin-right: 2.5%; font-weight: bold; text-align: center; }
+                        .clear { clear: both; }
+                        .title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0 2px 0; font-size: 11px; }
+                        .nomor { text-align: center; margin-bottom: 10px; font-size: 11px; }
+                        .info-table { width: 95%; margin: 0 auto 10px auto; border-collapse: collapse; }
+                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 10px; }
+                        .info-table td:first-child { width: 100px; }
+                        .info-table td:nth-child(2) { width: 8px; }
+                        .statement { margin: 0 auto 20px auto; width: 95%; text-align: justify; font-size: 10px; }
+                        table.main-table { width: 95%; margin: 0 auto 10px auto; border-collapse: collapse; table-layout: fixed; }
+                        table.main-table th, table.main-table td { border: 1px solid #000; padding: 3px 4px; word-wrap: break-word; }
+                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 9.5px; }
+                        table.main-table td { font-size: 9.5px; }
+                        .footer-table { width: 95%; margin: 15px auto 0 auto; border-collapse: collapse; }
+                        .sig-space { height: 60px; }
+                        .bold { font-weight: bold; }
+                        .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
+                        tfoot { display: table-row-group; }
+                        @media print {
+                            body { padding: 0; }
+                            @page { 
+                                size: 215mm 330mm; 
+                                margin: 1cm; 
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div style="position: relative; min-height: 31cm;">
+                        ${generateBend23HTML(unitKey, groupId, items)}
+                        <div class="watermark">Printed By Sipandu</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+

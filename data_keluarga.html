@@ -1,0 +1,1197 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Keluarga - SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const Icon = ({ path, size = 24, className = '', viewBox = "0 0 24 24" }) => (
+            <svg className={className} width={size} height={size} fill="none" viewBox={viewBox} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+
+        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />;
+        const Edit3 = (props) => <Icon {...props} path={<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>} />;
+        const Loader2 = (props) => <Icon {...props} className={`${props.className} animate-spin`} path={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />;
+        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+        const Save = (props) => <Icon {...props} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />;
+        const Settings = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
+        const FileSpreadsheet = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />;
+        const Plus = (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />;
+        const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+        const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+        const AlertCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+        const UserIcon = (props) => <Icon {...props} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />;
+        const KeyRound = (props) => <Icon {...props} path={<><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5"/></>} />;
+        const Lock = (props) => <Icon {...props} path={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+        const Unlock = (props) => <Icon {...props} path={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
+        const RefreshCw = (props) => <Icon {...props} path={<><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></>} />;
+
+        const MASTER_PIN = '888';
+        const STATUS_ANAK = ["Kandung", "Tiri", "Angkat"];
+        const STATUS_PENDIDIKAN = ["TK", "SD", "SMP", "SMA/SMK", "DI", "DII", "DIII", "DIV", "S1", "S2", "S3", "Lainnya"];
+        const PEKERJAAN_PASANGAN = ["PNS", "TNI", "POLRI", "PPPK", "Swasta", "Wiraswasta", "IRT", "Lainnya"];
+
+        const calculateAge = (birthDate) => {
+            if (!birthDate) return 0;
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            return age;
+        };
+
+        const getStatusTunjangan = (usia, tanggalPerpanjangan = null) => {
+            if (tanggalPerpanjangan) {
+                const today = new Date();
+                const tglPerpanjangan = new Date(tanggalPerpanjangan);
+                return today <= tglPerpanjangan;
+            }
+            return usia < 21;
+        };
+
+        const formatDate = (dateString) => {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            } catch (e) {
+                return dateString;
+            }
+        };
+
+        function App() {
+            const [loading, setLoading] = useState(true);
+            const [listPegawai, setListPegawai] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [statusFilter, setStatusFilter] = useState('');
+            const [tunjanganFilter, setTunjanganFilter] = useState('');
+            const [debouncedSearch, setDebouncedSearch] = useState('');
+            const [showSettings, setShowSettings] = useState(false);
+            const [pinModal, setPinModal] = useState({ show: false, type: '', payload: null });
+            const [pinInput, setPinInput] = useState('');
+            const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [form, setForm] = useState({});
+            const [lockedItems, setLockedItems] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('data_keluarga_locked');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
+
+            const showNotif = (message, type = 'success') => {
+                setNotification({ show: true, message, type });
+                setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 4000);
+            };
+
+            useEffect(() => {
+                localStorage.setItem('data_keluarga_locked', JSON.stringify(lockedItems));
+            }, [lockedItems]);
+
+            const handleToggleLock = (pegawaiId) => {
+                const isLocked = lockedItems.includes(pegawaiId);
+                if (isLocked) {
+                    setPinModal({ show: true, type: 'unlock', payload: pegawaiId });
+                } else {
+                    setLockedItems([...lockedItems, pegawaiId]);
+                    showNotif("Data berhasil dikunci!");
+                }
+            };
+
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('data_pegawai')
+                        .select('id, nama, nip, status_kepegawaian, pasangan, anak, order_index')
+                        .order('order_index', { ascending: true });
+                    
+                    if (error) {
+                        console.error("Error loading data:", error);
+                        showNotif("Gagal memuat data: " + error.message, "error");
+                    } else {
+                        setListPegawai(data || []);
+                    }
+                } catch (error) {
+                    console.error("Fetch Error:", error);
+                    showNotif("Gagal memuat data: " + (error.message || "Terjadi kesalahan"), "error");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+            }, []);
+
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    setDebouncedSearch(searchTerm);
+                }, 300);
+                return () => clearTimeout(timer);
+            }, [searchTerm]);
+
+            const resetFilters = () => {
+                setSearchTerm('');
+                setStatusFilter('');
+                setTunjanganFilter('');
+            };
+
+            const resetFormWithDefaults = (pegawai = null) => {
+                if (pegawai) {
+                    setForm({
+                        pegawai_id: pegawai.id,
+                        pegawai_data: pegawai,
+                        pasangan: pegawai.pasangan || [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '', nik: '' }],
+                        anak: pegawai.anak || [{ 
+                            anak_ke: '1', 
+                            nama: '', 
+                            tunjangan: true, 
+                            tanggal_lahir: '', 
+                            status_anak: 'Kandung', 
+                            status_pendidikan: '', 
+                            status_pendidikan_lainnya: '', 
+                            tanggalPerpanjangan: '', 
+                            keteranganPerpanjangan: '',
+                            pasanganId: null, // untuk link ke pasangan
+                            nik: ''
+                        }]
+                    });
+                } else {
+                    setForm({
+                        pegawai_id: '',
+                        pegawai_data: null,
+                        pasangan: [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '', nik: '' }],
+                        anak: [{ 
+                            anak_ke: '1', 
+                            nama: '', 
+                            tunjangan: true, 
+                            tanggal_lahir: '', 
+                            status_anak: 'Kandung', 
+                            status_pendidikan: '', 
+                            status_pendidikan_lainnya: '', 
+                            tanggalPerpanjangan: '', 
+                            keteranganPerpanjangan: '',
+                            pasanganId: null,
+                            nik: ''
+                        }]
+                    });
+                }
+            };
+
+            const handleAddPasangan = () => {
+                setForm(prev => ({
+                    ...prev,
+                    pasangan: [...(prev.pasangan || []), {
+                        pasangan_ke: ((prev.pasangan || []).length + 1).toString(),
+                        nama: '',
+                        tanggal_lahir: '',
+                        pekerjaan: '',
+                        pekerjaan_lainnya: '',
+                        nik: ''
+                    }]
+                }));
+            };
+
+            const handleRemovePasangan = (index) => {
+                setForm(prev => ({
+                    ...prev,
+                    pasangan: (prev.pasangan || []).filter((_, i) => i !== index)
+                }));
+            };
+
+            const handleUpdatePasangan = (index, field, value) => {
+                setForm(prev => {
+                    const newPasangan = [...(prev.pasangan || [])];
+                    newPasangan[index] = { ...newPasangan[index], [field]: value, id: index }; // tambah id untuk referensi
+                    return { ...prev, pasangan: newPasangan };
+                });
+            };
+
+            const handleAddAnak = () => {
+                setForm(prev => ({
+                    ...prev,
+                    anak: [...(prev.anak || []), {
+                        anak_ke: ((prev.anak || []).length + 1).toString(),
+                        nama: '',
+                        tunjangan: true,
+                        tanggal_lahir: '',
+                        status_anak: 'Kandung',
+                        status_pendidikan: '',
+                        status_pendidikan_lainnya: '',
+                        tanggalPerpanjangan: '',
+                        keteranganPerpanjangan: '',
+                        pasanganId: null,
+                        nik: ''
+                    }]
+                }));
+            };
+
+            const handleRemoveAnak = (index) => {
+                setForm(prev => ({
+                    ...prev,
+                    anak: (prev.anak || []).filter((_, i) => i !== index)
+                }));
+            };
+
+            const handleUpdateAnak = (index, field, value) => {
+                setForm(prev => {
+                    const newAnak = [...(prev.anak || [])];
+                    newAnak[index] = { ...newAnak[index], [field]: value };
+                    return { ...prev, anak: newAnak };
+                });
+            };
+
+            const handlePegawaiSelect = (pegawaiId) => {
+                const pegawai = listPegawai.find(p => p.id === pegawaiId);
+                if (pegawai) {
+                    resetFormWithDefaults(pegawai);
+                }
+            };
+
+            const handleSave = async () => {
+                if (!form.pegawai_id) {
+                    return showNotif("Pilih pegawai terlebih dahulu", "error");
+                }
+
+                setIsProcessing(true);
+                try {
+                    const { error } = await supabaseClient
+                        .from('data_pegawai')
+                        .update({
+                            pasangan: form.pasangan || [],
+                            anak: form.anak || [],
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', form.pegawai_id);
+
+                    if (error) throw error;
+
+                    showNotif("Data keluarga berhasil disimpan!");
+                    setSelectedItem(null);
+                    fetchData();
+                } catch (e) {
+                    console.error("Save Error:", e);
+                    showNotif("Gagal: " + (e.message || "Terjadi kesalahan database"), "error");
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const handleEdit = (pegawai) => {
+                if (lockedItems.includes(pegawai.id)) {
+                    showNotif("Data terkunci! Masukkan PIN untuk membuka kunci.", "error");
+                    return;
+                }
+                resetFormWithDefaults(pegawai);
+                setSelectedItem(pegawai);
+            };
+
+            const handleDeleteFamilyMember = async (pegawaiId, type, index) => {
+                if (lockedItems.includes(pegawaiId)) {
+                    showNotif("Data terkunci! Tidak bisa menghapus.", "error");
+                    return;
+                }
+                
+                if (!confirm(`Yakin ingin menghapus ${type === 'pasangan' ? 'data pasangan' : 'data anak'} ini?`)) {
+                    return;
+                }
+
+                setIsProcessing(true);
+                try {
+                    const pegawai = listPegawai.find(p => p.id === pegawaiId);
+                    if (!pegawai) return;
+
+                    let updatedData = {};
+                    if (type === 'pasangan') {
+                        const updatedPasangan = [...(pegawai.pasangan || [])];
+                        updatedPasangan.splice(index, 1);
+                        updatedPasangan.forEach((p, i) => p.pasangan_ke = (i + 1).toString());
+                        updatedData = { pasangan: updatedPasangan };
+                    } else {
+                        const updatedAnak = [...(pegawai.anak || [])];
+                        updatedAnak.splice(index, 1);
+                        updatedAnak.forEach((a, i) => a.anak_ke = (i + 1).toString());
+                        updatedData = { anak: updatedAnak };
+                    }
+
+                    const { error } = await supabaseClient
+                        .from('data_pegawai')
+                        .update({ ...updatedData, updated_at: new Date().toISOString() })
+                        .eq('id', pegawaiId);
+
+                    if (error) throw error;
+
+                    showNotif(`${type === 'pasangan' ? 'Data pasangan' : 'Data anak'} berhasil dihapus!`);
+                    fetchData();
+                } catch (e) {
+                    console.error("Delete Error:", e);
+                    showNotif("Gagal menghapus: " + (e.message || "Terjadi kesalahan"), "error");
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const handlePinSubmit = (val) => {
+                setPinInput(val);
+                if (val === MASTER_PIN) {
+                    const type = pinModal.type;
+                    const payload = pinModal.payload;
+                    setPinModal({ show: false, type: '', payload: null });
+                    setPinInput('');
+
+                    if (type === 'settings') setShowSettings(true);
+                    if (type === 'unlock') {
+                        setLockedItems(lockedItems.filter(id => id !== payload));
+                        showNotif("Data berhasil dibuka kuncinya!");
+                    }
+                }
+            };
+
+            const handleExportExcel = () => {
+                if (filteredData.length === 0) return;
+
+                const exportData = [];
+                filteredData.forEach(pegawai => {
+                    if (pegawai.pasangan && pegawai.pasangan.length > 0) {
+                        pegawai.pasangan.forEach(pasangan => {
+                            exportData.push({
+                                'No': exportData.length + 1,
+                                'Nama Pegawai': pegawai.nama,
+                                'NIP': pegawai.nip || '-',
+                                'Status Pegawai': pegawai.status_kepegawaian || '-',
+                                'Kategori': 'Pasangan',
+                                'Ke': pasangan.pasangan_ke,
+                                'Nama': pasangan.nama,
+                                'NIK': pasangan.nik || '-',
+                                'Tanggal Lahir': pasangan.tanggal_lahir,
+                                'Usia': calculateAge(pasangan.tanggal_lahir),
+                                'Pekerjaan': pasangan.pekerjaan === 'Lainnya' ? pasangan.pekerjaan_lainnya : pasangan.pekerjaan,
+                                'Status Tunjangan': '-',
+                                'Status Anak': '-',
+                                'Status Pendidikan': '-',
+                                'Tahun Perpanjangan': '-',
+                                'Keterangan Perpanjangan': '-',
+                            });
+                        });
+                    }
+
+                    if (pegawai.anak && pegawai.anak.length > 0) {
+                        pegawai.anak.forEach(anak => {
+                            const usia = calculateAge(anak.tanggal_lahir);
+                            const berlaku = getStatusTunjangan(usia, anak.tahunPerpanjangan || 0);
+                            const namaPasangan = form.pasangan?.find(p => p.id === anak.pasanganId)?.nama || '-';
+                            exportData.push({
+                                'No': exportData.length + 1,
+                                'Nama Pegawai': pegawai.nama,
+                                'NIP': pegawai.nip || '-',
+                                'Status Pegawai': pegawai.status_kepegawaian || '-',
+                                'Kategori': 'Anak',
+                                'Ke': anak.anak_ke,
+                                'Nama': anak.nama,
+                                'NIK': anak.nik || '-',
+                                'Pasangan': namaPasangan,
+                                'Tanggal Lahir': anak.tanggal_lahir,
+                                'Usia': usia,
+                                'Pekerjaan': '-',
+                                'Status Tunjangan': anak.tunjangan ? 'Ya' : 'Tidak',
+                                'Status Berlaku': berlaku ? 'Berlaku' : 'Tidak',
+                                'Status Anak': anak.status_anak,
+                                'Status Pendidikan': anak.status_pendidikan === 'Lainnya' ? anak.status_pendidikan_lainnya : anak.status_pendidikan,
+                                'Tanggal Perpanjangan': anak.tanggalPerpanjangan || '-',
+                                'Keterangan Perpanjangan': anak.keteranganPerpanjangan || '-',
+                            });
+                        });
+                    }
+                });
+
+                const worksheet = XLSX.utils.json_to_sheet(exportData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data Keluarga");
+                XLSX.writeFile(workbook, `DATA_KELUARGA_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showNotif("Excel berhasil diunduh!");
+            };
+
+            const filteredData = useMemo(() => {
+                return listPegawai.map(pegawai => {
+                    let matchSearch = true;
+                    if (debouncedSearch) {
+                        const searchLower = debouncedSearch.toLowerCase();
+                        matchSearch = (
+                            pegawai.nama?.toLowerCase().includes(searchLower) ||
+                            pegawai.nip?.includes(debouncedSearch)
+                        );
+                    }
+
+                    let filteredPasangan = pegawai.pasangan || [];
+                    let filteredAnak = pegawai.anak || [];
+
+                    if (statusFilter) {
+                        filteredAnak = filteredAnak.filter(a => {
+                            const usia = calculateAge(a.tanggal_lahir);
+                            const berlaku = getStatusTunjangan(usia, a.tanggalPerpanjangan);
+                            return (statusFilter === 'berlaku' && berlaku) ||
+                                   (statusFilter === 'tidak' && !berlaku);
+                        });
+                        // For status filter "tidak", still show pasangan
+                    }
+
+                    if (tunjanganFilter) {
+                        const tunjanganBool = tunjanganFilter === 'ya';
+                        filteredAnak = filteredAnak.filter(a => a.tunjangan === tunjanganBool);
+                    }
+
+                    // If no filters, keep original pasangan/anak
+                    if (!statusFilter && !tunjanganFilter) {
+                        filteredPasangan = pegawai.pasangan || [];
+                        filteredAnak = pegawai.anak || [];
+                    }
+
+                    // Only include pegawai if they have matching search and (matching anak or pasangan when applicable)
+                    const hasMatchingData = matchSearch && 
+                        (filteredAnak.length > 0 || (statusFilter === 'tidak' && filteredPasangan.length > 0) || (!statusFilter && !tunjanganFilter));
+
+                    if (hasMatchingData) {
+                        return {
+                            ...pegawai,
+                            pasangan: filteredPasangan,
+                            anak: filteredAnak
+                        };
+                    }
+                    return null;
+                }).filter(Boolean); // Remove null entries
+            }, [listPegawai, debouncedSearch, statusFilter, tunjanganFilter]);
+
+            // Skeleton component for better UX
+            const SkeletonItem = () => (
+                <tr className="animate-pulse">
+                    <td className="px-3 py-4 text-center border-r border-slate-200">
+                        <div className="w-10 h-8 bg-slate-200 rounded mx-auto"></div>
+                    </td>
+                    <td className="px-3 py-4 border-r border-slate-200">
+                        <div className="space-y-1">
+                            <div className="w-32 h-5 bg-slate-200 rounded"></div>
+                            <div className="w-24 h-4 bg-slate-100 rounded"></div>
+                        </div>
+                    </td>
+                    <td className="px-3 py-4 border-r border-slate-200"><div className="w-full h-24 bg-slate-100 rounded-lg"></div></td>
+                    <td className="px-3 py-4 border-r border-slate-200"><div className="w-full h-24 bg-slate-100 rounded-lg"></div></td>
+                    <td className="px-3 py-4 text-center border-r border-slate-200"><div className="w-20 h-16 bg-slate-100 rounded-lg mx-auto"></div></td>
+                    <td className="px-3 py-4 text-center border-r border-slate-200"><div className="w-16 h-10 bg-slate-100 rounded-lg mx-auto"></div></td>
+                    <td className="px-3 py-4 border-r border-slate-200"><div className="w-full h-12 bg-slate-100 rounded-lg"></div></td>
+                    <td className="px-3 py-4 text-center"><div className="w-20 h-10 bg-slate-100 rounded-lg mx-auto"></div></td>
+                </tr>
+            );
+
+            // Memoized row for better performance
+            const PegawaiRow = React.memo(({ pegawai, index, onEdit, lockedItems, handleToggleLock, handleDeleteFamilyMember }) => {
+                // Ambil data pasangan dan anak
+                const pasanganList = pegawai.pasangan || [];
+                const anakList = pegawai.anak || [];
+                const isLocked = lockedItems.includes(pegawai.id);
+                
+                // Hitung baris maksimal
+                const maxRows = Math.max(1, pasanganList.length, anakList.length);
+
+                return (
+                    <React.Fragment key={pegawai.id}>
+                        {/* Separator antar pegawai */}
+                        {index > 0 && (
+                            <tr className="h-4 bg-slate-200">
+                                <td colSpan="8" className="h-4"></td>
+                            </tr>
+                        )}
+                        
+                        {Array.from({ length: maxRows }).map((_, idx) => {
+                            const pasangan = pasanganList[idx];
+                            const anak = anakList[idx];
+                            const isFirst = idx === 0;
+                            const isLast = idx === maxRows - 1;
+                            
+                            return (
+                                <tr key={`${pegawai.id}-${idx}`} className={`hover:bg-blue-50/30 transition-all ${isLast ? 'border-b-2 border-slate-400' : 'border-b border-slate-200'}`}>
+                                    {isFirst && (
+                                        <td className="px-3 py-4 text-center align-top border-r border-slate-200" rowSpan={maxRows}>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="text-[13px] font-bold text-slate-700 block">{index + 1}</span>
+                                            </div>
+                                        </td>
+                                    )}
+                                    
+                                    {/* Kolom Pegawai */}
+                                    {isFirst && (
+                                        <td className="px-3 py-4 align-top border-r border-slate-200" rowSpan={maxRows}>
+                                            <div className="flex flex-col gap-1 px-3 py-3 rounded-lg border shadow-sm bg-white border-slate-200">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="px-2 py-1 rounded-md text-[13px] font-black uppercase text-white bg-blue-600">PEGAWAI</span>
+                                                </div>
+                                                <p className="font-bold text-slate-950 text-[13px] leading-tight">{pegawai.nama}</p>
+                                                <p className="text-[13px] font-semibold text-slate-500 leading-tight mt-1">NIP: {pegawai.nip || '-'}</p>
+                                                <p className="text-[13px] font-semibold text-blue-600 leading-tight mt-0.5">Status: {pegawai.status_kepegawaian || '-'}</p>
+                                            </div>
+                                        </td>
+                                    )}
+                                    
+                                    {/* Kolom Pasangan */}
+                                    <td className="px-3 py-4 align-top border-r border-slate-200">
+                                        {pasangan ? (
+                                            <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="text-[13px] font-black text-slate-700 uppercase">Pasangan Ke-{pasangan.pasangan_ke}</span>
+                                                    <button 
+                                                        onClick={() => handleDeleteFamilyMember(pegawai.id, 'pasangan', idx)} 
+                                                        disabled={isLocked}
+                                                        className={`p-1.5 rounded-md transition-all ${isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                                <p className="text-[13px] font-bold text-slate-900 mb-1 uppercase">{pasangan.nama || '-'}</p>
+                                                {pasangan.nik && <p className="text-[12px] text-slate-500 mb-1">NIK: {pasangan.nik}</p>}
+                                                <p className="text-[13px] text-slate-600 mb-0.5">Tgl Lahir: {formatDate(pasangan.tanggal_lahir)} <span className="font-semibold text-slate-700">({calculateAge(pasangan.tanggal_lahir)} thn)</span></p>
+                                                <p className="text-[13px] text-slate-600">Pekerjaan: {pasangan.pekerjaan === 'Lainnya' ? pasangan.pekerjaan_lainnya : pasangan.pekerjaan}</p>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[13px] text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
+                                    
+                                    {/* Kolom Anak */}
+                                    <td className="px-3 py-4 align-top border-r border-slate-200">
+                                        {anak ? (
+                                            <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                                                {/* Baris 1: Anak ke () dari () */}
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[13px] font-bold text-slate-700 uppercase">
+                                                            Anak Ke-{anak.anak_ke}
+                                                        </span>
+                                                        {anak.pasanganId !== null && anak.pasanganId !== undefined && (
+                                                            <span className="text-[13px] text-slate-500 uppercase">
+                                                                dari {pegawai.pasangan?.[anak.pasanganId]?.nama || 'Pasangan'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => handleDeleteFamilyMember(pegawai.id, 'anak', idx)} 
+                                                        disabled={isLocked}
+                                                        className={`p-1.5 rounded-md transition-all ${isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                                <p className="text-[13px] font-bold text-slate-900 mb-1 uppercase">{anak.nama || '-'}</p>
+                                                {anak.nik && <p className="text-[12px] text-slate-500 mb-1">NIK: {anak.nik}</p>}
+                                                <p className="text-[13px] text-slate-600 mb-0.5">Status: {anak.status_anak || '-'} • Pendidikan: {anak.status_pendidikan === 'Lainnya' ? anak.status_pendidikan_lainnya : anak.status_pendidikan}</p>
+                                                <p className="text-[13px] text-slate-600">Tgl Lahir: {formatDate(anak.tanggal_lahir)} <span className="font-semibold text-slate-700">({calculateAge(anak.tanggal_lahir)} thn)</span></p>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[13px] text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
+                                    
+                                    {/* Kolom Tunjangan Anak */}
+                                    <td className="px-3 py-4 align-top text-center border-r border-slate-200">
+                                        {anak ? (
+                                            <div className="space-y-2">
+                                                <span className={`inline-block px-3 py-1 rounded-md text-[13px] font-black ${
+                                                    anak.tunjangan ? 'bg-green-400 text-white shadow-sm' : 'bg-slate-300 text-slate-800'
+                                                }`}>
+                                                    Tunjangan: {anak.tunjangan ? 'Ya' : 'Tidak'}
+                                                </span>
+                                                {(() => {
+                                                    const usia = calculateAge(anak.tanggal_lahir);
+                                                    const berlaku = getStatusTunjangan(usia, anak.tanggalPerpanjangan);
+                                                    
+                                                    // Hitung tanggal batas berlaku
+                                                    let tanggalBerlakuSd = null;
+                                                    if (anak.tanggalPerpanjangan) {
+                                                        tanggalBerlakuSd = formatDate(anak.tanggalPerpanjangan);
+                                                    } else if (anak.tanggal_lahir) {
+                                                        const tglLahir = new Date(anak.tanggal_lahir);
+                                                        tglLahir.setFullYear(tglLahir.getFullYear() + 21);
+                                                        tanggalBerlakuSd = formatDate(tglLahir);
+                                                    }
+                                                    
+                                                    return (
+                                                        <>
+                                                            <span className={`block px-3 py-1 rounded-md text-[13px] font-black shadow-sm ${
+                                                                !berlaku ? 'bg-red-500 text-white' : 'bg-green-400 text-white'
+                                                            }`}>
+                                                                {!berlaku ? '✗ Tidak Berlaku' : '✓ Berlaku'}
+                                                            </span>
+                                                            
+                                                            {tanggalBerlakuSd && (
+                                                                <div className="text-[13px] text-slate-600 font-semibold bg-white px-2 py-1 rounded border border-slate-200">
+                                                                    sd: {tanggalBerlakuSd}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        ) : (
+                                            <span className="text-[13px] text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
+                                    
+                                    {/* Kolom Tanggal Perpanjangan */}
+                                    <td className="px-3 py-4 align-top text-center border-r border-slate-200">
+                                        {anak && anak.tanggalPerpanjangan ? (
+                                            <span className="inline-block px-3 py-1 rounded-md text-[13px] font-bold text-slate-800 bg-white border border-slate-300 shadow-sm">
+                                                {formatDate(anak.tanggalPerpanjangan)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[13px] text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
+                                    
+                                    {/* Kolom Keterangan */}
+                                    <td className="px-3 py-4 align-top border-r border-slate-200">
+                                        {anak && anak.keteranganPerpanjangan ? (
+                                            <span className="text-[13px] text-slate-800 block leading-relaxed">
+                                                {anak.keteranganPerpanjangan}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[13px] text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
+                                    
+                                    {/* Kolom Aksi */}
+                                    {isFirst && (
+                                        <td className="px-3 py-4 text-center align-middle" rowSpan={maxRows}>
+                                            <div className="flex flex-col gap-2 items-center">
+                                                <button 
+                                                    onClick={() => onEdit(pegawai)} 
+                                                    className={`flex items-center justify-center p-2.5 rounded-lg transition-all shadow-md ${
+                                                        isLocked 
+                                                            ? 'bg-red-500 text-white cursor-not-allowed' 
+                                                            : 'bg-green-400 text-white hover:bg-green-500'
+                                                    }`}
+                                                    disabled={isLocked}
+                                                    title="Edit"
+                                                >
+                                                    <Edit3 size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleToggleLock(pegawai.id)} 
+                                                    className={`flex items-center justify-center p-2.5 rounded-lg transition-all shadow-md ${
+                                                        isLocked 
+                                                            ? 'bg-yellow-400 text-white hover:bg-yellow-500' 
+                                                            : 'bg-amber-500 text-white hover:bg-amber-600'
+                                                    }`}
+                                                    title={isLocked ? "Buka Kunci" : "Kunci"}
+                                                >
+                                                    {isLocked ? <Unlock size={18} /> : <Lock size={18} />}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
+                                </tr>
+                            );
+                        })}
+                    </React.Fragment>
+                );
+            });
+
+            if (loading) return (
+                <div className="min-h-screen bg-[#FDFDFD] pb-12 font-sans">
+                    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-200 rounded-xl animate-pulse"></div>
+                            <div>
+                                <div className="w-36 h-4 bg-slate-200 rounded animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-48 h-9 bg-slate-100 rounded-xl animate-pulse"></div>
+                        </div>
+                    </header>
+                    <main className="p-6">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700 tracking-wider">
+                                        <tr>
+                                            <th className="px-3 py-4 w-10 text-center border-r border-slate-200">No</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pegawai</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pasangan</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Anak</th>
+                                            <th className="px-3 py-4 text-center w-40 border-r border-slate-200">Tunjangan Anak</th>
+                                            <th className="px-3 py-4 text-center w-32 border-r border-slate-200">Tgl Perpanjangan</th>
+                                            <th className="px-3 py-4 text-center w-48 border-r border-slate-200">Keterangan</th>
+                                            <th className="px-3 py-4 text-center w-20">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        <SkeletonItem />
+                                        <SkeletonItem />
+                                        <SkeletonItem />
+                                        <SkeletonItem />
+                                        <SkeletonItem />
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-[#FDFDFD] text-slate-950 pb-12 font-sans text-[13px]">
+                    {notification.show && (
+                        <div className={`fixed top-6 right-6 z-[999] px-6 py-4 rounded-2xl text-[11px] font-black flex items-center gap-4 shadow-2xl border border-white/10 animate-in ${notification.type === 'error' ? 'bg-rose-600 text-white' : notification.type === 'info' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
+                            {notification.type === 'error' ? <AlertCircle size={18} className="text-rose-200" /> : notification.type === 'info' ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} className="text-emerald-400" />}
+                            <span className="uppercase tracking-widest">{notification.message}</span>
+                        </div>
+                    )}
+
+                    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Users size={20} /></div>
+                            <h2 className="text-[14px] font-black uppercase leading-tight">Data Keluarga</h2>
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="relative flex items-center gap-2">
+                                <div className="bg-yellow-100 px-4 py-2 rounded-lg border border-yellow-200 shadow-sm">
+                                    <p className="text-[10px] text-yellow-900 font-black">Total Pegawai: {filteredData.length} • Total Anak: {filteredData.reduce((total, p) => total + (p.anak?.length || 0), 0)}</p>
+                                </div>
+                                <div className="relative">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Cari nama Pegawai" 
+                                        className="pl-9 pr-3 py-2 bg-slate-100 rounded-lg w-48 outline-none border border-transparent focus:border-slate-950 transition-all font-bold uppercase text-[10px]"
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)} 
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </div>
+                            <select 
+                                className="px-3 py-2 bg-slate-100 rounded-lg text-[10px] font-bold uppercase text-slate-600 outline-none border border-transparent focus:border-slate-950"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <option value="">Semua Status</option>
+                                <option value="berlaku">Berlaku</option>
+                                <option value="tidak">Tidak Berlaku</option>
+                            </select>
+                            <select 
+                                className="px-3 py-2 bg-slate-100 rounded-lg text-[10px] font-bold uppercase text-slate-600 outline-none border border-transparent focus:border-slate-950"
+                                value={tunjanganFilter}
+                                onChange={(e) => setTunjanganFilter(e.target.value)}
+                            >
+                                <option value="">Semua Tunjangan</option>
+                                <option value="ya">Ya</option>
+                                <option value="tidak">Tidak</option>
+                            </select>
+                            <button 
+                                onClick={resetFilters} 
+                                className="flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold uppercase text-[10px] hover:bg-slate-200 transition-all"
+                            >
+                                <RefreshCw size={14} /> Reset
+                            </button>
+                            <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold uppercase text-[10px] hover:bg-emerald-700 transition-all shadow-md">
+                                <FileSpreadsheet size={16} /> Excel
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="p-6">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700 tracking-wider">
+                                        <tr>
+                                            <th className="px-3 py-4 w-10 text-center border-r border-slate-200">No</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pegawai</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pasangan</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Anak</th>
+                                            <th className="px-3 py-4 text-center w-40 border-r border-slate-200">Tunjangan anak</th>
+                                            <th className="px-3 py-4 text-center w-32 border-r border-slate-200">Tgl Perpanjangan</th>
+                                            <th className="px-3 py-4 text-center w-48 border-r border-slate-200">Keterangan</th>
+                                            <th className="px-3 py-4 text-center w-20">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredData.map((pegawai, i) => (
+                                            <PegawaiRow 
+                                                key={pegawai.id} 
+                                                pegawai={pegawai} 
+                                                index={i} 
+                                                onEdit={handleEdit}
+                                                lockedItems={lockedItems}
+                                                handleToggleLock={handleToggleLock}
+                                                handleDeleteFamilyMember={handleDeleteFamilyMember}
+                                            />
+                                        ))}
+                                        {filteredData.length === 0 && (
+                                            <tr>
+                                                <td colSpan="8" className="px-4 py-12 text-center">
+                                                    <div className="text-slate-400">
+                                                        <Users size={48} className="mx-auto mb-4 opacity-30" />
+                                                        <p className="text-[13px] font-black">Belum ada data</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* FORM MODAL */}
+                    {selectedItem && (
+                        <div className="fixed inset-0 z-[500] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl w-full max-w-4xl flex flex-col shadow-2xl overflow-hidden animate-in max-h-[90vh]">
+                                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center shadow-lg"><Users size={18} /></div>
+                                        <div>
+                                            <h2 className="text-[13px] font-black uppercase leading-tight">Data Keluarga {selectedItem.nama}</h2>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedItem(null)} className="p-2 bg-white rounded-full border border-slate-100 text-slate-400 hover:text-slate-950 transition-all"><X size={18} /></button>
+                                </div>
+                                <div className="p-5 space-y-5 overflow-y-auto">
+                                    {/* PASANGAN SECTION */}
+                                    <div className="bg-rose-50/40 p-4 rounded-xl border border-rose-100 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1.5 bg-rose-500 text-white rounded-md"><Users size={12} /></div>
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-700">Data Pasangan</h3>
+                                            </div>
+                                            <button onClick={handleAddPasangan} className="flex items-center gap-1 px-3 py-1.5 bg-rose-100 text-rose-700 rounded-md hover:bg-rose-200 text-[9px] font-black">
+                                                <Plus size={12} /> Tambah
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {(form.pasangan || []).map((pasangan, idx) => (
+                                                <div key={idx} className="bg-white rounded-lg p-3 border border-slate-100">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-[10px] font-black text-slate-700 uppercase">Pasangan Ke-{pasangan.pasangan_ke}</span>
+                                                        {(form.pasangan?.length || 0) > 1 && (
+                                                            <button onClick={() => handleRemovePasangan(idx)} className="p-1.5 bg-rose-100 text-rose-600 rounded-md hover:bg-rose-200">
+                                                                <Trash2 size={10} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Nama</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={pasangan.nama} 
+                                                                onChange={(e) => handleUpdatePasangan(idx, 'nama', e.target.value)}
+                                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-rose-500"
+                                                                placeholder="Nama lengkap"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">NIK</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={pasangan.nik} 
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                                                                    handleUpdatePasangan(idx, 'nik', value);
+                                                                }}
+                                                                maxLength={16}
+                                                                className={`w-full px-3 py-1.5 border rounded-md text-[11px] focus:outline-none ${pasangan.nik && pasangan.nik.length < 16 ? 'border-yellow-500 bg-yellow-50' : 'border-slate-200 focus:border-rose-500'}`}
+                                                                placeholder="Nomor Induk Kependudukan"
+                                                            />
+                                                            {pasangan.nik && pasangan.nik.length < 16 && (
+                                                                <p className="text-[10px] text-yellow-700 font-bold">NIK belum lengkap (harus 16 digit)</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pekerjaan</label>
+                                                            <select 
+                                                                value={pasangan.pekerjaan} 
+                                                                onChange={(e) => handleUpdatePasangan(idx, 'pekerjaan', e.target.value)}
+                                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-rose-500 bg-white"
+                                                            >
+                                                                <option value="">Pilih...</option>
+                                                                {PEKERJAAN_PASANGAN.map(p => <option key={p} value={p}>{p}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        {pasangan.pekerjaan === 'Lainnya' && (
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pekerjaan Lainnya</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={pasangan.pekerjaan_lainnya} 
+                                                                    onChange={(e) => handleUpdatePasangan(idx, 'pekerjaan_lainnya', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-rose-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Tanggal Lahir</label>
+                                                            <div className="flex gap-2">
+                                                                <input 
+                                                                    type="date" 
+                                                                    value={pasangan.tanggal_lahir} 
+                                                                    onChange={(e) => handleUpdatePasangan(idx, 'tanggal_lahir', e.target.value)}
+                                                                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-rose-500"
+                                                                />
+                                                                <div className="flex items-center justify-center px-3 py-1.5 bg-slate-100 rounded-md text-[11px] font-black text-slate-700 min-w-[70px]">
+                                                                    {calculateAge(pasangan.tanggal_lahir)} thn
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ANAK SECTION */}
+                                    <div className="bg-blue-50/40 p-4 rounded-xl border border-blue-100 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1.5 bg-blue-500 text-white rounded-md"><Users size={12} /></div>
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-700">Data Anak</h3>
+                                            </div>
+                                            <button onClick={handleAddAnak} className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[9px] font-black">
+                                                <Plus size={12} /> Tambah
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {(form.anak || []).map((anak, idx) => {
+                                                const usia = calculateAge(anak.tanggal_lahir);
+                                                const berlaku = getStatusTunjangan(usia, anak.tanggalPerpanjangan);
+                                                return (
+                                                    <div key={idx} className="bg-white rounded-lg p-3 border border-slate-100">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-[10px] font-black text-slate-700 uppercase">Anak Ke-{anak.anak_ke}</span>
+                                                            {(form.anak?.length || 0) > 1 && (
+                                                                <button onClick={() => handleRemoveAnak(idx)} className="p-1.5 bg-rose-100 text-rose-600 rounded-md hover:bg-rose-200">
+                                                                    <Trash2 size={10} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Nama</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={anak.nama} 
+                                                                    onChange={(e) => handleUpdateAnak(idx, 'nama', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500"
+                                                                    placeholder="Nama lengkap"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">NIK</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={anak.nik} 
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                                                                        handleUpdateAnak(idx, 'nik', value);
+                                                                    }}
+                                                                    maxLength={16}
+                                                                    className={`w-full px-3 py-1.5 border rounded-md text-[11px] focus:outline-none ${anak.nik && anak.nik.length < 16 ? 'border-yellow-500 bg-yellow-50' : 'border-slate-200 focus:border-blue-500'}`}
+                                                                    placeholder="Nomor Induk Kependudukan"
+                                                                />
+                                                                {anak.nik && anak.nik.length < 16 && (
+                                                                    <p className="text-[10px] text-yellow-700 font-bold">NIK belum lengkap (harus 16 digit)</p>
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pasangan</label>
+                                                                <select 
+                                                                    value={anak.pasanganId} 
+                                                                    onChange={(e) => handleUpdateAnak(idx, 'pasanganId', e.target.value ? Number(e.target.value) : null)}
+                                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500 bg-white"
+                                                                >
+                                                                    <option value="">Pilih pasangan (opsional)</option>
+                                                                    {(form.pasangan || []).map((p, pIdx) => (
+                                                                        <option key={pIdx} value={pIdx}>{p.pasangan_ke}. {p.nama || '-'}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Status Anak</label>
+                                                                <select 
+                                                                    value={anak.status_anak} 
+                                                                    onChange={(e) => handleUpdateAnak(idx, 'status_anak', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500 bg-white"
+                                                                >
+                                                                    {STATUS_ANAK.map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Status Pendidikan</label>
+                                                                <select 
+                                                                    value={anak.status_pendidikan} 
+                                                                    onChange={(e) => handleUpdateAnak(idx, 'status_pendidikan', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500 bg-white"
+                                                                >
+                                                                    <option value="">Pilih...</option>
+                                                                    {STATUS_PENDIDIKAN.map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            {anak.status_pendidikan === 'Lainnya' && (
+                                                                <div className="space-y-1 md:col-span-2">
+                                                                    <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pendidikan Lainnya</label>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={anak.status_pendidikan_lainnya} 
+                                                                        onChange={(e) => handleUpdateAnak(idx, 'status_pendidikan_lainnya', e.target.value)}
+                                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Tanggal Lahir</label>
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="date" 
+                                                                        value={anak.tanggal_lahir} 
+                                                                        onChange={(e) => handleUpdateAnak(idx, 'tanggal_lahir', e.target.value)}
+                                                                        className="flex-1 px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500"
+                                                                    />
+                                                                    <div className={`flex items-center justify-center px-3 py-1.5 rounded-md text-[11px] font-black min-w-[100px] ${berlaku ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                                        {usia} thn • {berlaku ? '✓ Berlaku' : '✗ Tidak Berlaku'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-700">
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={anak.tunjangan} 
+                                                                        onChange={(e) => handleUpdateAnak(idx, 'tunjangan', e.target.checked)}
+                                                                        className="w-4 h-4 text-blue-600 rounded"
+                                                                    />
+                                                                    Tunjangan Anak
+                                                                </label>
+                                                            </div>
+
+                                                            {/* PERPANJANGAN SECTION */}
+                                                            {(!berlaku || anak.tanggalPerpanjangan) && (
+                                                                <div className="md:col-span-2 bg-rose-50 border border-rose-200 rounded-md p-3 space-y-3">
+                                                                    <p className="text-[10px] font-black text-rose-700">Perpanjangan Masa Berlaku</p>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[9px] font-bold text-rose-600 uppercase px-0.5">Tanggal Berlaku Baru</label>
+                                                                            <input 
+                                                                                type="date" 
+                                                                                value={anak.tanggalPerpanjangan || ''} 
+                                                                                onChange={(e) => handleUpdateAnak(idx, 'tanggalPerpanjangan', e.target.value)}
+                                                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md focus:border-rose-500 focus:outline-none text-[11px]"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[9px] font-bold text-rose-600 uppercase px-0.5">Keterangan</label>
+                                                                            <input 
+                                                                                type="text" 
+                                                                                value={anak.keteranganPerpanjangan || ''} 
+                                                                                onChange={(e) => handleUpdateAnak(idx, 'keteranganPerpanjangan', e.target.value)}
+                                                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md focus:border-rose-500 focus:outline-none text-[11px]"
+                                                                                placeholder="Keterangan perpanjangan"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    {anak.tanggalPerpanjangan && (
+                                                                        <p className="text-[10px] text-emerald-600 font-bold">
+                                                                            Status akan menjadi berlaku sampai {new Date(anak.tanggalPerpanjangan).toLocaleDateString('id-ID')}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-5 bg-slate-50 border-t flex gap-3">
+                                    <button onClick={handleSave} disabled={isProcessing} className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[11px] hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+                                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                        {isProcessing ? 'Menyimpan...' : 'Simpan Data'}
+                                    </button>
+                                    <button onClick={() => setSelectedItem(null)} className="px-6 py-3 bg-white text-slate-500 rounded-xl font-black uppercase tracking-widest text-[10px] border border-slate-200 hover:bg-slate-100">
+                                        Batal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PIN MODAL */}
+                    {pinModal.show && (
+                        <div className="fixed inset-0 z-[600] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+                            <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-10 text-center space-y-6 shadow-2xl animate-in">
+                                <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xl"><KeyRound size={28} /></div>
+                                <div>
+                                    <h3 className="text-[14px] font-black uppercase tracking-tight text-slate-950">PIN Otentikasi</h3>
+                                </div>
+                                <input 
+                                    type="password" 
+                                    autoFocus 
+                                    maxLength={3} 
+                                    className="w-full text-center text-5xl font-black outline-none bg-slate-50 py-4 rounded-[1.5rem] tracking-[1.5rem] border-2 border-transparent focus:border-slate-900 shadow-inner"
+                                    placeholder="•••" 
+                                    value={pinInput} 
+                                    onChange={e => handlePinSubmit(e.target.value)} 
+                                    autoComplete="new-password"
+                                />
+                                <button onClick={() => { setPinModal({show: false}); setPinInput(''); }} className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline">Batal</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
+

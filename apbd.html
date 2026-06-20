@@ -1,0 +1,2767 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APBD TRACKER - Budgeting System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        /* 20% Layout Reduction */
+        html {
+            font-size: 13px;
+        }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Custom Table Spacing */
+        .border-separate { border-collapse: collapse; }
+        .border-spacing-0 { border-spacing: 0; }
+        
+        /* Fixed Table Layout */
+        #main-table { table-layout: fixed; width: max-content; min-width: 100%; }
+        .sticky-col-1 { position: sticky; left: 0; z-index: 20; }
+        .sticky-col-2 { position: sticky; left: 100px; z-index: 20; }
+        
+        /* Fixed Header */
+        #table-head th { 
+            position: sticky; 
+            top: 0; 
+            z-index: 50; 
+            background-color: #0f172a; /* Slate-900 matching the theme */
+        }
+        
+        /* Ensure horizontally sticky headers have higher z-index */
+        #table-head .sticky-col-1, #table-head .sticky-col-2 { z-index: 60; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10">
+
+    <header class="bg-slate-900 sticky top-0 z-[100] px-4 py-1 text-white shadow-2xl border-b-2 border-emerald-500">
+        <div class="container w-full px-2 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <div class="bg-emerald-500 p-1 rounded-xl -rotate-6 shadow-xl"><i data-lucide="layers" class="w-3.5 h-3.5"></i></div>
+                <div>
+                    <h1 class="text-base font-black italic tracking-tighter uppercase leading-none">APBD <span class="text-emerald-400 font-black italic text-[16px] ml-0.5">TRACKER</span></h1>
+                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5"></p>
+                </div>
+            </div>
+
+            <div class="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+                <button onclick="setActiveTab('pagu')" id="tab-pagu" class="tab-btn px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-lg">
+                    <i data-lucide="database" class="w-2.5 h-2.5"></i> Pagu
+                </button>
+                <button onclick="setActiveTab('realisasi')" id="tab-realisasi" class="tab-btn px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
+                    <i data-lucide="receipt" class="w-2.5 h-2.5"></i> Realisasi
+                </button>
+                <button onclick="setActiveTab('rekap')" id="tab-rekap" class="tab-btn px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
+                    <i data-lucide="bar-chart-3" class="w-2.5 h-2.5"></i> Rekap
+                </button>
+                <a href="bend23.html" class="px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
+                    <i data-lucide="shopping-bag" class="w-2.5 h-2.5"></i> Bend 23
+                </a>
+            </div>
+
+            <div class="hidden lg:flex gap-3 items-center">
+                <div class="text-right">
+                    <div id="pagu-label" class="text-[5px] text-slate-500 uppercase font-black tracking-widest">Pagu</div>
+                    <div id="global-pagu" class="text-xs font-mono font-black text-white leading-none tracking-tighter">Rp 0</div>
+                </div>
+                <div class="h-4 w-[1px] bg-slate-800"></div>
+                <div class="text-right">
+                    <div class="text-[5px] text-emerald-500 uppercase font-black tracking-widest">Sisa Kas</div>
+                    <div id="global-sisa" class="text-xs font-mono font-black text-emerald-400 leading-none tracking-tighter">Rp 0</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-2">
+        <div class="mb-2 flex items-center justify-between gap-4">
+            <div class="flex bg-white p-0.5 rounded-xl shadow-sm border border-slate-200">
+                <button onclick="setViewMode('murni')" id="mode-murni" class="mode-btn px-3 py-1.5 rounded-lg font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-400 hover:bg-slate-50">
+                    <i data-lucide="wallet" class="w-3 h-3"></i> Murni
+                </button>
+                <button onclick="setViewMode('efisiensi')" id="mode-efisiensi" class="mode-btn px-3 py-1.5 rounded-lg font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-400 hover:bg-slate-50">
+                    <i data-lucide="scissors" class="w-3 h-3"></i> Efisiensi
+                </button>
+                <button onclick="setViewMode('perubahan')" id="mode-perubahan" class="mode-btn px-3 py-1.5 rounded-lg font-black uppercase text-[7px] transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-lg">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i> Perubahan
+                </button>
+                <button onclick="setViewMode('perbandingan')" id="mode-perbandingan" class="mode-btn px-3 py-1.5 rounded-lg font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-400 hover:bg-slate-50">
+                    <i data-lucide="arrow-right-left" class="w-3 h-3"></i> Banding
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="handleExportMain()" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                    <i data-lucide="file-output" class="w-3 h-3"></i> Ekspor
+                </button>
+                <div id="rekap-controls" class="hidden flex items-center gap-2">
+                    <button onclick="showAllMonths()" class="bg-blue-600 text-white px-2 py-1 rounded-md font-black uppercase text-[7px] flex items-center gap-1 hover:bg-blue-700 transition-all shadow-sm">
+                        <i data-lucide="eye" class="w-2.5 h-2.5"></i> Semua Bulan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Summary Cards (Hidden by default) -->
+        <div id="filter-summary" class="mb-2 hidden grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div class="bg-slate-900 rounded-xl p-2 border border-slate-800 shadow-xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="bg-blue-500/20 p-1 rounded-lg text-blue-400"><i data-lucide="filter" class="w-2.5 h-2.5"></i></div>
+                    <span id="filter-pagu-label" class="text-[7px] font-black text-slate-500 uppercase tracking-widest">Pagu</span>
+                </div>
+                <div id="filtered-pagu" class="text-xs font-mono font-black text-blue-100">Rp 0</div>
+            </div>
+            <div class="bg-emerald-950 rounded-xl p-2 border border-emerald-900 shadow-xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="bg-emerald-500/20 p-1 rounded-lg text-emerald-400"><i data-lucide="receipt" class="w-2.5 h-2.5"></i></div>
+                    <span class="text-[7px] font-black text-emerald-700 uppercase tracking-widest">Real</span>
+                </div>
+                <div id="filtered-real" class="text-xs font-mono font-black text-emerald-400">Rp 0</div>
+            </div>
+            <div class="bg-amber-950 rounded-xl p-2 border border-amber-900 shadow-xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="bg-amber-500/20 p-1 rounded-lg text-amber-400"><i data-lucide="wallet" class="w-2.5 h-2.5"></i></div>
+                    <span class="text-[7px] font-black text-amber-700 uppercase tracking-widest">Sisa </span>
+                </div>
+                <div id="filtered-sisa" class="text-xs font-mono font-black text-amber-400">Rp 0</div>
+            </div>
+        </div>
+
+        <!-- Unified Search & Filter Controls -->
+        <div class="mb-2 bg-white p-2 rounded-xl shadow-sm border border-slate-200 space-y-2">
+            <!-- Row 1: Search & Tag Filters -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
+                    <input id="search-input" oninput="handleFilterChange()" placeholder="Cari Kode, Uraian..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none focus:ring-2 ring-emerald-500/5 transition-all" />
+                </div>
+
+                <div class="flex items-center gap-2 border-l pl-2 border-slate-100">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[6px] font-black text-slate-400 uppercase">Dana:</span>
+                        <select id="filter-dana" onchange="handleFilterChange()" class="bg-transparent text-[8px] font-black outline-none appearance-none cursor-pointer pr-1">
+                            <option value="all">SEMUA</option>
+                            <option value="DAU">DAU</option>
+                            <option value="DAK">DAK</option>
+                            <option value="PAD">PAD</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 border-l pl-2 border-slate-100">
+                        <span class="text-[6px] font-black text-slate-400 uppercase">Metode:</span>
+                        <select id="filter-metode" onchange="handleFilterChange()" class="bg-transparent text-[8px] font-black outline-none appearance-none cursor-pointer pr-1">
+                            <option value="all">SEMUA</option>
+                            <option value="EPURCHASING">E-PURCH</option>
+                            <option value="SWAKELOLA">SWAKELOLA</option>
+                            <option value="LANGSUNG">LANGSUNG</option>
+                            <option value="DIKECUALIKAN">DIKECUALIKAN</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 border-l pl-2 border-slate-100">
+                        <span class="text-[6px] font-black text-slate-400 uppercase">Metode 2:</span>
+                        <select id="filter-metode2" onchange="handleFilterChange()" class="bg-transparent text-[8px] font-black outline-none appearance-none cursor-pointer pr-1">
+                            <option value="all">SEMUA</option>
+                            <option value="PENYEDIA_SWAKELOLA">PENYEDIA DLM SWAKELOLA</option>
+                            <option value="TIDAK_ADA">N/A</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 border-l pl-2 border-slate-100">
+                        <span class="text-[6px] font-black text-slate-400 uppercase">Pelaksana:</span>
+                        <select id="filter-pelaksana" onchange="handleFilterChange()" class="bg-transparent text-[8px] font-black outline-none appearance-none cursor-pointer pr-1">
+                            <option value="all">SEMUA</option>
+                            <option value="TU">TATA USAHA</option>
+                            <option value="PENYANTUNAN">PENYANTUNAN</option>
+                            <option value="BIMRESOS">BIMRESOS</option>
+                        </select>
+                    </div>
+
+                    <button id="reset-filter-btn" onclick="handleResetFilters()" class="hidden bg-rose-600 text-white px-2 py-1 rounded-md font-black uppercase text-[7px] flex items-center gap-1 shadow-lg hover:bg-rose-700 transition-all animate-pulse">
+                        <i data-lucide="refresh-ccw" class="w-2.5 h-2.5"></i> RESET
+                    </button>
+
+                    <div class="flex gap-0.5 bg-slate-100 p-0.5 rounded-lg border-l ml-1">
+                        <button onclick="createBackup()" title="Backup " class="p-1 text-slate-600 hover:bg-white hover:text-emerald-600 rounded-md transition-all"><i data-lucide="cloud-upload" class="w-3 h-3"></i></button>
+                        <button onclick="setShowBackupModal(true)" title="Riwayat" class="p-1 text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all relative">
+                            <i data-lucide="history" class="w-3 h-3"></i>
+                            <span id="backup-badge" class="hidden absolute top-0.5 right-0.5 w-1 h-1 bg-blue-500 rounded-full border border-white"></span>
+                        </button>
+                        <button onclick="document.getElementById('import-file').click()" title="Restore" class="p-1 text-slate-600 hover:bg-white rounded-md transition-all"><i data-lucide="upload" class="w-3 h-3"></i></button>
+                        <input type="file" id="import-file" onchange="handleImport(event)" class="hidden" accept=".json" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Level Filters & Actions (Integrated) -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[6px] font-black text-slate-400 uppercase tracking-widest">Filter:</span>
+                    <div id="level-filters" class="flex items-center gap-1">
+                        <!-- Buttons will be rendered here by JS -->
+                    </div>
+                </div>
+
+                <div class="flex-1"></div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="togglePercentages()" class="bg-white border-2 border-slate-100 text-slate-500 px-3 py-1.5 rounded-lg font-black uppercase text-[7px] flex items-center gap-1.5 hover:border-slate-300 transition-all shadow-sm">
+                        <i data-lucide="percent" class="w-2.5 h-2.5"></i> Tampilkan Prosentase
+                    </button>
+                    <button id="btn-add-program" onclick="openAddProgramModal()" class="bg-slate-900 text-white px-3 py-1.5 rounded-lg font-black uppercase text-[7px] flex items-center gap-1.5 hover:bg-black transition-all shadow-lg">
+                        <i data-lucide="plus" class="w-2.5 h-2.5"></i> Program Baru
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hierarchy Filters -->
+        <div class="mb-2 grid grid-cols-4 gap-1.5 bg-slate-900/5 p-1.5 rounded-xl border border-slate-200">
+            <div class="space-y-0.5">
+                <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Program</label>
+                <select id="hier-program" onchange="handleHierarchyChange('program')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-blue-500/20">
+                    <option value="all">SEMUA PROGRAM</option>
+                </select>
+            </div>
+            <div class="space-y-0.5">
+                <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Kegiatan</label>
+                <select id="hier-kegiatan" onchange="handleHierarchyChange('kegiatan')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-indigo-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                    <option value="all">SEMUA KEGIATAN</option>
+                </select>
+            </div>
+            <div class="space-y-0.5">
+                <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Sub-Kegiatan</label>
+                <select id="hier-subkeg" onchange="handleHierarchyChange('sub_kegiatan')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-emerald-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                    <option value="all">SEMUA SUB-KEGIATAN</option>
+                </select>
+            </div>
+            <div class="space-y-0.5">
+                <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Rekening</label>
+                <select id="hier-rekening" onchange="handleHierarchyChange('rekening')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-orange-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                    <option value="all">SEMUA REKENING</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex-1">
+            <div class="overflow-x-auto overflow-y-auto no-scrollbar max-h-[calc(100vh-220px)]">
+                <table id="main-table" class="w-full text-left border-collapse">
+                    <thead id="table-head">
+                        <!-- Head rendered by JS -->
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-white/5">
+                        <!-- Data injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="pagu-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"></div>
+    <div id="realisasi-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[200] hidden items-center justify-center p-4"></div>
+    <div id="pin-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[300] hidden items-center justify-center p-4"></div>
+    <div id="backup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] hidden items-center justify-center p-4"></div>
+
+    <!-- Notification Toast -->
+    <div id="notif" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[500] px-8 py-4 bg-slate-900 text-white rounded-full shadow-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
+        <i id="notif-icon" data-lucide="info" class="w-4 h-4 text-emerald-400"></i>
+        <span id="notif-msg"></span>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        let supa = null;
+        try {
+            if (typeof supabase !== 'undefined') {
+                supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+             console.error("[APBD] Supabase early init failed:", e);
+         }
+         const appId = 'SIPD_PAGU_ADVANCED_v2';
+  
+         const PIN_OTORITAS = "888";
+        const BULAN_LIST = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+        const SUMBER_DANA = [
+            { id: 'DAU', label: 'DAU', color: 'bg-amber-400 text-amber-950', icon: 'wallet' },
+            { id: 'DAK', label: 'DAK', color: 'bg-cyan-500 text-white', icon: 'database' },
+            { id: 'PAD', label: 'PAD', color: 'bg-emerald-500 text-white', icon: 'bar-chart-3' },
+            { id: 'LAINNYA', label: 'Lainnya', color: 'bg-slate-400 text-slate-900', icon: 'tag' }
+        ];
+
+        const METODE_BELANJA = [
+            { id: 'EPURCHASING', label: 'E-PURCH', color: 'bg-blue-600 text-white', icon: 'shopping-cart' },
+            { id: 'SWAKELOLA', label: 'SWAKELOLA', color: 'bg-purple-600 text-white', icon: 'users' },
+            { id: 'LANGSUNG', label: 'LANGSUNG', color: 'bg-rose-600 text-white', icon: 'hand-coins' },
+            { id: 'DIKECUALIKAN', label: 'DIKECUALIKAN', color: 'bg-orange-500 text-white', icon: 'shield-check' },
+            { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
+        ];
+
+        const METODE_BELANJA_2 = [
+            { id: 'PENYEDIA_SWAKELOLA', label: 'Penyedia Dalam Swakelola', color: 'bg-violet-500 text-white', icon: 'user-cog' },
+            { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
+        ];
+
+        const PELAKSANA = [
+            { id: 'TU', label: 'Tata Usaha', color: 'bg-slate-700 text-white', icon: 'building' },
+            { id: 'PENYANTUNAN', label: 'Penyantunan', color: 'bg-indigo-600 text-white', icon: 'heart' },
+            { id: 'BIMRESOS', label: 'Bimresos', color: 'bg-teal-600 text-white', icon: 'users-round' },
+            { id: 'LAINNYA', label: 'Lainnya', color: 'bg-slate-400 text-slate-900', icon: 'user' }
+        ];
+
+        const LEVEL_STYLES = {
+            program: { bg: 'bg-blue-700', text: 'text-white', border: 'border-slate-800', accent: 'bg-blue-400', label: 'Program', icon: 'layers' },
+            kegiatan: { bg: 'bg-emerald-700', text: 'text-indigo-100', border: 'border-indigo-950', accent: 'bg-indigo-400', label: 'Kegiatan', icon: 'database' },
+            sub_kegiatan: { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-800', accent: 'bg-emerald-300', label: 'Sub-Kegiatan', icon: 'tag' },
+            rekening: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-700', accent: 'bg-orange-200', label: 'Rekening', icon: 'receipt' }
+        };
+
+        // --- STATE ---
+        let state = {
+            activeTab: 'pagu',
+            viewMode: localStorage.getItem(`${appId}_viewMode`) || 'perubahan',
+            expandedItems: {},
+            filterText: '',
+            filterDana: 'all',
+            filterMetode: 'all',
+            filterMetode2: 'all',
+            filterPelaksana: 'all',
+            filterLevel: 'all',
+            filterHierarchy: { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' },
+            modalFilters: { bulan: 'all', penerima: '', noBp: '' },
+            data: { pagu: [], realisasi: [], backups: [] },
+            editingPaguId: null,
+            targetItem: null,
+            isModeLocked: localStorage.getItem(`${appId}_isModeLocked`) === 'true',
+            bulkRealisasi: [],
+            pendingAction: null,
+            paguForm: { id: '', type: 'program', kode: '', uraian: '', paguMurni: '', paguPerubahan: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', metodeBelanja2: 'TIDAK_ADA', pelaksana: 'TU', parentId: null },
+            hiddenMonths: new Set(), // Bulan yang disembunyikan
+            showPercentages: true, // Menampilkan prosentase
+            hiddenCols: new Set(), // Kolom rekap yang disembunyikan
+            editingId: null // Melacak rekening yang sedang diedit manual
+        };
+
+        function checkIsFiltering() {
+            const hasSearch = !!state.filterText;
+            const hasDana = state.filterDana !== 'all';
+            const hasMetode = state.filterMetode !== 'all';
+            const hasMetode2 = state.filterMetode2 !== 'all';
+            const hasPelaksana = state.filterPelaksana !== 'all';
+            const hasLevel = state.filterLevel !== 'all';
+            const hasHierarchy = state.filterHierarchy.program !== 'all' || state.filterHierarchy.kegiatan !== 'all' || state.filterHierarchy.sub_kegiatan !== 'all' || state.filterHierarchy.rekening !== 'all';
+            return hasSearch || hasDana || hasMetode || hasMetode2 || hasPelaksana || hasLevel || hasHierarchy;
+        }
+
+        // --- UTILS ---
+        const formatRupiah = (num) => {
+            if (num === undefined || num === null || num === '') return '';
+            const val = typeof num === 'string' ? parseInt(num.replace(/[^0-9]/g, '')) : num;
+            if (isNaN(val)) return '0';
+            return new Intl.NumberFormat('id-ID').format(val);
+        };
+
+        const parseRupiah = (str) => {
+            if (!str) return 0;
+            return parseInt(str.toString().replace(/[^0-9]/g, '')) || 0;
+        };
+
+        function showNotif(msg, type = 'success') {
+            const el = document.getElementById('notif');
+            const msgEl = document.getElementById('notif-msg');
+            msgEl.innerText = msg;
+            el.style.opacity = '1';
+            el.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translate(-50%, 10px)';
+            }, 3000);
+        }
+
+        // --- CORE DATABASE FUNCTIONS ---
+        async function init() {
+            try {
+                console.log("[APBD] Initializing database connection...");
+                
+                // Wait for supabase to be defined (max 5 seconds)
+                let retries = 0;
+                while (typeof supabase === 'undefined' && retries < 10) {
+                    console.log("[APBD] Waiting for Supabase library... " + (retries + 1));
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    retries++;
+                }
+
+                if (typeof supabase === 'undefined') {
+                    throw new Error("Library Supabase tidak terdeteksi. Silakan periksa koneksi internet dan muat ulang halaman.");
+                }
+
+                if (!supa) {
+                    console.log("[APBD] Creating Supabase client...");
+                    supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+
+                const { data, error } = await supa
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', appId)
+                    .maybeSingle();
+
+                if (error) {
+                    console.error("[APBD] Database Fetch Error:", error);
+                    if (error.code === '42P01') {
+                        throw new Error("Tabel 'sipd_main_document' belum dibuat di database Supabase.");
+                    }
+                    throw new Error("Gagal mengambil data: " + error.message);
+                }
+
+                if (data) {
+                    console.log("[APBD] Data loaded successfully");
+                    state.data = {
+                        pagu: data.pagu || [],
+                        realisasi: data.realisasi || [],
+                        backups: data.backups || []
+                    };
+
+                    updateBackupBadge();
+                    updateHierarchyOptions();
+                    updateModeUI();
+                } else {
+                    console.log("[APBD] No data found, creating new entry...");
+                    await saveToSupabase({ pagu: [], realisasi: [], backups: [] });
+                }
+                render();
+            } catch (err) {
+                console.error("[APBD] Initialization failed:", err);
+                const errorMsg = err.message || "Gagal memuat data dari database";
+                showNotif(errorMsg, "error");
+                
+                // Provide a manual retry in console for developers
+                window.retryInit = init;
+                console.log("Ketik 'retryInit()' untuk mencoba ulang koneksi database.");
+
+                // Fallback to local rendering
+                render();
+            }
+        }
+
+        async function saveToSupabase(newData) {
+            try {
+                if (!supa) {
+                    throw new Error("Koneksi database belum terinisialisasi.");
+                }
+
+                // Update local state first for instant UI feedback
+                state.data = newData;
+                
+                const { error } = await supa
+                    .from('sipd_main_document')
+                    .upsert({ 
+                        app_id: appId, 
+                        pagu: newData.pagu, 
+                        realisasi: newData.realisasi, 
+                        backups: newData.backups,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'app_id' });
+
+                if (error) throw error;
+                showNotif("Tersimpan di Database");
+                updateBackupBadge();
+            } catch (err) {
+                console.error("Save Error:", err);
+                showNotif("Gagal menyimpan ke Cloud: " + (err.message || "Error tidak dikenal"), "error");
+            }
+        }
+
+        function updateBackupBadge() {
+            const badge = document.getElementById('backup-badge');
+            if (state.data.backups && state.data.backups.length > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // --- HANDLERS ---
+        function setActiveTab(tab) {
+            state.activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-500', 'text-slate-950', 'shadow-lg', 'scale-105');
+                btn.classList.add('text-slate-500', 'hover:text-slate-300');
+            });
+            document.getElementById(`tab-${tab}`).classList.add('bg-emerald-500', 'text-slate-950', 'shadow-lg', 'scale-105');
+            document.getElementById(`tab-${tab}`).classList.remove('text-slate-500', 'hover:text-slate-300');
+            
+            const btnAdd = document.getElementById('btn-add-program');
+            if (tab === 'pagu') btnAdd.classList.remove('hidden');
+            else btnAdd.classList.add('hidden');
+
+            render();
+        }
+
+        function setViewMode(mode) {
+            if (state.viewMode === mode) {
+                // Proses Mengunci atau Membuka Kunci
+                state.pendingAction = () => {
+                    state.isModeLocked = !state.isModeLocked;
+                    localStorage.setItem(`${appId}_isModeLocked`, state.isModeLocked);
+                    
+                    if (state.isModeLocked) {
+                        showNotif("Mode Pagu Dikunci", "success");
+                    } else {
+                        showNotif("Mode Pagu Dibuka", "success");
+                    }
+                    updateModeUI();
+                    render();
+                };
+                openPinModal();
+                return;
+            } else {
+                if (state.isModeLocked) return;
+                state.viewMode = mode;
+                state.isModeLocked = false;
+                localStorage.setItem(`${appId}_viewMode`, state.viewMode);
+                localStorage.setItem(`${appId}_isModeLocked`, state.isModeLocked);
+                updateModeUI();
+                render();
+            }
+        }
+
+        function updateModeUI() {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                const btnMode = btn.id.replace('mode-', '');
+                
+                // Reset styles & clear icons
+                btn.classList.remove('bg-blue-600', 'bg-emerald-600', 'bg-amber-500', 'bg-slate-900', 'text-white', 'text-slate-950', 'shadow-lg', 'opacity-50', 'cursor-not-allowed');
+                btn.classList.add('text-slate-400', 'hover:bg-slate-50');
+                btn.disabled = false;
+                
+                // Restore original icon and text
+                const originalIcons = { murni: 'wallet', efisiensi: 'scissors', perubahan: 'trending-up', perbandingan: 'arrow-right-left' };
+                const originalLabels = { murni: 'Murni', efisiensi: 'Efisiensi', perubahan: 'Perubahan', perbandingan: 'Banding' };
+                
+                btn.innerHTML = `<i data-lucide="${originalIcons[btnMode]}" class="w-3 h-3"></i> ${originalLabels[btnMode]}`;
+
+                // Apply active style
+                if (btnMode === state.viewMode) {
+                    if (state.viewMode === 'murni') btn.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+                    else if (state.viewMode === 'efisiensi') btn.classList.add('bg-emerald-600', 'text-white', 'shadow-lg');
+                    else if (state.viewMode === 'perubahan') btn.classList.add('bg-amber-500', 'text-slate-950', 'shadow-lg');
+                    else btn.classList.add('bg-slate-900', 'text-white', 'shadow-lg');
+                    btn.classList.remove('text-slate-400', 'hover:bg-slate-50');
+                    
+                    // Add lock icon if locked
+                    if (state.isModeLocked) {
+                        btn.innerHTML = `<i data-lucide="lock" class="w-3 h-3 text-white"></i> ${originalLabels[btnMode]}`;
+                    }
+                } else if (state.isModeLocked) {
+                    // Disable others if locked
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.disabled = true;
+                }
+            });
+            
+            lucide.createIcons();
+            const label = document.getElementById('pagu-label');
+            if (label) label.innerText = `Pagu ${state.viewMode === 'perbandingan' ? 'Total' : state.viewMode.charAt(0).toUpperCase() + state.viewMode.slice(1)}`;
+        }
+
+        function openPinModal() {
+            const modal = document.getElementById('pin-modal');
+            modal.innerHTML = `
+                <div class="bg-white rounded-[40px] w-full max-w-xs overflow-hidden shadow-2xl border-[6px] border-slate-900 animate-in zoom-in duration-300">
+                    <div class="bg-slate-900 p-6 text-white text-center relative">
+                        <button onclick="closePinModal()" class="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-all">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                        <div class="bg-amber-500 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 -rotate-6 shadow-lg">
+                            <i data-lucide="key-round" class="text-slate-900"></i>
+                        </div>
+                        <h4 class="font-black text-xl uppercase tracking-tighter">Otoritas Diperlukan</h4>
+                        <p class="text-[9px] font-bold opacity-50 uppercase tracking-widest mt-1">Masukkan PIN otoritas untuk melanjutkan</p>
+                    </div>
+                    <div class="p-8">
+                        <input type="password" id="pin-input" maxlength="3" autofocus class="w-full text-center text-4xl font-black tracking-[0.5em] py-4 bg-slate-50 border-4 border-slate-100 rounded-3xl outline-none focus:border-amber-500 focus:bg-white transition-all" placeholder="***" />
+                        
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="closePinModal()" class="flex-1 py-4 border-2 border-slate-100 rounded-2xl text-[10px] font-black text-slate-400 uppercase hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">Batalkan</button>
+                            <button onclick="verifyPin()" class="flex-1 py-4 bg-emerald-500 text-slate-950 rounded-2xl font-black text-xs hover:bg-emerald-600 transition-all uppercase shadow-lg">Lanjutkan</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Focus hidden input for keyboard users
+            const input = document.getElementById('pin-input');
+            input.focus();
+            input.onkeyup = (e) => { if (e.key === 'Enter') verifyPin(); };
+        }
+
+        function verifyPin() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin === PIN_OTORITAS) {
+                if (state.pendingAction) state.pendingAction();
+                closePinModal();
+            } else {
+                showNotif("PIN Salah!", "error");
+                document.getElementById('pin-input').value = '';
+            }
+        }
+
+        function closePinModal() {
+            const modal = document.getElementById('pin-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            state.pendingAction = null;
+        }
+
+        function handleFilterChange() {
+            state.filterText = document.getElementById('search-input').value.toLowerCase();
+            state.filterDana = document.getElementById('filter-dana').value;
+            state.filterMetode = document.getElementById('filter-metode').value;
+            state.filterMetode2 = document.getElementById('filter-metode2').value;
+            state.filterPelaksana = document.getElementById('filter-pelaksana').value;
+            checkResetButton();
+            render();
+        }
+
+        function handleResetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-dana').value = 'all';
+            document.getElementById('filter-metode').value = 'all';
+            document.getElementById('filter-metode2').value = 'all';
+            document.getElementById('filter-pelaksana').value = 'all';
+            state.filterText = '';
+            state.filterDana = 'all';
+            state.filterMetode = 'all';
+            state.filterMetode2 = 'all';
+            state.filterPelaksana = 'all';
+            state.filterLevel = 'all';
+            state.filterHierarchy = { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' };
+            state.expandedItems = {};
+            document.getElementById('reset-filter-btn').classList.add('hidden');
+            updateHierarchyOptions();
+            checkResetButton();
+            render();
+        }
+
+        function checkResetButton() {
+            const resetBtn = document.getElementById('reset-filter-btn');
+            if (checkIsFiltering()) {
+                resetBtn.classList.remove('hidden');
+            } else {
+                resetBtn.classList.add('hidden');
+            }
+        }
+
+        function handleHierarchyChange(level) {
+            const val = document.getElementById(`hier-${level === 'sub_kegiatan' ? 'subkeg' : level}`).value;
+            state.filterHierarchy[level] = val;
+
+            if (level === 'program') {
+                state.filterHierarchy.kegiatan = 'all';
+                state.filterHierarchy.sub_kegiatan = 'all';
+                state.filterHierarchy.rekening = 'all';
+            } else if (level === 'kegiatan') {
+                state.filterHierarchy.sub_kegiatan = 'all';
+                state.filterHierarchy.rekening = 'all';
+            } else if (level === 'sub_kegiatan') {
+                state.filterHierarchy.rekening = 'all';
+            }
+
+            updateHierarchyOptions();
+            checkResetButton();
+            render();
+        }
+
+        function updateHierarchyOptions() {
+            const progSelect = document.getElementById('hier-program');
+            const kegSelect = document.getElementById('hier-kegiatan');
+            const subkegSelect = document.getElementById('hier-subkeg');
+            const rekSelect = document.getElementById('hier-rekening');
+
+            // 1. Update Program Options
+            const programs = state.data.pagu.filter(p => p.type === 'program');
+            progSelect.innerHTML = '<option value="all">SEMUA PROGRAM</option>' + 
+                programs.map(p => `<option value="${p.id}" ${state.filterHierarchy.program === p.id ? 'selected' : ''}>${p.kode} - ${p.uraian}</option>`).join('');
+
+            // 2. Update Kegiatan Options
+            let kegiatanList = [];
+            kegSelect.disabled = state.filterHierarchy.program === 'all';
+            
+            if (state.filterHierarchy.program !== 'all') {
+                const selectedProg = programs.find(p => p.id === state.filterHierarchy.program);
+                if (selectedProg && selectedProg.children) {
+                    kegiatanList = selectedProg.children.filter(c => c.type === 'kegiatan');
+                }
+            }
+            kegSelect.innerHTML = '<option value="all">SEMUA KEGIATAN</option>' + 
+                kegiatanList.map(k => `<option value="${k.id}" ${state.filterHierarchy.kegiatan === k.id ? 'selected' : ''}>${k.kode} - ${k.uraian}</option>`).join('');
+
+            // 3. Update Sub-Kegiatan Options
+            let subkegList = [];
+            subkegSelect.disabled = state.filterHierarchy.kegiatan === 'all';
+
+            if (state.filterHierarchy.kegiatan !== 'all') {
+                const findItem = (list, id) => {
+                    for (const item of list) {
+                        if (item.id === id) return item;
+                        if (item.children) {
+                            const found = findItem(item.children, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const selectedKeg = findItem(state.data.pagu, state.filterHierarchy.kegiatan);
+                if (selectedKeg && selectedKeg.children) {
+                    subkegList = selectedKeg.children.filter(s => s.type === 'sub_kegiatan');
+                }
+            }
+            subkegSelect.innerHTML = '<option value="all">SEMUA SUB-KEGIATAN</option>' + 
+                subkegList.map(s => `<option value="${s.id}" ${state.filterHierarchy.sub_kegiatan === s.id ? 'selected' : ''}>${s.kode} - ${s.uraian}</option>`).join('');
+
+            // 4. Update Rekening Options
+            let rekeningList = [];
+            rekSelect.disabled = state.filterHierarchy.sub_kegiatan === 'all';
+
+            if (state.filterHierarchy.sub_kegiatan !== 'all') {
+                const findItem = (list, id) => {
+                    for (const item of list) {
+                        if (item.id === id) return item;
+                        if (item.children) {
+                            const found = findItem(item.children, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const selectedSub = findItem(state.data.pagu, state.filterHierarchy.sub_kegiatan);
+                if (selectedSub && selectedSub.children) {
+                    rekeningList = selectedSub.children.filter(r => r.type === 'rekening');
+                }
+            }
+            rekSelect.innerHTML = '<option value="all">SEMUA REKENING</option>' + 
+                rekeningList.map(r => `<option value="${r.id}" ${state.filterHierarchy.rekening === r.id ? 'selected' : ''}>${r.kode} - ${r.uraian}</option>`).join('');
+        }
+
+        // --- BACKUP & RESTORE LOGIC ---
+        function createBackup() {
+            if (!state.data.pagu.length && !state.data.realisasi.length) {
+                alert("Tidak ada data untuk dibackup.");
+                return;
+            }
+            
+            // Generate SQL snapshot format
+            const timestamp = new Date().toISOString();
+            const sqlSnapshot = `-- SIPD ULTRA SQL SNAPSHOT
+-- Generated: ${timestamp}
+BEGIN;
+DELETE FROM public.sipd_main_document WHERE app_id = '${appId}';
+INSERT INTO public.sipd_main_document (app_id, pagu, realisasi, updated_at)
+VALUES (
+    '${appId}',
+    '${JSON.stringify(state.data.pagu).replace(/'/g, "''")}'::jsonb,
+    '${JSON.stringify(state.data.realisasi).replace(/'/g, "''")}'::jsonb,
+    '${timestamp}'
+);
+COMMIT;`;
+
+            const newBackup = {
+                id: `backup-${Date.now()}`,
+                timestamp: new Date().toLocaleString('id-ID'),
+                pagu: JSON.parse(JSON.stringify(state.data.pagu)),
+                realisasi: JSON.parse(JSON.stringify(state.data.realisasi)),
+                sql_snapshot: sqlSnapshot
+            };
+            
+            const updatedBackups = [newBackup, ...(state.data.backups || [])].slice(0, 10);
+            saveToSupabase({ ...state.data, backups: updatedBackups });
+        }
+
+        function downloadSqlBackup(id) {
+            const backup = state.data.backups.find(b => b.id === id);
+            if (!backup || !backup.sql_snapshot) {
+                alert("Snapshot SQL tidak ditemukan untuk backup ini.");
+                return;
+            }
+            
+            const blob = new Blob([backup.sql_snapshot], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `RESTORE_SIPD_${backup.timestamp.replace(/[/:\s]/g, '_')}.sql`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotif("File SQL Restore berhasil diunduh");
+        }
+
+        function setShowBackupModal(show) {
+            const modal = document.getElementById('backup-modal');
+            if (show) {
+                renderBackupModal();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function renderBackupModal() {
+            const modal = document.getElementById('backup-modal');
+            modal.innerHTML = `
+                <div class="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl border-[6px] border-blue-600">
+                    <div class="bg-blue-600 p-8 text-white flex justify-between items-center">
+                        <div>
+                            <h4 class="font-black text-2xl uppercase tracking-tighter">Riwayat Cloud Backup</h4>
+                            <p class="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-1">Hanya menyimpan 10 versi terakhir</p>
+                        </div>
+                        <button onclick="setShowBackupModal(false)" class="p-2 hover:bg-white/20 rounded-xl"><i data-lucide="x"></i></button>
+                    </div>
+                    <div class="p-6 bg-slate-50 space-y-3 max-h-[60vh] overflow-y-auto">
+                        ${state.data.backups && state.data.backups.length > 0 ? state.data.backups.map(b => `
+                            <div class="bg-white p-5 rounded-3xl border border-slate-200 flex items-center justify-between hover:border-blue-300 transition-all">
+                                <div>
+                                    <div class="text-[10px] font-black text-slate-400 uppercase">Waktu Pencadangan</div>
+                                    <div class="font-bold text-slate-800">${b.timestamp}</div>
+                                    <div class="text-[8px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded mt-2 inline-block">
+                                        ${b.pagu ? b.pagu.length : 0} Program • ${b.realisasi ? b.realisasi.length : 0} Transaksi
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="downloadSqlBackup('${b.id}')" title="Unduh SQL Restore" class="p-3 bg-blue-100 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="file-code"></i></button>
+                                    <button onclick="restoreBackup('${b.id}')" title="Restore via App" class="p-3 bg-emerald-100 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all"><i data-lucide="rotate-ccw"></i></button>
+                                    <button onclick="deleteBackup('${b.id}')" title="Hapus" class="p-3 bg-rose-100 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all"><i data-lucide="trash-2"></i></button>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="text-center py-20 opacity-30 italic uppercase font-black tracking-widest text-xs">Belum ada riwayat backup</div>'}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function restoreBackup(id) {
+            const backup = state.data.backups.find(b => b.id === id);
+            if (backup && confirm(`Pulihkan data dari ${backup.timestamp}?`)) {
+                saveToSupabase({ ...state.data, pagu: backup.pagu, realisasi: backup.realisasi });
+                state.data.pagu = backup.pagu;
+                state.data.realisasi = backup.realisasi;
+                updateHierarchyOptions();
+                setShowBackupModal(false);
+                render();
+            }
+        }
+
+        function deleteBackup(id) {
+            if (confirm("Hapus backup ini?")) {
+                const updated = state.data.backups.filter(b => b.id !== id);
+                saveToSupabase({ ...state.data, backups: updated });
+                renderBackupModal();
+            }
+        }
+
+        function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const imported = JSON.parse(ev.target.result);
+                    
+                    // Validasi struktur data minimal
+                    if (!imported.pagu || !Array.isArray(imported.pagu)) {
+                        throw new Error("Format data JSON tidak sesuai (pagu missing)");
+                    }
+
+                    if (confirm("Data JSON berhasil dibaca. Pulihkan data ini ke Cloud? (Data saat ini akan diganti)")) {
+                        // Gabungkan dengan backups lama jika ada
+                        const newData = {
+                            pagu: imported.pagu || [],
+                            realisasi: imported.realisasi || [],
+                            backups: state.data.backups || []
+                        };
+                        
+                        await saveToSupabase(newData);
+                        // Reload state lokal
+                        state.data = newData;
+                        updateHierarchyOptions();
+                        render();
+                        showNotif("Data JSON berhasil dipulihkan ke Cloud");
+                    }
+                } catch(err) { 
+                    console.error("Import Error:", err);
+                    alert("Gagal memulihkan JSON: " + err.message); 
+                } finally {
+                    e.target.value = ''; // Reset input file
+                }
+            };
+            reader.readAsText(file);
+        }
+        // --- CALCULATION LOGIC ---
+        function getAggregatedData(item) {
+            // Jika rekening, ambil nilainya sendiri. Jika bukan rekening, mulai dari 0 (akan dijumlahkan dari anak-anaknya)
+            let paguMurni = item.type === 'rekening' ? parseRupiah(item.paguMurni || item.pagu || 0) : 0;
+            let paguEfisiensi = item.type === 'rekening' ? parseRupiah(item.paguEfisiensi || 0) : 0;
+            let paguPerubahan = item.type === 'rekening' ? parseRupiah(item.paguPerubahan || item.pagu || 0) : 0;
+            let belumSP2D = parseRupiah(item.belumSP2D || 0);
+            
+            const transactions = (state.data.realisasi || []).filter(r => r.rekeningId === item.id);
+            
+            let realisasi = 0;
+            let monthly = Array(12).fill(0);
+
+            transactions.forEach(r => {
+                const nilai = parseRupiah(r.nilai);
+                realisasi += nilai;
+                
+                if (r.tanggal) {
+                    // Coba berbagai format tanggal (YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD, dsb)
+                    const dateParts = r.tanggal.split(/[-/.]/);
+                    let month = -1;
+
+                    if (dateParts.length === 3) {
+                        // Jika format YYYY-MM-DD (bagian pertama > 31)
+                        if (parseInt(dateParts[0]) > 31) {
+                            month = parseInt(dateParts[1]) - 1;
+                        } 
+                        // Jika format DD-MM-YYYY (bagian terakhir > 31)
+                        else if (parseInt(dateParts[2]) > 31) {
+                            month = parseInt(dateParts[1]) - 1;
+                        }
+                        // Default ambil bagian tengah
+                        else {
+                            month = parseInt(dateParts[1]) - 1;
+                        }
+                    }
+
+                    if (month >= 0 && month <= 11) {
+                        monthly[month] += nilai;
+                    } else {
+                        // Jika gagal deteksi bulan, masukkan ke bulan dari sistem/default
+                        const fallbackMonth = new Date(r.tanggal).getMonth();
+                        if (!isNaN(fallbackMonth)) {
+                            monthly[fallbackMonth] += nilai;
+                        } else {
+                            // Jika benar-benar gagal, masukkan ke bulan Januari sebagai fallback agar total tetap sama
+                            monthly[0] += nilai;
+                        }
+                    }
+                } else {
+                    // Jika tidak ada tanggal, masukkan ke Januari agar total rekap = total realisasi
+                    monthly[0] += nilai;
+                }
+            });
+
+            let foundDana = new Set();
+            let foundMetode = new Set();
+            let foundMetode2 = new Set();
+            let foundPelaksana = new Set();
+            if (item.type === 'rekening') {
+                foundDana.add(item.sumberDana || 'DAU');
+                foundMetode.add(item.metodeBelanja || 'TIDAK_ADA');
+                foundMetode2.add(item.metodeBelanja2 || 'TIDAK_ADA');
+                foundPelaksana.add(item.pelaksana || 'TU');
+            }
+
+            if (item.children && item.children.length > 0) {
+                let sumMurni = 0, sumEfisiensi = 0, sumPerubahan = 0, sumReal = 0, sumBelum = 0;
+                let sumMonthly = Array(12).fill(0);
+
+                item.children.forEach(child => {
+                    const childData = getAggregatedData(child);
+                    sumMurni += childData.paguMurni;
+                    sumEfisiensi += childData.paguEfisiensi;
+                    sumPerubahan += childData.paguPerubahan;
+                    sumReal += childData.realisasi;
+                    sumBelum += childData.belumSP2D;
+                    childData.monthly.forEach((v, i) => sumMonthly[i] += v);
+                    childData.foundDana.forEach(d => foundDana.add(d));
+                    childData.foundMetode.forEach(m => foundMetode.add(m));
+                    childData.foundMetode2.forEach(m2 => foundMetode2.add(m2));
+                    childData.foundPelaksana.forEach(p => foundPelaksana.add(p));
+                });
+
+                paguMurni = sumMurni;
+                paguEfisiensi = sumEfisiensi;
+                paguPerubahan = sumPerubahan;
+                realisasi = sumReal;
+                belumSP2D = sumBelum;
+                monthly = sumMonthly;
+            }
+
+            return { paguMurni, paguEfisiensi, paguPerubahan, realisasi, belumSP2D, monthly, foundDana, foundMetode, foundMetode2, foundPelaksana };
+        }
+
+        function calculateFilteredTotals(items, forceMatch = false) {
+            let murni = 0, efisiensi = 0, perubahan = 0, real = 0, belum = 0;
+            let monthly = Array(12).fill(0);
+            let foundDana = new Set();
+            let foundMetode = new Set();
+            let foundMetode2 = new Set();
+            let foundPelaksana = new Set();
+
+            items.forEach(item => {
+                // Hierarchy filtering logic (pruning)
+                let skip = false;
+                if (state.filterHierarchy.program !== 'all' && item.type === 'program' && item.id !== state.filterHierarchy.program) skip = true;
+                if (state.filterHierarchy.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== state.filterHierarchy.kegiatan) skip = true;
+                if (state.filterHierarchy.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== state.filterHierarchy.sub_kegiatan) skip = true;
+                if (state.filterHierarchy.rekening !== 'all' && item.type === 'rekening' && item.id !== state.filterHierarchy.rekening) skip = true;
+
+                if (skip) return;
+
+                const itemMeetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
+                const currentForceMatch = forceMatch || itemMeetsText;
+
+                if (item.type === 'rekening') {
+                    const agg = getAggregatedData(item);
+                    const meetsDana = state.filterDana === 'all' || item.sumberDana === state.filterDana;
+                    const meetsMetode = state.filterMetode === 'all' || item.metodeBelanja === state.filterMetode;
+                    const meetsMetode2 = state.filterMetode2 === 'all' || (item.metodeBelanja2 || 'TIDAK_ADA') === state.filterMetode2;
+                    const meetsPelaksana = state.filterPelaksana === 'all' || (item.pelaksana || 'TU') === state.filterPelaksana;
+                    
+                    if (currentForceMatch && meetsDana && meetsMetode && meetsMetode2 && meetsPelaksana) {
+                        murni += agg.paguMurni;
+                        efisiensi += agg.paguEfisiensi;
+                        perubahan += agg.paguPerubahan;
+                        real += agg.realisasi;
+                        belum += agg.belumSP2D;
+                        agg.monthly.forEach((v, i) => monthly[i] += v);
+                        foundDana.add(item.sumberDana || 'DAU');
+                        foundMetode.add(item.metodeBelanja || 'TIDAK_ADA');
+                        foundMetode2.add(item.metodeBelanja2 || 'TIDAK_ADA');
+                        foundPelaksana.add(item.pelaksana || 'TU');
+                    }
+                } else if (item.children) {
+                    const sub = calculateFilteredTotals(item.children, currentForceMatch);
+                    murni += sub.paguMurni;
+                    efisiensi += sub.paguEfisiensi;
+                    perubahan += sub.paguPerubahan;
+                    real += sub.realisasi;
+                    belum += sub.belumSP2D;
+                    sub.monthly.forEach((v, i) => monthly[i] += v);
+                    sub.foundDana.forEach(d => foundDana.add(d));
+                    sub.foundMetode.forEach(m => foundMetode.add(m));
+                    sub.foundMetode2.forEach(m2 => foundMetode2.add(m2));
+                    sub.foundPelaksana.forEach(p => foundPelaksana.add(p));
+                }
+            });
+
+            return { 
+                paguMurni: murni, 
+                paguEfisiensi: efisiensi, 
+                paguPerubahan: perubahan, 
+                realisasi: real, 
+                belumSP2D: belum, 
+                monthly, 
+                foundDana, 
+                foundMetode, 
+                foundMetode2,
+                foundPelaksana 
+            };
+        }
+
+        // --- RENDER LOGIC ---
+        function render(force = false) {
+            renderHeaderStats();
+            renderLevelFilters();
+            if (!state.editingId || force) {
+                renderTable();
+            }
+        }
+
+        function renderHeaderStats() {
+            const isFiltering = checkIsFiltering();
+            
+            let murni = 0, efisiensi = 0, perubahan = 0, real = 0;
+            
+            if (isFiltering) {
+                const filtered = calculateFilteredTotals(state.data.pagu);
+                murni = filtered.paguMurni;
+                efisiensi = filtered.paguEfisiensi;
+                perubahan = filtered.paguPerubahan;
+                real = filtered.realisasi;
+            } else {
+                state.data.pagu.forEach(p => {
+                    const agg = getAggregatedData(p);
+                    murni += agg.paguMurni;
+                    efisiensi += agg.paguEfisiensi;
+                    perubahan += agg.paguPerubahan;
+                    real += agg.realisasi;
+                });
+            }
+
+            let activePagu = 0;
+            if (state.viewMode === 'murni') activePagu = murni;
+            else if (state.viewMode === 'efisiensi') activePagu = efisiensi;
+            else activePagu = perubahan;
+
+            document.getElementById('global-pagu').innerText = `Rp ${formatRupiah(activePagu)}`;
+            document.getElementById('global-sisa').innerText = `Rp ${formatRupiah(activePagu - real)}`;
+
+            // Filter Summary
+            const summary = document.getElementById('filter-summary');
+            
+            if (isFiltering) {
+                summary.classList.remove('hidden');
+                summary.classList.add('grid');
+                
+                document.getElementById('filter-pagu-label').innerText = `Filter: Pagu ${state.viewMode.toUpperCase()}`;
+                document.getElementById('filtered-pagu').innerText = `Rp ${formatRupiah(activePagu)}`;
+                document.getElementById('filtered-real').innerText = `Rp ${formatRupiah(real)}`;
+                document.getElementById('filtered-sisa').innerText = `Rp ${formatRupiah(activePagu - real)}`;
+            } else {
+                summary.classList.add('hidden');
+                summary.classList.remove('grid');
+            }
+        }
+
+        function renderLevelFilters() {
+            const container = document.getElementById('level-filters');
+            const levels = [
+                { id: 'all', label: 'SEMUA', color: 'bg-slate-900', icon: 'layout-grid' },
+                { id: 'program', label: 'PROGRAM', color: 'bg-slate-800', icon: 'layers' },
+                { id: 'kegiatan', label: 'KEGIATAN', color: 'bg-indigo-900', icon: 'database' },
+                { id: 'sub_kegiatan', label: 'SUB-KEG', color: 'bg-emerald-700', icon: 'tag' },
+                { id: 'rekening', label: 'REKENING', color: 'bg-orange-600', icon: 'receipt' }
+            ];
+
+            container.innerHTML = levels.map(lvl => `
+                <button onclick="setLevelFilter('${lvl.id}')" class="px-3 py-1.5 rounded-lg font-black uppercase text-[8px] transition-all flex items-center gap-1.5 border-2 ${state.filterLevel === lvl.id ? `${lvl.color} text-white border-transparent shadow-lg scale-105` : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'}">
+                    <i data-lucide="${lvl.icon}" class="w-3 h-3"></i> ${lvl.label}
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function setLevelFilter(lvl) {
+            state.filterLevel = lvl;
+            render();
+        }
+
+        function togglePercentages() {
+            state.showPercentages = !state.showPercentages;
+            render();
+        }
+
+        function toggleMonth(monthIdx) {
+            if (state.hiddenMonths.has(monthIdx)) {
+                state.hiddenMonths.delete(monthIdx);
+            } else {
+                state.hiddenMonths.add(monthIdx);
+            }
+            render();
+        }
+
+        function showAllMonths() {
+            state.hiddenMonths.clear();
+            state.hiddenCols.clear();
+            render();
+        }
+
+        function toggleCol(colId) {
+            if (state.hiddenCols.has(colId)) {
+                state.hiddenCols.delete(colId);
+            } else {
+                state.hiddenCols.add(colId);
+            }
+            render();
+        }
+
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            
+            document.getElementById('rekap-controls').classList.toggle('hidden', state.activeTab !== 'rekap');
+
+            // Standard border color for consistency - made much whiter and prominent
+            const borderColor = 'border-white/60';
+            
+            // Kode: 90px, Uraian: 400px, Pagu/Real/Sisa: 80px, Bulan: 55px
+            let headHtml = `
+                <tr class="bg-slate-900 text-amber-400 text-[9px] font-black uppercase tracking-[0.1em]">
+                    <th class="px-2 py-2.5 w-[90px] sticky-col-1 bg-slate-900 border-r border-b ${borderColor}">Kode</th>
+                    <th class="px-3 py-2.5 w-[400px] sticky-col-2 bg-slate-900 border-r border-b ${borderColor}">Program dan Kegiatan</th>
+            `;
+
+            // Tab Rekap: Hanya tampilkan satu kolom pagu yang aktif (dikunci)
+            if (state.activeTab === 'rekap') {
+                const activePaguLabel = state.viewMode === 'murni' ? 'Pagu Murni' : (state.viewMode === 'efisiensi' ? 'Pagu Efisiensi' : (state.viewMode === 'perubahan' ? 'Pagu Perubahan' : 'Pagu'));
+                headHtml += `
+                    <th class="px-2 py-2.5 text-right w-[80px] sticky-col-3 bg-slate-800 text-amber-400 border-r border-b ${borderColor}">
+                        <div class="flex flex-col items-end leading-tight">
+                            <span class="text-[9px] font-black uppercase tracking-tight">${activePaguLabel}</span>
+                        </div>
+                    </th>
+                `;
+            } else if (state.viewMode === 'perbandingan') {
+                headHtml += `
+                    <th class="px-2 py-2.5 text-right w-[80px] sticky-col-3 bg-blue-950 text-amber-400 border-r border-b ${borderColor}">Pagu Murni</th>
+                    <th class="px-2 py-2.5 text-right w-[80px] sticky-col-4 bg-emerald-950 text-amber-400 border-r border-b ${borderColor}">Pagu Efisiensi</th>
+                    <th class="px-2 py-2.5 text-right w-[80px] sticky-col-5 bg-amber-950 text-amber-400 border-r border-b ${borderColor}">Pagu Perubahan</th>
+                `;
+            } else {
+                const activePaguLabel = state.viewMode === 'murni' ? 'Pagu Murni' : (state.viewMode === 'efisiensi' ? 'Pagu Efisiensi' : (state.viewMode === 'perubahan' ? 'Pagu Perubahan' : 'Pagu'));
+                headHtml += `
+                    <th class="px-2 py-2.5 text-right w-[80px] sticky-col-3 bg-slate-800 text-amber-400 border-r border-b ${borderColor}">${activePaguLabel}</th>
+                `;
+            }
+
+            if (state.activeTab === 'rekap') {
+                BULAN_LIST.forEach((b, idx) => {
+                    if (!state.hiddenMonths.has(idx)) {
+                        headHtml += `
+                            <th class="px-0.5 py-2.5 text-center w-[55px] border-r border-b ${borderColor} text-amber-400 group relative">
+                                <div class="flex flex-col items-center">
+                                    <input type="checkbox" onchange="toggleMonth(${idx})" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan ${b}">
+                                    <span>${b}</span>
+                                </div>
+                            </th>`;
+                    }
+                });
+                if (!state.hiddenCols.has('real')) {
+                    headHtml += `
+                        <th class="px-2 py-2.5 text-right w-[80px] bg-emerald-950 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center">
+                                <input type="checkbox" onchange="toggleCol('real')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Real">
+                                <span>Real</span>
+                            </div>
+                        </th>`;
+                }
+                if (!state.hiddenCols.has('sisa')) {
+                    headHtml += `
+                        <th class="px-2 py-2.5 text-right w-[80px] bg-slate-800 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center">
+                                <input type="checkbox" onchange="toggleCol('sisa')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Sisa">
+                                <span>Sisa</span>
+                            </div>
+                        </th>`;
+                }
+                if (!state.hiddenCols.has('belum_sp2d')) {
+                    headHtml += `
+                        <th class="px-2 py-2.5 text-left w-[80px] bg-rose-950 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center">
+                                <input type="checkbox" onchange="toggleCol('belum_sp2d')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Blm SP2D">
+                                <span>Belum SP2D</span>
+                            </div>
+                        </th>`;
+                }
+                if (!state.hiddenCols.has('real_plus_sp2d')) {
+                    headHtml += `
+                        <th class="px-2 py-2.5 text-left w-[80px] bg-indigo-950 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center">
+                                <input type="checkbox" onchange="toggleCol('real_plus_sp2d')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Real + SP2D">
+                                <span>Real Belum SP2D</span>
+                            </div>
+                        </th>`;
+                }
+                if (!state.hiddenCols.has('sisa_real')) {
+                    headHtml += `
+                        <th class="px-2 py-2.5 text-left w-[80px] bg-blue-900 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center">
+                                <input type="checkbox" onchange="toggleCol('sisa_real')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Sisa Real">
+                                <span>Sisa Real Belum SP2D</span>
+                            </div>
+                        </th>`;
+                }
+            } else {
+                headHtml += `
+                    <th class="px-2 py-2.5 text-right w-[80px] bg-emerald-950 text-amber-400 border-r border-b ${borderColor}">Realisasi</th>
+                    <th class="px-2 py-2.5 text-right w-[80px] bg-slate-800 text-amber-400 border-r border-b ${borderColor}">Sisa Pagu</th>
+                `;
+            }
+            
+            // Tambahkan kolom Aksi jika bukan tab rekap
+            if (state.activeTab !== 'rekap') {
+                headHtml += `<th class="px-2 py-2.5 text-center w-[100px] bg-slate-900 text-amber-400 border-b ${borderColor}">Aksi</th>`;
+            }
+
+            headHtml += `</tr>`;
+            head.innerHTML = headHtml;
+
+            body.innerHTML = '';
+            if (state.data.pagu.length === 0) {
+                body.innerHTML = `<tr><td colspan="30" class="py-20 text-center opacity-20"><i data-lucide="database" class="w-12 h-12 mx-auto mb-2"></i><span class="font-black uppercase tracking-[0.5em] text-[10px]">Database Kosong</span></td></tr>`;
+            } else {
+                renderTotalRow();
+                renderRows(state.data.pagu, 0);
+            }
+            lucide.createIcons();
+        }
+
+        function renderTotalRow() {
+            const body = document.getElementById('table-body');
+            const borderColor = 'border-white/60';
+            
+            // Calculate totals based on current filters
+            const filtered = calculateFilteredTotals(state.data.pagu);
+            const totalMurni = filtered.paguMurni;
+            const totalEfisiensi = filtered.paguEfisiensi;
+            const totalPerubahan = filtered.paguPerubahan;
+            const totalReal = filtered.realisasi;
+            const totalBelum = filtered.belumSP2D;
+            const totalMonthly = filtered.monthly;
+
+            let activeTotalPagu = state.viewMode === 'murni' ? totalMurni : (state.viewMode === 'efisiensi' ? totalEfisiensi : totalPerubahan);
+            const totalSisa = activeTotalPagu - totalReal;
+            const totalRealPlusSP2D = totalReal + totalBelum;
+            const totalSisaReal = activeTotalPagu - totalRealPlusSP2D;
+
+            const pctReal = activeTotalPagu > 0 ? (totalReal / activeTotalPagu * 100).toFixed(1) : '0';
+            const pctSisa = activeTotalPagu > 0 ? (totalSisa / activeTotalPagu * 100).toFixed(1) : '0';
+            const pctBlm = activeTotalPagu > 0 ? (totalBelum / activeTotalPagu * 100).toFixed(1) : '0';
+            const pctTotalReal = activeTotalPagu > 0 ? (totalRealPlusSP2D / activeTotalPagu * 100).toFixed(1) : '0';
+            const pctSisaReal = activeTotalPagu > 0 ? (totalSisaReal / activeTotalPagu * 100).toFixed(1) : '0';
+
+            const row = document.createElement('tr');
+            row.className = "bg-slate-800 text-amber-400 font-black text-[10px] uppercase sticky top-[34px] z-[40] border-b-2 border-amber-500/30";
+            
+            let html = `
+                <td class="px-2 py-2 border-r border-b ${borderColor} sticky-col-1 bg-slate-800 text-center">TOTAL</td>
+                <td class="px-3 py-2 border-r border-b ${borderColor} sticky-col-2 bg-slate-800 italic">PAGU ANGGARAN</td>
+            `;
+
+            if (state.activeTab === 'rekap') {
+                html += `
+                    <td class="px-2 py-1 border-r border-b ${borderColor} sticky-col-3 bg-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.2)]">
+                        <div class="flex flex-col items-end">
+                            <span class="font-mono text-[11px]">${activeTotalPagu.toLocaleString('id-ID')}</span>
+                        </div>
+                    </td>`;
+
+                totalMonthly.forEach((v, idx) => {
+                    if (!state.hiddenMonths.has(idx)) {
+                        const pctMo = activeTotalPagu > 0 ? (v / activeTotalPagu * 100).toFixed(1) : '0';
+                        html += `
+                            <td class="px-1 py-1 border-r border-b ${borderColor} ${v > 0 ? 'bg-white/5' : 'opacity-40'}">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[9px]">${v.toLocaleString('id-ID')}</span>
+                                    ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">${pctMo}%</span>` : ''}
+                                </div>
+                            </td>`;
+                    }
+                });
+
+                if (!state.hiddenCols.has('real')) {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px]">${totalReal.toLocaleString('id-ID')}</span>
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                            </div>
+                        </td>`;
+                }
+                if (!state.hiddenCols.has('sisa')) {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/30">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px]">${totalSisa.toLocaleString('id-ID')}</span>
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                            </div>
+                        </td>`;
+                }
+                if (!state.hiddenCols.has('belum_sp2d')) {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px] text-rose-300">${totalBelum.toLocaleString('id-ID')}</span>
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctBlm}%</span>` : ''}
+                            </div>
+                        </td>`;
+                }
+                if (!state.hiddenCols.has('real_plus_sp2d')) {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px] text-indigo-100">${totalRealPlusSP2D.toLocaleString('id-ID')}</span>
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctTotalReal}%</span>` : ''}
+                            </div>
+                        </td>`;
+                }
+                if (!state.hiddenCols.has('sisa_real')) {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px] text-blue-100">${totalSisaReal.toLocaleString('id-ID')}</span>
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisaReal}%</span>` : ''}
+                            </div>
+                        </td>`;
+                }
+            } else {
+                if (state.viewMode === 'perbandingan') {
+                    html += `
+                        <td class="px-2 py-2 text-right font-mono border-r border-b ${borderColor} sticky-col-3 bg-slate-800">${totalMurni.toLocaleString('id-ID')}</td>
+                        <td class="px-2 py-2 text-right font-mono border-r border-b ${borderColor} sticky-col-4 bg-slate-800">${totalEfisiensi.toLocaleString('id-ID')}</td>
+                        <td class="px-2 py-2 text-right font-mono border-r border-b ${borderColor} sticky-col-5 bg-slate-800">${totalPerubahan.toLocaleString('id-ID')}</td>
+                    `;
+                } else {
+                    html += `
+                        <td class="px-2 py-1 border-r border-b ${borderColor} sticky-col-3 bg-slate-800">
+                            <div class="flex flex-col items-end">
+                                <span class="font-mono text-[11px]">${activeTotalPagu.toLocaleString('id-ID')}</span>
+                            </div>
+                        </td>`;
+                }
+                html += `
+                    <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
+                        <div class="flex flex-col items-end">
+                            <span class="font-mono text-[11px] text-emerald-300">${totalReal.toLocaleString('id-ID')}</span>
+                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/30">
+                        <div class="flex flex-col items-end">
+                            <span class="font-mono text-[11px] text-yellow-200">${totalSisa.toLocaleString('id-ID')}</span>
+                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                        </div>
+                    </td>
+                `;
+            }
+            
+            // Tambahkan cell kosong untuk TOTAL di kolom Aksi
+            if (state.activeTab !== 'rekap') {
+                html += `<td class="px-2 py-1 border-b ${borderColor} bg-slate-800"></td>`;
+            }
+
+            row.innerHTML = html;
+            body.appendChild(row);
+        }
+
+        function renderRows(items, depth) {
+            const body = document.getElementById('table-body');
+            const borderColor = 'border-white/60';
+            
+            const isFiltering = checkIsFiltering();
+
+            items.forEach(item => {
+                const agg = isFiltering ? calculateFilteredTotals([item]) : getAggregatedData(item);
+                const isExpanded = state.expandedItems[item.id] || 
+                                   state.filterLevel !== 'all' || 
+                                   state.filterText || 
+                                   (state.filterHierarchy.program !== 'all' && item.type === 'program' && item.id === state.filterHierarchy.program) ||
+                                   (state.filterHierarchy.kegiatan !== 'all' && item.type === 'kegiatan' && item.id === state.filterHierarchy.kegiatan) ||
+                                   (state.filterHierarchy.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id === state.filterHierarchy.sub_kegiatan) ||
+                                   (state.filterHierarchy.rekening !== 'all' && item.type === 'rekening' && item.id === state.filterHierarchy.rekening);
+                
+                const meetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
+                const meetsDana = state.filterDana === 'all' || agg.foundDana.has(state.filterDana);
+                const meetsMetode = state.filterMetode === 'all' || agg.foundMetode.has(state.filterMetode);
+                const meetsMetode2 = state.filterMetode2 === 'all' || agg.foundMetode2.has(state.filterMetode2);
+                const meetsPelaksana = state.filterPelaksana === 'all' || agg.foundPelaksana.has(state.filterPelaksana);
+                
+                let meetsHierarchy = true;
+                if (state.filterHierarchy.program !== 'all') {
+                    if (item.type === 'program' && item.id !== state.filterHierarchy.program) meetsHierarchy = false;
+                }
+                if (state.filterHierarchy.kegiatan !== 'all') {
+                    if (item.type === 'kegiatan' && item.id !== state.filterHierarchy.kegiatan) meetsHierarchy = false;
+                }
+                if (state.filterHierarchy.sub_kegiatan !== 'all') {
+                    if (item.type === 'sub_kegiatan' && item.id !== state.filterHierarchy.sub_kegiatan) meetsHierarchy = false;
+                }
+                if (state.filterHierarchy.rekening !== 'all') {
+                    if (item.type === 'rekening' && item.id !== state.filterHierarchy.rekening) meetsHierarchy = false;
+                }
+
+                const hasMatchingChild = (list) => list?.some(c => {
+                    const subAgg = getAggregatedData(c);
+                    const subMeetsText = !state.filterText || c.uraian.toLowerCase().includes(state.filterText) || c.kode.includes(state.filterText);
+                    const subMeetsDana = state.filterDana === 'all' || subAgg.foundDana.has(state.filterDana);
+                    const subMeetsMetode = state.filterMetode === 'all' || subAgg.foundMetode.has(state.filterMetode);
+                    const subMeetsMetode2 = state.filterMetode2 === 'all' || subAgg.foundMetode2.has(state.filterMetode2);
+                    const subMeetsPelaksana = state.filterPelaksana === 'all' || subAgg.foundPelaksana.has(state.filterPelaksana);
+                    
+                    let subMeetsHierarchy = true;
+                    if (state.filterHierarchy.program !== 'all' && c.type === 'program' && c.id !== state.filterHierarchy.program) subMeetsHierarchy = false;
+                    if (state.filterHierarchy.kegiatan !== 'all' && c.type === 'kegiatan' && c.id !== state.filterHierarchy.kegiatan) subMeetsHierarchy = false;
+                    if (state.filterHierarchy.sub_kegiatan !== 'all' && c.type === 'sub_kegiatan' && c.id !== state.filterHierarchy.sub_kegiatan) subMeetsHierarchy = false;
+                    if (state.filterHierarchy.rekening !== 'all' && c.type === 'rekening' && c.id !== state.filterHierarchy.rekening) subMeetsHierarchy = false;
+
+                    return (subMeetsText && subMeetsDana && subMeetsMetode && subMeetsMetode2 && subMeetsPelaksana && subMeetsHierarchy) || hasMatchingChild(c.children);
+                });
+
+                const isVisible = meetsHierarchy && ((meetsText && meetsDana && meetsMetode && meetsMetode2 && meetsPelaksana) || hasMatchingChild(item.children));
+                
+                let activePagu = 0;
+                if (state.viewMode === 'murni') activePagu = agg.paguMurni;
+                else if (state.viewMode === 'efisiensi') activePagu = agg.paguEfisiensi;
+                else activePagu = agg.paguPerubahan;
+
+                // Logika Visibilitas:
+                if (isFiltering) {
+                    if (!isVisible) return;
+                } else {
+                    // Jika di Tab Pagu atau Realisasi: Tampilkan semua agar bisa dikelola
+                    // Jika di Tab Rekap: Sembunyikan yang tidak ada anggaran/transaksi agar tidak penuh
+                    if (state.activeTab === 'rekap') {
+                        const hasValue = activePagu > 0 || agg.realisasi > 0 || agg.belumSP2D > 0 || hasMatchingChild(item.children);
+                        if (!hasValue) return;
+                    }
+                }
+
+                const shouldShowSelf = state.filterLevel === 'all' || state.filterLevel === item.type;
+                const style = LEVEL_STYLES[item.type];
+                
+                const sisa = activePagu - agg.realisasi;
+                const realPlusSP2D = agg.realisasi + agg.belumSP2D;
+                const sisaReal = activePagu - realPlusSP2D;
+
+                if (shouldShowSelf) {
+                    const row = document.createElement('tr');
+                    row.className = `${style.bg} group ${style.text} hover:brightness-110 transition-all cursor-pointer`;
+                    
+                    // Add click handler to the whole row for expanding/collapsing
+                    row.onclick = (e) => {
+                        // Don't trigger if clicking buttons or inputs
+                        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('a')) {
+                            return;
+                        }
+                        if (item.type !== 'rekening') {
+                            toggleExpand(item.id);
+                        }
+                    };
+                    
+                    let html = `
+                        <td class="px-2 py-1.5 font-mono text-[9px] whitespace-nowrap align-middle border-r border-b ${borderColor} sticky-col-1 ${style.bg} w-[90px]" style="padding-left: ${state.filterLevel === 'all' ? depth * 10 + 4 : 4}px">
+                            <div class="flex items-center gap-1.5">
+                                ${state.filterLevel === 'all' && item.type !== 'rekening' ? `
+                                    <button onclick="toggleExpand('${item.id}')" class="p-0.5 hover:bg-black/20 rounded">
+                                        <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3 h-3"></i>
+                                    </button>
+                                ` : ''}
+                                <span class="font-bold opacity-80 uppercase tracking-tighter">${item.kode}</span>
+                            </div>
+                        </td>
+                        <td class="px-3 py-1.5 border-r border-b ${borderColor} w-[400px] sticky-col-2 ${style.bg}">
+                            <div class="flex flex-col">
+                                <span class="uppercase text-[10px] font-black leading-tight tracking-tight">${item.uraian}</span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    ${item.type === 'rekening' ? `
+                                        <span class="${(SUMBER_DANA.find(s => s.id === item.sumberDana) || SUMBER_DANA[0]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${item.sumberDana || 'DAU'}</span>
+                                        <span class="${(METODE_BELANJA.find(m => m.id === item.metodeBelanja) || METODE_BELANJA[4]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(METODE_BELANJA.find(m => m.id === item.metodeBelanja) || METODE_BELANJA[4]).label}</span>
+                                        ${item.metodeBelanja2 && item.metodeBelanja2 !== 'TIDAK_ADA' ? `<span class="${(METODE_BELANJA_2.find(m => m.id === item.metodeBelanja2) || METODE_BELANJA_2[1]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(METODE_BELANJA_2.find(m => m.id === item.metodeBelanja2) || METODE_BELANJA_2[1]).label}</span>` : ''}
+                                        <span class="${(PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')) || PELAKSANA[0]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')) || PELAKSANA[0]).label}</span>
+                                    ` : `
+                                        ${Array.from(agg.foundDana).map(dId => `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold">${dId}</span>`).join('')}
+                                        ${Array.from(agg.foundMetode).filter(m => m !== 'TIDAK_ADA').map(mId => {
+                                            const m = METODE_BELANJA.find(m => m.id === mId);
+                                            return m ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${m.label}</span>` : '';
+                                        }).join('')}
+                                        ${Array.from(agg.foundMetode2).filter(m2 => m2 !== 'TIDAK_ADA').map(m2Id => {
+                                            const m2 = METODE_BELANJA_2.find(m => m.id === m2Id);
+                                            return m2 ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${m2.label}</span>` : '';
+                                        }).join('')}
+                                        ${Array.from(agg.foundPelaksana).map(pId => {
+                                            const p = PELAKSANA.find(p => p.id === pId);
+                                            return p ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${p.label}</span>` : '';
+                                        }).join('')}
+                                    `}
+                                </div>
+                            </div>
+                        </td>
+                    `;
+
+                    if (state.activeTab === 'rekap') {
+                        const pctReal = activePagu > 0 ? (agg.realisasi / activePagu * 100).toFixed(1) : '0';
+                        const pctSisa = activePagu > 0 ? (sisa / activePagu * 100).toFixed(1) : '0';
+                        const pctBlm = activePagu > 0 ? (agg.belumSP2D / activePagu * 100).toFixed(1) : '0';
+                        const pctTotalReal = activePagu > 0 ? (realPlusSP2D / activePagu * 100).toFixed(1) : '0';
+                        const pctSisaReal = activePagu > 0 ? (sisaReal / activePagu * 100).toFixed(1) : '0';
+
+                        html += `
+                            <td class="px-2 py-1 border-r border-b ${borderColor} sticky-col-3 bg-black/5 w-[80px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[11px] font-black text-amber-400">${activePagu.toLocaleString('id-ID')}</span>
+                                </div>
+                            </td>`;
+
+                        agg.monthly.forEach((v, idx) => {
+                            if (!state.hiddenMonths.has(idx)) {
+                                const pctMo = activePagu > 0 ? (v / activePagu * 100).toFixed(1) : '0';
+                                html += `
+                                    <td class="px-1 py-1 border-r border-b ${borderColor} ${v > 0 ? 'bg-white/5 font-bold' : 'opacity-10'} w-[55px]">
+                                        <div class="flex flex-col items-end">
+                                            <span class="font-mono text-[9px]">${v.toLocaleString('id-ID')}</span>
+                                            ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">${pctMo}%</span>` : ''}
+                                        </div>
+                                    </td>`;
+                            }
+                        });
+                        
+                        if (!state.hiddenCols.has('real')) {
+                            html += `
+                                <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10 w-[80px]">
+                                    <div class="flex flex-col items-end">
+                                        <span class="font-mono text-[11px] font-black text-emerald-300">${agg.realisasi.toLocaleString('id-ID')}</span>
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                                    </div>
+                                </td>`;
+                        }
+                        if (!state.hiddenCols.has('sisa')) {
+                            html += `
+                                <td class="px-2 py-1 border-r border-b ${borderColor} ${sisa < 0 ? 'bg-red-600' : 'bg-black/20'} w-[80px]">
+                                    <div class="flex flex-col items-end">
+                                        <span class="font-mono text-[11px] font-black ${sisa < 0 ? 'text-white' : 'text-yellow-200'}">${sisa.toLocaleString('id-ID')}</span>
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                    </div>
+                                </td>`;
+                        }
+                        if (!state.hiddenCols.has('belum_sp2d')) {
+                            html += `
+                                <td class="p-0 border-r border-b ${borderColor} bg-black/10 w-[80px]">
+                                    <div class="flex flex-col items-end pr-2 py-1">
+                                        ${item.type === 'rekening' ? `
+                                            <input value="${formatRupiah(agg.belumSP2D)}" 
+                                                   onfocus="state.editingId = '${item.id}'"
+                                                   onblur="state.editingId = null; saveToSupabase(state.data)"
+                                                   oninput="updateBelumSP2D('${item.id}', this.value, this)" 
+                                                   onpaste="handlePasteBelumSP2D(event, '${item.id}', this)"
+                                                   class="w-full text-right bg-transparent outline-none font-mono text-[11px] font-black text-rose-300 focus:bg-white/10" 
+                                                   placeholder="0" />
+                                        ` : `
+                                            <span class="font-mono text-[11px] font-black text-rose-300">${agg.belumSP2D.toLocaleString('id-ID')}</span>
+                                        `}
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctBlm}%</span>` : ''}
+                                    </div>
+                                </td>`;
+                        }
+                        if (!state.hiddenCols.has('real_plus_sp2d')) {
+                            html += `
+                                <td class="px-2 py-1 border-r border-b ${borderColor} bg-indigo-900/40 w-[80px]">
+                                    <div class="flex flex-col items-end">
+                                        <span class="font-mono text-[11px] font-black text-indigo-100">${realPlusSP2D.toLocaleString('id-ID')}</span>
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctTotalReal}%</span>` : ''}
+                                    </div>
+                                </td>`;
+                        }
+                        if (!state.hiddenCols.has('sisa_real')) {
+                            html += `
+                                <td class="px-2 py-1 border-r border-b ${borderColor} bg-blue-900/40 w-[80px]">
+                                    <div class="flex flex-col items-end">
+                                        <span class="font-mono text-[11px] font-black text-blue-100">${sisaReal.toLocaleString('id-ID')}</span>
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisaReal}%</span>` : ''}
+                                    </div>
+                                </td>`;
+                        }
+                    } else if (state.viewMode === 'perbandingan') {
+                        html += `
+                            <td class="px-2 py-1.5 text-right font-mono text-[10px] font-bold border-r border-b ${borderColor} sticky-col-3 bg-white/5 text-blue-200 w-[80px]">${agg.paguMurni.toLocaleString('id-ID')}</td>
+                            <td class="px-2 py-1.5 text-right font-mono text-[10px] font-bold border-r border-b ${borderColor} sticky-col-4 bg-white/5 text-emerald-200 w-[80px]">${agg.paguEfisiensi.toLocaleString('id-ID')}</td>
+                            <td class="px-2 py-1.5 text-right font-mono text-[10px] font-bold border-r border-b ${borderColor} sticky-col-5 bg-white/10 text-amber-200 w-[80px]">${agg.paguPerubahan.toLocaleString('id-ID')}</td>
+                        `;
+                    } else {
+                        const pctReal = activePagu > 0 ? (agg.realisasi / activePagu * 100).toFixed(1) : '0';
+                        const pctSisa = activePagu > 0 ? (sisa / activePagu * 100).toFixed(1) : '0';
+
+                        html += `
+                            <td class="px-2 py-1 border-r border-b ${borderColor} sticky-col-3 bg-black/5 w-[80px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[11px] font-black text-white">${activePagu.toLocaleString('id-ID')}</span>
+                                </div>
+                            </td>
+                            <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10 w-[80px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[11px] font-black text-emerald-300">${agg.realisasi.toLocaleString('id-ID')}</span>
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                                </div>
+                            </td>
+                            <td class="px-2 py-1 border-r border-b ${borderColor} ${sisa < 0 ? 'bg-red-600' : 'bg-black/20'} w-[80px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[11px] font-black ${sisa < 0 ? 'text-white' : 'text-yellow-200'}">${sisa.toLocaleString('id-ID')}</span>
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                </div>
+                            </td>
+                        `;
+                    }
+                    
+                    // Tambahkan kolom Aksi di akhir baris jika bukan tab rekap
+                    if (state.activeTab !== 'rekap') {
+                        html += `
+                            <td class="px-2 py-1.5 border-b ${borderColor} align-middle">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    ${state.activeTab === 'pagu' && item.type !== 'rekening' ? `<button onclick="openAddSubModal('${item.id}', '${item.type}')" title="Tambah Sub" class="p-1.5 bg-white/20 rounded-lg hover:bg-white/40 transition-all"><i data-lucide="plus" class="w-3 h-3"></i></button>` : ''}
+                                    ${state.activeTab === 'pagu' ? `
+                                        <button onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 bg-white/10 rounded-lg hover:bg-white/40 transition-all"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                        <button onclick="confirmDelete('${item.id}')" title="Hapus" class="p-1.5 bg-red-500/30 rounded-lg hover:bg-red-500/50 transition-all"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                    ` : ''}
+                                    ${state.activeTab === 'realisasi' && item.type === 'rekening' ? `
+                                        <button onclick="openRealisasiModal('${item.id}')" title="Transaksi" class="px-2 py-1 bg-white text-black rounded-lg font-black text-[7px] uppercase flex items-center gap-1 hover:scale-105 transition-all shadow-sm"><i data-lucide="receipt" class="w-2.5 h-2.5"></i> Transaksi</button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        `;
+                    }
+
+                    row.innerHTML = html;
+                    body.appendChild(row);
+                }
+
+                if ((isExpanded || state.filterLevel !== 'all') && item.children) {
+                    renderRows(item.children, depth + 1);
+                }
+            });
+        }
+
+        function toggleExpand(id) {
+            state.expandedItems[id] = !state.expandedItems[id];
+            render();
+        }
+
+        async function updateBelumSP2D(id, rawVal, inputEl) {
+            // Save cursor position
+            const start = inputEl.selectionStart;
+            const end = inputEl.selectionEnd;
+            const oldLen = inputEl.value.length;
+
+            const val = parseRupiah(rawVal);
+            inputEl.value = formatRupiah(val);
+            
+            // Adjust cursor position if dots were added/removed
+            const newLen = inputEl.value.length;
+            const diff = newLen - oldLen;
+            inputEl.setSelectionRange(start + diff, end + diff);
+
+            // Helper to update tree locally
+            const updateInTree = (list) => {
+                return list.map(item => {
+                    if (item.id === id) {
+                        return { ...item, belumSP2D: val };
+                    }
+                    if (item.children) {
+                        return { ...item, children: updateInTree(item.children) };
+                    }
+                    return item;
+                });
+            };
+
+            state.data.pagu = updateInTree(state.data.pagu);
+            
+            // Re-calculate row stats locally for instant feedback
+            const row = inputEl.closest('tr');
+            const item = findInTree(state.data.pagu, id);
+            const agg = getAggregatedData(item);
+            
+            let activePagu = 0;
+            if (state.viewMode === 'murni') activePagu = agg.paguMurni;
+            else if (state.viewMode === 'efisiensi') activePagu = agg.paguEfisiensi;
+            else activePagu = agg.paguPerubahan;
+
+            const sisa = activePagu - agg.realisasi;
+            const realPlusSP2D = agg.realisasi + agg.belumSP2D;
+            const sisaReal = activePagu - realPlusSP2D;
+
+            // Helper to find column index precisely
+            const getColIndex = (colType) => {
+                let idx = 2; // Start after Kode & Uraian
+                idx += (state.viewMode === 'perbandingan' ? 3 : 1); // Add Pagu column(s)
+                
+                if (state.activeTab === 'rekap') {
+                    BULAN_LIST.forEach((_, i) => { if (!state.hiddenMonths.has(i)) idx++; });
+                    if (colType === 'real') return idx;
+                    if (!state.hiddenCols.has('real')) idx++;
+                    if (colType === 'sisa') return idx;
+                    if (!state.hiddenCols.has('sisa')) idx++;
+                    if (colType === 'belum_sp2d') return idx;
+                    if (!state.hiddenCols.has('belum_sp2d')) idx++;
+                    if (colType === 'real_plus_sp2d') return idx;
+                    if (!state.hiddenCols.has('real_plus_sp2d')) idx++;
+                    if (colType === 'sisa_real') return idx;
+                }
+                return -1;
+            };
+
+            const realPlusIdx = getColIndex('real_plus_sp2d');
+            if (realPlusIdx !== -1 && row.cells[realPlusIdx]) {
+                row.cells[realPlusIdx].innerText = realPlusSP2D.toLocaleString('id-ID');
+            }
+
+            const sisaRealIdx = getColIndex('sisa_real');
+            if (sisaRealIdx !== -1 && row.cells[sisaRealIdx]) {
+                row.cells[sisaRealIdx].innerText = sisaReal.toLocaleString('id-ID');
+            }
+
+            // Update parent rows in DOM for instant feedback on aggregation
+            const updateParentDOM = (list) => {
+                for (const parent of list) {
+                    if (parent.children && findInTree(parent.children, id)) {
+                        const rows = document.getElementById('table-body').rows;
+                        for (let r of rows) {
+                            const rowKode = r.cells[0].innerText.trim();
+                            if (rowKode === parent.kode) {
+                                const parentAgg = getAggregatedData(parent);
+                                const pActivePagu = state.viewMode === 'murni' ? parentAgg.paguMurni : (state.viewMode === 'efisiensi' ? parentAgg.paguEfisiensi : parentAgg.paguPerubahan);
+                                const pSisa = pActivePagu - parentAgg.realisasi;
+                                const pRealPlusSP2D = parentAgg.realisasi + parentAgg.belumSP2D;
+                                const pSisaReal = pActivePagu - pRealPlusSP2D;
+                                
+                                const pRealIdx = getColIndex('real');
+                                const pSisaIdx = getColIndex('sisa');
+                                const pBlmIdx = getColIndex('belum_sp2d');
+                                const pRealPlusIdx = getColIndex('real_plus_sp2d');
+                                const pSisaRealIdx = getColIndex('sisa_real');
+
+                                if (pBlmIdx !== -1 && r.cells[pBlmIdx]) {
+                                    const target = r.cells[pBlmIdx].querySelector('div') || r.cells[pBlmIdx];
+                                    target.innerText = parentAgg.belumSP2D.toLocaleString('id-ID');
+                                }
+                                if (pRealPlusIdx !== -1 && r.cells[pRealPlusIdx]) r.cells[pRealPlusIdx].innerText = pRealPlusSP2D.toLocaleString('id-ID');
+                                if (pSisaRealIdx !== -1 && r.cells[pSisaRealIdx]) r.cells[pSisaRealIdx].innerText = pSisaReal.toLocaleString('id-ID');
+                                break;
+                            }
+                        }
+                        updateParentDOM(parent.children);
+                    } else if (parent.children) {
+                        updateParentDOM(parent.children);
+                    }
+                }
+            };
+            updateParentDOM(state.data.pagu);
+
+            // Update header summary cards
+            renderHeaderStats();
+        }
+
+        async function handlePasteBelumSP2D(e, id, inputEl) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            
+            if (lines.length <= 1) {
+                // Single value paste - use standard behavior but manually update to handle formatting
+                const val = lines[0] || '';
+                updateBelumSP2D(id, val, inputEl);
+                return;
+            }
+
+            // Bulk paste logic
+            const currentTr = inputEl.closest('tr');
+            const tbody = document.getElementById('table-body');
+            const allTrs = Array.from(tbody.rows);
+            const startIdx = allTrs.indexOf(currentTr);
+
+            let lineIdx = 0;
+            for (let i = startIdx; i < allTrs.length && lineIdx < lines.length; i++) {
+                const tr = allTrs[i];
+                const input = tr.querySelector('input[onpaste*="handlePasteBelumSP2D"]');
+                
+                if (input) {
+                    const lineVal = lines[lineIdx].trim();
+                    // Extract ID from the input's attributes
+                    const match = input.getAttribute('oninput').match(/'([^']+)'/);
+                    if (match) {
+                        const targetId = match[1];
+                        updateBelumSP2D(targetId, lineVal, input);
+                    }
+                    lineIdx++;
+                }
+            }
+            
+            // Final save after bulk update
+            saveToSupabase(state.data);
+            showNotif(`Bulk input ${lineIdx} data berhasil`);
+        }
+
+        // --- CRUD MODALS ---
+        function openAddProgramModal() {
+            state.paguForm = { id: `id-${Date.now()}`, type: 'program', kode: '', uraian: '', paguMurni: '', paguEfisiensi: '', paguPerubahan: '', belumSP2D: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', pelaksana: 'TU', parentId: null };
+            state.editingPaguId = null;
+            renderPaguModal();
+        }
+
+        function openAddSubModal(parentId, parentType) {
+            const types = { program: 'kegiatan', kegiatan: 'sub_kegiatan', sub_kegiatan: 'rekening' };
+            state.paguForm = { id: `id-${Date.now()}`, type: types[parentType], kode: '', uraian: '', paguMurni: '', paguEfisiensi: '', paguPerubahan: '', belumSP2D: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', pelaksana: 'TU', parentId };
+            state.editingPaguId = null;
+            renderPaguModal();
+        }
+
+        function openEditModal(id) {
+            const item = findInTree(state.data.pagu, id);
+            state.paguForm = { 
+                ...item, 
+                paguMurni: formatRupiah(item.paguMurni || item.pagu || 0), 
+                paguEfisiensi: formatRupiah(item.paguEfisiensi || 0),
+                paguPerubahan: formatRupiah(item.paguPerubahan || item.pagu || 0),
+                belumSP2D: formatRupiah(item.belumSP2D || 0)
+            };
+            state.editingPaguId = id;
+            renderPaguModal();
+        }
+
+        function findInTree(list, id) {
+            for (const item of list) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findInTree(item.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function renderPaguModal() {
+            const modal = document.getElementById('pagu-modal');
+            const style = LEVEL_STYLES[state.paguForm.type];
+            modal.innerHTML = `
+                <div class="bg-white rounded-[40px] w-full max-w-xl overflow-hidden shadow-2xl border-[6px] border-slate-900">
+                    <div class="${style.bg} p-8 text-white flex justify-between items-center">
+                        <div>
+                            <h4 class="font-black text-2xl italic uppercase tracking-tighter">${state.editingPaguId ? 'Edit' : 'Tambah'} ${style.label}</h4>
+                            <p class="text-[9px] font-bold opacity-60 uppercase mt-1 tracking-widest">Manajemen Pagu Murni & Perubahan</p>
+                        </div>
+                        <button onclick="closePaguModal()"><i data-lucide="x"></i></button>
+                    </div>
+                    <form id="form-pagu" class="p-8 space-y-5 bg-white">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Kode Struktur</label>
+                                <input id="f-kode" value="${state.paguForm.kode}" placeholder="X.XX.XX..." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-mono font-bold text-sm outline-none transition-all" required />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-black text-slate-400 uppercase ml-3">${state.paguForm.type === 'rekening' ? 'Sumber Dana' : 'Level'}</label>
+                                ${state.paguForm.type === 'rekening' ? `
+                                    <select id="f-dana" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
+                                        ${SUMBER_DANA.map(s => `<option value="${s.id}" ${state.paguForm.sumberDana === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}
+                                    </select>
+                                ` : `<div class="w-full p-4 bg-slate-100 border-2 border-slate-100 rounded-[20px] font-bold text-sm text-slate-500 uppercase">${style.label}</div>`}
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Uraian / Deskripsi</label>
+                            <textarea id="f-uraian" placeholder="Masukkan deskripsi..." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none h-20 resize-none" required>${state.paguForm.uraian}</textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-black text-blue-500 uppercase ml-3 italic">Pagu Murni (Rp)</label>
+                                <input id="f-murni" oninput="this.value = formatRupiah(this.value)" value="${state.paguForm.paguMurni}" placeholder="0" class="w-full p-4 bg-blue-50 border-2 border-blue-100 text-blue-700 rounded-[20px] font-mono font-black text-lg outline-none" ${state.paguForm.type !== 'rekening' ? 'disabled title="Otomatis dari Rekening"' : ''} />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-black text-emerald-600 uppercase ml-3 italic">Pagu Efisiensi (Rp)</label>
+                                <input id="f-efisiensi" oninput="this.value = formatRupiah(this.value)" value="${state.paguForm.paguEfisiensi}" placeholder="0" class="w-full p-4 bg-emerald-50 border-2 border-emerald-100 text-emerald-700 rounded-[20px] font-mono font-black text-lg outline-none" ${state.paguForm.type !== 'rekening' ? 'disabled title="Otomatis dari Rekening"' : ''} />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-black text-amber-600 uppercase ml-3 italic">Pagu Perubahan (Rp)</label>
+                                <input id="f-perubahan" oninput="this.value = formatRupiah(this.value)" value="${state.paguForm.paguPerubahan}" placeholder="0" class="w-full p-4 bg-amber-50 border-2 border-amber-100 text-amber-700 rounded-[20px] font-mono font-black text-lg outline-none" ${state.paguForm.type !== 'rekening' ? 'disabled title="Otomatis dari Rekening"' : ''} />
+                            </div>
+                        </div>
+                        ${state.paguForm.type === 'rekening' ? `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Metode Belanja</label>
+                                    <select id="f-metode" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
+                                        ${METODE_BELANJA.map(m => `<option value="${m.id}" ${state.paguForm.metodeBelanja === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Metode Belanja 2</label>
+                                    <select id="f-metode2" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
+                                        ${METODE_BELANJA_2.map(m => `<option value="${m.id}" ${state.paguForm.metodeBelanja2 === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Pelaksana</label>
+                                    <select id="f-pelaksana" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
+                                        ${PELAKSANA.map(p => `<option value="${p.id}" ${state.paguForm.pelaksana === p.id ? 'selected' : ''}>${p.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="flex gap-3 mt-4">
+                            <button type="button" onclick="closePaguModal()" class="flex-1 py-5 border-2 border-slate-100 text-slate-400 rounded-[24px] font-black uppercase text-xs hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">
+                                Batalkan
+                            </button>
+                            <button type="submit" class="flex-[2] py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-xs shadow-xl flex items-center justify-center gap-3 hover:bg-black transition-all">
+                                <i data-lucide="save"></i> Simpan Data Anggaran
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            lucide.createIcons();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            document.getElementById('form-pagu').onsubmit = async (e) => {
+                e.preventDefault();
+                const murni = parseRupiah(document.getElementById('f-murni').value);
+                const efisiensi = parseRupiah(document.getElementById('f-efisiensi').value);
+                const perubahan = parseRupiah(document.getElementById('f-perubahan').value);
+                
+                const updatedItem = {
+                    ...state.paguForm,
+                    kode: document.getElementById('f-kode').value,
+                    uraian: document.getElementById('f-uraian').value.toUpperCase(),
+                    paguMurni: Number(murni),
+                    paguEfisiensi: Number(efisiensi),
+                    paguPerubahan: Number(perubahan),
+                    sumberDana: state.paguForm.type === 'rekening' ? document.getElementById('f-dana').value : 'DAU',
+                    metodeBelanja: state.paguForm.type === 'rekening' ? document.getElementById('f-metode').value : 'TIDAK_ADA',
+                    metodeBelanja2: state.paguForm.type === 'rekening' ? document.getElementById('f-metode2').value : 'TIDAK_ADA',
+                    pelaksana: state.paguForm.type === 'rekening' ? document.getElementById('f-pelaksana').value : 'TU'
+                };
+
+                const updateTree = (list) => {
+                    if (!list || !Array.isArray(list)) return [];
+                    return list.map(item => {
+                        // 1. Jika SEDANG EDIT item ini
+                        if (state.editingPaguId && item.id === state.editingPaguId) {
+                            return { ...item, ...updatedItem };
+                        }
+                        
+                        // 2. Jika TAMBAH BARU dan ini adalah PARENT-nya
+                        if (!state.editingPaguId && item.id === state.paguForm.parentId) {
+                            const currentChildren = Array.isArray(item.children) ? [...item.children] : [];
+                            return { 
+                                ...item, 
+                                children: [...currentChildren, { ...updatedItem, children: updatedItem.type === 'rekening' ? null : [] }] 
+                            };
+                        }
+
+                        // 3. Rekursi ke anak-anaknya (jika ada)
+                        if (item.children && Array.isArray(item.children)) {
+                            return { ...item, children: updateTree(item.children) };
+                        }
+
+                        return item;
+                    });
+                };
+
+                let newPaguData;
+                if (!state.editingPaguId && !state.paguForm.parentId) {
+                    // Tambah Program Baru di level teratas
+                    newPaguData = [...state.data.pagu, { ...updatedItem, children: [] }];
+                } else {
+                    newPaguData = updateTree(state.data.pagu);
+                }
+
+                const newData = { ...state.data, pagu: newPaguData };
+                await saveToSupabase(newData);
+                state.data = newData;
+                
+                // Otomatis buka/expand parent agar item baru terlihat
+                if (state.paguForm.parentId) {
+                    state.expandedItems[state.paguForm.parentId] = true;
+                }
+                
+                updateHierarchyOptions();
+                render();
+                closePaguModal();
+            };
+        }
+
+        function closePaguModal() {
+            document.getElementById('pagu-modal').classList.add('hidden');
+            document.getElementById('pagu-modal').classList.remove('flex');
+        }
+
+        function confirmDelete(id) {
+            state.pendingAction = () => {
+                const removeFromTree = (list) => list.filter(i => i.id !== id).map(i => ({...i, children: i.children ? removeFromTree(i.children) : null}));
+                const newData = { ...state.data, pagu: removeFromTree(state.data.pagu) };
+                saveToSupabase(newData);
+                render();
+            };
+            openPinModal();
+        }
+
+        // --- TRANSAKSI / REALISASI MODAL ---
+        function openRealisasiModal(id) {
+            const findItemAndPath = (list, targetId, path = []) => {
+                for (const item of list) {
+                    if (item.id === targetId) return { item, path };
+                    if (item.children) {
+                        const found = findItemAndPath(item.children, targetId, [...path, item]);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const result = findItemAndPath(state.data.pagu, id);
+            if (result) {
+                state.targetItem = result.item;
+                state.targetPath = result.path; // Store hierarchy path
+                state.bulkRealisasi = (state.data.realisasi || [])
+                    .filter(r => (r.rekeningId || r.subKegiatanId) === id)
+                    .map(r => ({ ...r, id: r.id || `rel-${Date.now()}-${Math.random()}` }));
+                
+                // Reset Filters when opening modal
+                state.modalFilters = { bulan: 'all', penerima: '', noBp: '' };
+
+                renderRealisasiModal();
+                document.getElementById('realisasi-modal').classList.remove('hidden');
+                document.getElementById('realisasi-modal').classList.add('flex');
+            }
+        }
+
+        function renderRealisasiModal() {
+            const modal = document.getElementById('realisasi-modal');
+            const agg = getAggregatedData(state.targetItem);
+            
+            let activePagu = 0;
+            let paguLabel = "Pagu";
+            if (state.viewMode === 'murni') { activePagu = agg.paguMurni; paguLabel = "Pagu Murni"; }
+            else if (state.viewMode === 'efisiensi') { activePagu = agg.paguEfisiensi; paguLabel = "Pagu Efisiensi"; }
+            else { activePagu = agg.paguPerubahan; paguLabel = "Pagu Perubahan"; }
+
+            // Urutkan data berdasarkan No BP (Alfanumerik) - DESCENDING (Paling besar di atas)
+            // Khusus baris baru (noBp kosong) dipaksa di paling atas
+            state.bulkRealisasi.sort((a, b) => {
+                if (!a.noBp && b.noBp) return -1;
+                if (a.noBp && !b.noBp) return 1;
+                const noA = (a.noBp || "").toString().toLowerCase();
+                const noB = (b.noBp || "").toString().toLowerCase();
+                return noB.localeCompare(noA, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            // Cari No BP yang duplikat
+            const noBpCounts = {};
+            state.bulkRealisasi.forEach(r => {
+                if (r.noBp) {
+                    noBpCounts[r.noBp] = (noBpCounts[r.noBp] || 0) + 1;
+                }
+            });
+
+            // Apply Filters
+            const filteredRealisasi = state.bulkRealisasi.filter(r => {
+                const searchLower = (state.modalFilters.penerima || "").toLowerCase();
+                const matchPenerima = !searchLower || 
+                                     (r.penerima || "").toLowerCase().includes(searchLower) || 
+                                     (r.keterangan || "").toLowerCase().includes(searchLower);
+                
+                const matchNoBp = !state.modalFilters.noBp || (r.noBp || "").toLowerCase().includes(state.modalFilters.noBp.toLowerCase());
+                
+                let matchBulan = true;
+                if (state.modalFilters.bulan !== 'all') {
+                    if (r.tanggal) {
+                        const dateParts = r.tanggal.split(/[-/.]/);
+                        let m = -1;
+                        if (dateParts.length === 3) {
+                            if (parseInt(dateParts[0]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else if (parseInt(dateParts[2]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else m = parseInt(dateParts[1]) - 1;
+                        }
+                        matchBulan = m === parseInt(state.modalFilters.bulan);
+                    } else {
+                        matchBulan = false;
+                    }
+                }
+                return matchPenerima && matchBulan && matchNoBp;
+            });
+
+            // Calculate current total from bulk items
+            const currentTotalReal = state.bulkRealisasi.reduce((acc, r) => acc + (r.nilai || 0), 0);
+            const currentSisa = activePagu - currentTotalReal;
+
+            // Format hierarchy breadcrumb
+            const breadcrumb = state.targetPath.map(p => p.uraian).join(' <i data-lucide="chevron-right" class="w-2.5 h-2.5 inline"></i> ');
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-[32px] w-full max-w-[98%] max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border-[6px] border-emerald-500">
+                    <div class="bg-emerald-500 p-3 text-white flex justify-between items-center gap-6">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[7px] font-bold text-black uppercase flex items-center gap-1">
+                                ${breadcrumb}
+                            </div>
+                            <h4 class="font-black text-base text-black italic uppercase tracking-tighter leading-tight truncate">${state.targetItem.uraian}</h4>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="flex gap-2">
+                                <div class="bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-right">
+                                    <div class="text-[6px] font-bold opacity-60 uppercase leading-none mb-0.5">${paguLabel}</div>
+                                    <div id="modal-header-pagu" class="text-xs font-mono font-black" data-val="${activePagu}">Rp ${formatRupiah(activePagu)}</div>
+                                </div>
+                                <div class="bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-right">
+                                    <div class="text-[6px] font-black text-emerald-200 uppercase leading-none mb-0.5">Real</div>
+                                    <div id="modal-header-real" class="text-xs font-mono font-black text-emerald-100">Rp ${formatRupiah(currentTotalReal)}</div>
+                                </div>
+                                <div class="bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-right">
+                                    <div class="text-[6px] font-black text-yellow-200 uppercase leading-none mb-0.5">Sisa</div>
+                                    <div id="modal-header-sisa" class="text-xs font-mono font-black ${currentSisa < 0 ? 'text-rose-400' : 'text-yellow-100'}">Rp ${formatRupiah(currentSisa)}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="h-8 w-[1px] bg-black/10"></div>
+                            
+                            <div class="flex gap-1.5">
+                                <button onclick="handleExportTransaksi()" class="bg-black/20 px-3 py-2 rounded-xl font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-black/40 transition-all border border-white/20"><i data-lucide="file-output" class="w-3.5 h-3.5"></i> Ekspor</button>
+                                <button onclick="closeRealisasiModal()" class="bg-white/10 p-1 rounded-xl hover:bg-white/20 h-10 w-10 flex items-center justify-center transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-3 bg-slate-50" onpaste="handleBulkPaste(event)">
+                        <div class="mb-3 flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-2">
+                                <button onclick="addRealRow()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-[8px] flex items-center gap-1.5 shadow-lg hover:scale-105 transition-all">
+                                    <i data-lucide="plus" class="w-3 h-3"></i> Tambah Baris
+                                </button>
+                            </div>
+
+                            <div class="flex-1 flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <span class="text-[7px] font-black text-slate-400 uppercase">Bulan:</span>
+                                    <select onchange="state.modalFilters.bulan = this.value; renderRealisasiModal()" class="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[9px] font-bold outline-none">
+                                        <option value="all">Semua</option>
+                                        ${BULAN_LIST.map((b, i) => `<option value="${i}" ${state.modalFilters.bulan == i ? 'selected' : ''}>${b}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="w-32 relative shrink-0">
+                                    <i data-lucide="hash" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
+                                    <input value="${state.modalFilters.noBp}" oninput="state.modalFilters.noBp = this.value; renderRealisasiTableBody()" placeholder="Filter No BP..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
+                                </div>
+                                <div class="flex-1 relative">
+                                    <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
+                                    <input value="${state.modalFilters.penerima}" oninput="state.modalFilters.penerima = this.value; renderRealisasiTableBody()" placeholder="Cari Uraian / Penerima..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
+                                </div>
+                                <button onclick="state.modalFilters = { bulan: 'all', penerima: '', noBp: '' }; renderRealisasiModal()" class="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg font-black uppercase text-[7px] hover:bg-rose-50 hover:text-rose-500 transition-all">Reset</button>
+                            </div>
+
+                            <div class="text-[8px] font-bold text-slate-400 italic shrink-0">
+                                <i data-lucide="info" class="w-2.5 h-2.5 inline mr-1"></i> Tips: Ctrl + V untuk paste dari Excel.
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                            <table id="transaksi-table" class="w-full text-left border-collapse min-w-[1200px] table-fixed">
+                                <thead class="bg-slate-100 text-[8px] font-black uppercase text-slate-500">
+                                    <tr>
+                                        <th class="px-3 py-2 border-b border-slate-200 w-28">No BP</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 w-28">Tanggal</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Uraian Belanja</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 w-48">Penerima</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-right w-32">Nominal</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-right text-orange-500 w-24">PPN</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-right text-orange-500 w-24">PPH</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-right text-emerald-600 w-32">Diterima</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 w-32">Sub Uk</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-center w-14">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transaksi-body" class="divide-y divide-slate-100">
+                                    ${filteredRealisasi.map((r) => {
+                                        const isDuplicate = r.noBp && noBpCounts[r.noBp] > 1;
+                                        return `
+                                            <tr class="hover:bg-emerald-50/30 transition-colors">
+                                                <td class="p-0 border-r border-slate-100 ${isDuplicate ? 'bg-rose-50' : ''}">
+                                                    <input value="${r.noBp || ''}" 
+                                                           oninput="updateRealRowById('${r.id}', 'noBp', this.value)" 
+                                                           class="w-full px-3 py-2 font-mono text-[11px] font-black ${isDuplicate ? 'text-rose-600' : 'text-slate-700'} bg-transparent outline-none focus:bg-emerald-50" 
+                                                           placeholder="BP-xxx" />
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <input value="${r.tanggal || ''}" oninput="updateRealRowById('${r.id}', 'tanggal', this.value)" class="w-full px-3 py-2 text-[10px] font-bold bg-transparent outline-none focus:bg-emerald-50" placeholder="YYYY-MM-DD" />
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <textarea oninput="updateRealRowById('${r.id}', 'keterangan', this.value.toUpperCase())" 
+                                                              class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                                              rows="2"
+                                                              placeholder="Uraian...">${r.keterangan || ''}</textarea>
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <textarea oninput="updateRealRowById('${r.id}', 'penerima', this.value.toUpperCase())" 
+                                                              class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                                              rows="2"
+                                                              placeholder="Nama...">${r.penerima || ''}</textarea>
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <input value="${formatRupiah(r.nilai)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'nilai', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-700 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <input value="${formatRupiah(r.ppn)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'ppn', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                                                </td>
+                                                <td class="p-0 border-r border-slate-100">
+                                                    <input value="${formatRupiah(r.pph)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'pph', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                                                </td>
+                                                <td class="px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-600 bg-emerald-50/30">
+                                                    ${((r.nilai || 0) - (r.ppn || 0) - (r.pph || 0)).toLocaleString('id-ID')}
+                                                </td>
+                                                <td class="px-2 py-1 border-r border-slate-100 align-middle">
+                                                    <div class="flex flex-wrap gap-1 justify-center">
+                                                        ${[
+                                                            {id: 'DI', label: '1: DI'}, 
+                                                            {id: 'PA', label: '2: PA'}, 
+                                                            {id: 'LU', label: '3: LU'}, 
+                                                            {id: 'PMKS', label: '4: PMKS'}
+                                                        ].map(opt => `
+                                                            <label class="flex items-center gap-0.5 cursor-pointer group">
+                                                                <input type="checkbox" 
+                                                                       ${(r.subUk || []).includes(opt.id) ? 'checked' : ''} 
+                                                                       onchange="toggleSubUk('${r.id}', '${opt.id}')"
+                                                                       class="w-2.5 h-2.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                                                <span class="text-[7px] font-black text-slate-500 group-hover:text-emerald-600">${opt.label}</span>
+                                                            </label>
+                                                        `).join('')}
+                                                    </div>
+                                                </td>
+                                                <td class="px-2 py-2 text-center">
+                                                    <button onclick="removeRealRowById('${r.id}')" class="p-1 text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-white border-t border-slate-200 flex justify-end items-center gap-3">
+                        <button onclick="closeRealisasiModal()" class="px-6 py-2 border-2 border-slate-100 text-slate-400 rounded-xl font-black uppercase text-[8px] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all">Batalkan</button>
+                        <button onclick="saveBulkRealisasi()" class="px-6 py-2 bg-slate-900 text-white rounded-xl font-black uppercase text-[8px] flex items-center gap-1.5 shadow-xl hover:scale-105 transition-all"><i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan</button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderRealisasiTableBody() {
+            const body = document.getElementById('transaksi-body');
+            if (!body) return;
+
+            // Apply Filters
+            const filteredRealisasi = state.bulkRealisasi.filter(r => {
+                const searchLower = (state.modalFilters.penerima || "").toLowerCase();
+                const matchPenerima = !searchLower || 
+                                     (r.penerima || "").toLowerCase().includes(searchLower) || 
+                                     (r.keterangan || "").toLowerCase().includes(searchLower);
+                
+                const matchNoBp = !state.modalFilters.noBp || (r.noBp || "").toLowerCase().includes(state.modalFilters.noBp.toLowerCase());
+                
+                let matchBulan = true;
+                if (state.modalFilters.bulan !== 'all') {
+                    if (r.tanggal) {
+                        const dateParts = r.tanggal.split(/[-/.]/);
+                        let m = -1;
+                        if (dateParts.length === 3) {
+                            if (parseInt(dateParts[0]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else if (parseInt(dateParts[2]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else m = parseInt(dateParts[1]) - 1;
+                        }
+                        matchBulan = m === parseInt(state.modalFilters.bulan);
+                    } else {
+                        matchBulan = false;
+                    }
+                }
+                return matchPenerima && matchBulan && matchNoBp;
+            });
+
+            // Hitung No BP duplikat untuk filtered saja (atau seluruh bulk?)
+            // Sebaiknya seluruh bulk agar peringatan duplikat tetap akurat walau terfilter
+            const noBpCounts = {};
+            state.bulkRealisasi.forEach(r => {
+                if (r.noBp) noBpCounts[r.noBp] = (noBpCounts[r.noBp] || 0) + 1;
+            });
+
+            body.innerHTML = filteredRealisasi.map((r) => {
+                const isDuplicate = r.noBp && noBpCounts[r.noBp] > 1;
+                return `
+                    <tr class="hover:bg-emerald-50/30 transition-colors">
+                        <td class="p-0 border-r border-slate-100 ${isDuplicate ? 'bg-rose-50' : ''}">
+                            <input value="${r.noBp || ''}" 
+                                   oninput="updateRealRowById('${r.id}', 'noBp', this.value)" 
+                                   class="w-full px-3 py-2 font-mono text-[11px] font-black ${isDuplicate ? 'text-rose-600' : 'text-slate-700'} bg-transparent outline-none focus:bg-emerald-50" 
+                                   placeholder="BP-xxx" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${r.tanggal || ''}" oninput="updateRealRowById('${r.id}', 'tanggal', this.value)" class="w-full px-3 py-2 text-[10px] font-bold bg-transparent outline-none focus:bg-emerald-50" placeholder="YYYY-MM-DD" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <textarea oninput="updateRealRowById('${r.id}', 'keterangan', this.value.toUpperCase())" 
+                                      class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                      rows="2"
+                                      placeholder="Uraian...">${r.keterangan || ''}</textarea>
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <textarea oninput="updateRealRowById('${r.id}', 'penerima', this.value.toUpperCase())" 
+                                      class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                      rows="2"
+                                      placeholder="Nama...">${r.penerima || ''}</textarea>
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.nilai)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'nilai', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-700 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.ppn)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'ppn', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.pph)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'pph', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td id="netto-${r.id}" class="px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-600 bg-emerald-50/30">
+                            ${((r.nilai || 0) - (r.ppn || 0) - (r.pph || 0)).toLocaleString('id-ID')}
+                        </td>
+                        <td class="px-2 py-1 border-r border-slate-100 align-middle">
+                            <div class="flex flex-wrap gap-1 justify-center">
+                                ${[
+                                    {id: 'DI', label: '1: DI'}, 
+                                    {id: 'PA', label: '2: PA'}, 
+                                    {id: 'LU', label: '3: LU'}, 
+                                    {id: 'PMKS', label: '4: PMKS'}
+                                ].map(opt => `
+                                    <label class="flex items-center gap-0.5 cursor-pointer group">
+                                        <input type="checkbox" 
+                                               ${(r.subUk || []).includes(opt.id) ? 'checked' : ''} 
+                                               onchange="toggleSubUk('${r.id}', '${opt.id}')"
+                                               class="w-2.5 h-2.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                        <span class="text-[7px] font-black text-slate-500 group-hover:text-emerald-600">${opt.label}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td class="px-2 py-2 text-center">
+                            <button onclick="removeRealRowById('${r.id}')" class="p-1 text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+            
+            // Update Header Stats (tanpa re-render seluruh modal)
+            const activePagu = parseFloat(document.getElementById('modal-header-pagu')?.dataset.val || 0);
+            const currentTotalReal = state.bulkRealisasi.reduce((acc, r) => acc + (r.nilai || 0), 0);
+            const currentSisa = activePagu - currentTotalReal;
+
+            const realEl = document.getElementById('modal-header-real');
+            const sisaEl = document.getElementById('modal-header-sisa');
+
+            if (realEl) realEl.innerText = `Rp ${formatRupiah(currentTotalReal)}`;
+            if (sisaEl) {
+                sisaEl.innerText = `Rp ${formatRupiah(currentSisa)}`;
+                sisaEl.className = `text-xs font-mono font-black ${currentSisa < 0 ? 'text-rose-400' : 'text-yellow-100'}`;
+            }
+        }
+
+        function closeRealisasiModal() {
+            document.getElementById('realisasi-modal').classList.add('hidden');
+            document.getElementById('realisasi-modal').classList.remove('flex');
+        }
+
+        function addRealRow() {
+            const newRow = { 
+                id: `rel-${Date.now()}-${Math.random()}`, 
+                rekeningId: state.targetItem.id, 
+                noBp: '', 
+                tanggal: new Date().toISOString().split('T')[0], 
+                keterangan: '', 
+                penerima: '', 
+                subUk: [], // Checklist Sub Uk: DI, PA, LU, PMKS
+                nilai: 0, 
+                ppn: 0, 
+                pph: 0 
+            };
+             state.bulkRealisasi.unshift(newRow);
+             renderRealisasiTableBody();
+         }
+
+        function updateRealRowById(id, field, val) {
+            const idx = state.bulkRealisasi.findIndex(r => r.id === id);
+            if (idx === -1) return;
+
+            state.bulkRealisasi[idx][field] = val;
+            
+            // Jika field adalah noBp, render ulang untuk memperbarui warna duplikat
+            // Jika field adalah tanggal/keterangan/penerima, jangan render ulang agar kursor tidak hilang
+            if (field === 'noBp') {
+                renderRealisasiTableBody();
+                return;
+            }
+
+            // Update Header Stats
+            const activePagu = parseFloat(document.getElementById('modal-header-pagu')?.dataset.val || 0);
+            const currentTotalReal = state.bulkRealisasi.reduce((acc, r) => acc + (r.nilai || 0), 0);
+            const currentSisa = activePagu - currentTotalReal;
+
+            const realEl = document.getElementById('modal-header-real');
+            const sisaEl = document.getElementById('modal-header-sisa');
+
+            if (realEl) realEl.innerText = `Rp ${formatRupiah(currentTotalReal)}`;
+            if (sisaEl) {
+                sisaEl.innerText = `Rp ${formatRupiah(currentSisa)}`;
+                sisaEl.className = `text-xs font-mono font-black ${currentSisa < 0 ? 'text-rose-400' : 'text-yellow-100'}`;
+            }
+
+            // Jika mengedit nilai/ppn/pph, update kolom Netto di baris tersebut secara langsung
+            if (['nilai', 'ppn', 'pph'].includes(field)) {
+                const r = state.bulkRealisasi[idx];
+                const netto = (r.nilai || 0) - (r.ppn || 0) - (r.pph || 0);
+                const nettoEl = document.getElementById(`netto-${id}`);
+                if (nettoEl) {
+                    nettoEl.innerText = netto.toLocaleString('id-ID');
+                }
+            }
+        }
+
+        function toggleSubUk(id, uk) {
+            const idx = state.bulkRealisasi.findIndex(r => r.id === id);
+            if (idx === -1) return;
+
+            if (!state.bulkRealisasi[idx].subUk) state.bulkRealisasi[idx].subUk = [];
+            
+            const current = state.bulkRealisasi[idx].subUk;
+            const foundIdx = current.indexOf(uk);
+            
+            if (foundIdx > -1) {
+                current.splice(foundIdx, 1);
+            } else {
+                current.push(uk);
+            }
+            // No need to re-render everything, just local state update is enough since checkboxes are already synced with state
+        }
+
+        function removeRealRowById(id) {
+            const r = state.bulkRealisasi.find(r => r.id === id);
+            const label = r && r.noBp ? `Nomor ${r.noBp}` : 'baris ini';
+            
+            if (confirm(`Apakah Anda yakin ingin menghapus ${label}?`)) {
+                state.bulkRealisasi = state.bulkRealisasi.filter(r => r.id !== id);
+                renderRealisasiTableBody();
+            }
+        }
+
+        function saveBulkRealisasi() {
+            const others = (state.data.realisasi || []).filter(r => (r.rekeningId || r.subKegiatanId) !== state.targetItem.id);
+            const newData = { ...state.data, realisasi: [...others, ...state.bulkRealisasi] };
+            
+            saveToSupabase(newData);
+            closeRealisasiModal();
+            render();
+        }
+
+        function handleBulkPaste(e) {
+            // Check if we are inside the modal container
+            if (!document.getElementById('realisasi-modal').contains(e.target)) return;
+            
+            const text = e.clipboardData.getData('text');
+            if (!text || !text.includes('\t')) return; // Only process if it looks like Excel data (contains tabs)
+
+            e.preventDefault();
+            const lines = text.trim().split('\n');
+            
+            const newRows = lines.map(line => {
+                const cols = line.split('\t');
+                return {
+                    id: `rel-${Date.now()}-${Math.random()}`,
+                    rekeningId: state.targetItem.id,
+                    noBp: cols[0] || '',
+                    tanggal: cols[1] || new Date().toISOString().split('T')[0],
+                    keterangan: (cols[2] || '').toUpperCase(),
+                    penerima: (cols[3] || '').toUpperCase(),
+                    subUk: [],
+                    nilai: parseRupiah(cols[4] || '0'),
+                    ppn: parseRupiah(cols[5] || '0'),
+                    pph: parseRupiah(cols[6] || '0')
+                };
+            });
+
+            if (newRows.length > 0) {
+                // If the last row is empty, replace it, otherwise append
+                if (state.bulkRealisasi.length > 0) {
+                    const last = state.bulkRealisasi[0];
+                    if (!last.noBp && !last.keterangan && last.nilai === 0) {
+                        state.bulkRealisasi.shift();
+                    }
+                }
+                state.bulkRealisasi = [...newRows, ...state.bulkRealisasi];
+                renderRealisasiModal();
+                showNotif(`${newRows.length} transaksi berhasil ditambahkan dari Excel`);
+            }
+        }
+
+        // --- EXPORT LOGIC ---
+        function handleExportMain() {
+            const table = document.getElementById('main-table');
+            const clone = table.cloneNode(true);
+            
+            // Bersihkan elemen yang tidak diperlukan di Excel & konversi input menjadi teks
+            clone.querySelectorAll('button').forEach(b => b.remove());
+            clone.querySelectorAll('i').forEach(i => i.remove());
+            clone.querySelectorAll('input[type="checkbox"]').forEach(c => c.remove());
+            clone.querySelectorAll('input[type="text"], input:not([type])').forEach(input => {
+                const span = document.createElement('span');
+                span.innerText = input.value;
+                input.parentNode.replaceChild(span, input);
+            });
+            
+            // Apply classes to clone rows before generating outerHTML
+            const rows = clone.querySelectorAll('tbody tr');
+            const originalRows = table.querySelectorAll('tbody tr');
+            rows.forEach((row, idx) => {
+                const originalRow = originalRows[idx];
+                if (originalRow) {
+                    if (originalRow.classList.contains('bg-blue-700')) row.classList.add('bg-program');
+                    else if (originalRow.classList.contains('bg-emerald-700')) row.classList.add('bg-kegiatan');
+                    else if (originalRow.classList.contains('bg-emerald-500')) row.classList.add('bg-sub_kegiatan');
+                    else if (originalRow.classList.contains('bg-orange-600')) row.classList.add('bg-rekening');
+                }
+            });
+
+            // Ambil informasi filter saat ini
+            let filterInfo = [];
+            if (state.filterText) filterInfo.push(`Pencarian: ${state.filterText}`);
+            if (state.filterDana !== 'all') filterInfo.push(`Dana: ${state.filterDana}`);
+            if (state.filterMetode !== 'all') filterInfo.push(`Metode: ${state.filterMetode}`);
+            
+            // Filter Hirarki Detail
+            if (state.filterHierarchy.program !== 'all') {
+                const item = findInTree(state.data.pagu, state.filterHierarchy.program);
+                if (item) filterInfo.push(`Program: ${item.kode} - ${item.uraian}`);
+            }
+            if (state.filterHierarchy.kegiatan !== 'all') {
+                const item = findInTree(state.data.pagu, state.filterHierarchy.kegiatan);
+                if (item) filterInfo.push(`Kegiatan: ${item.kode} - ${item.uraian}`);
+            }
+            if (state.filterHierarchy.sub_kegiatan !== 'all') {
+                const item = findInTree(state.data.pagu, state.filterHierarchy.sub_kegiatan);
+                if (item) filterInfo.push(`Sub-Kegiatan: ${item.kode} - ${item.uraian}`);
+            }
+            if (state.filterHierarchy.rekening !== 'all') {
+                const item = findInTree(state.data.pagu, state.filterHierarchy.rekening);
+                if (item) filterInfo.push(`Rekening: ${item.kode} - ${item.uraian}`);
+            }
+            
+            const title = `LAPORAN APBD - ${state.activeTab.toUpperCase()} (${state.viewMode.toUpperCase()})`;
+            const timestamp = new Date().toLocaleString('id-ID');
+            
+            const html = `
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #000000; padding: 6px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 9pt; }
+                        th { background-color: #1e293b; color: #ffffff; font-weight: bold; text-align: center; text-transform: uppercase; }
+                        .title { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 5px; }
+                        .info { font-size: 10pt; font-weight: bold; margin-bottom: 2px; }
+                        
+                        /* Warna sesuai aplikasi */
+                        .bg-program { background-color: #1d4ed8 !important; color: #ffffff !important; } /* Blue-700 */
+                        .bg-kegiatan { background-color: #065f46 !important; color: #ffffff !important; } /* Emerald-800 */
+                        .bg-sub_kegiatan { background-color: #10b981 !important; color: #ffffff !important; } /* Emerald-500 */
+                        .bg-rekening { background-color: #ea580c !important; color: #ffffff !important; } /* Orange-600 */
+                        
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-mono { font-family: 'Courier New', Courier, monospace; }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">${title}</div>
+                    <div style="margin-bottom: 20px;">
+                        <div class="info">Dicetak pada: ${timestamp}</div>
+                        ${filterInfo.map(info => `<div class="info">${info}</div>`).join('')}
+                    </div>
+                    ${clone.outerHTML}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const fileName = `APBD_${state.activeTab.toUpperCase()}_${new Date().toISOString().split('T')[0]}.xls`;
+            
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotif(`Export berhasil: ${fileName}`);
+        }
+
+        function handleExportTransaksi() {
+            const table = document.getElementById('transaksi-table');
+            const clone = table.cloneNode(true);
+            clone.querySelectorAll('button').forEach(b => b.remove());
+            clone.querySelectorAll('i').forEach(i => i.remove());
+            clone.querySelectorAll('input').forEach(input => {
+                const span = document.createElement('span');
+                span.innerText = input.value;
+                input.parentNode.replaceChild(span, input);
+            });
+            
+            // Cari data hirarki lengkap
+            let hierarchy = [];
+            const findPath = (list, targetId, path = []) => {
+                for (const item of list) {
+                    const currentPath = [...path, item];
+                    if (item.id === targetId) return currentPath;
+                    if (item.children) {
+                        const found = findPath(item.children, targetId, currentPath);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const path = findPath(state.data.pagu, state.targetItem.id);
+            let infoHtml = '';
+            if (path) {
+                hierarchy = path.map(p => `<div><b style="text-transform: uppercase;">${p.type.replace('_', ' ')}:</b> ${p.kode} - ${p.uraian}</div>`).join('');
+                infoHtml = `
+                    <div style="margin-bottom: 20px; font-family: sans-serif; font-size: 10pt;">
+                        ${hierarchy}
+                    </div>
+                `;
+            }
+
+            const title = `<div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 10px; font-family: sans-serif;">LAPORAN RINCIAN TRANSAKSI</div>`;
+            const timestamp = `<div style="font-size: 9pt; color: #666666; margin-bottom: 15px; font-family: sans-serif;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</div>`;
+
+            const html = `
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #000000; padding: 8px; font-family: sans-serif; font-size: 9pt; }
+                        th { background-color: #1e293b; color: #ffffff; font-weight: bold; text-align: center; text-transform: uppercase; }
+                        .text-right { text-align: right; }
+                        .font-black { font-weight: 900; }
+                    </style>
+                </head>
+                <body>
+                    ${title}
+                    ${timestamp}
+                    ${infoHtml}
+                    ${clone.outerHTML}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Transaksi_${state.targetItem.kode}_${new Date().toISOString().split('T')[0]}.xls`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotif(`Export transaksi berhasil`);
+        }
+
+        // --- START ---
+        window.addEventListener('load', () => {
+            console.log("[APBD] Page loaded, starting init...");
+            init();
+        });
+    </script>
+</body>
+</html>
+

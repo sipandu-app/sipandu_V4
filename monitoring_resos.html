@@ -1,0 +1,908 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Rehabilitasi Sosial - SIPM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #F8FAFC;
+        }
+        .active-tab { 
+            background-color: white; 
+            color: #10B981; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
+        }
+        [v-cloak] { display: none; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-10 text-[11px]">
+
+    <!-- Notification -->
+    <div id="notification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- PIN Modal -->
+    <div id="modal-pin" class="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-[240px] rounded-2xl p-6 shadow-2xl text-center border border-slate-200">
+            <h3 class="text-[10px] font-black uppercase tracking-widest mb-4">Verifikasi PIN</h3>
+            <input type="password" id="pin-input" class="w-full text-center p-2 bg-slate-50 border border-slate-200 rounded-lg font-black text-xl mb-4 outline-none" placeholder="••••">
+            <div class="flex flex-col gap-2">
+                <button onclick="processPinAction()" class="w-full py-2 bg-slate-900 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider">Konfirmasi</button>
+                <button onclick="closePinModal()" class="text-[9px] font-bold text-slate-400 uppercase">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="modal-note" class="fixed inset-0 z-[170] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-500 p-2 rounded-xl text-white shadow-sm"><i data-lucide="sticky-note" class="w-4 h-4"></i></div>
+                    <h2 class="text-[10px] font-black uppercase tracking-wider text-amber-900">Catatan Laporan</h2>
+                </div>
+                <button onclick="closeNoteModal()" class="h-8 w-8 flex items-center justify-center bg-white border border-amber-200 rounded-full text-amber-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="p-6">
+                <p id="note-content" class="text-xs font-semibold text-slate-700 leading-relaxed italic whitespace-pre-wrap"></p>
+                <button onclick="closeNoteModal()" class="w-full mt-4 h-9 bg-slate-900 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div id="modal-summary" class="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl text-white"><i data-lucide="building-2" class="w-4 h-4"></i></div>
+                    <h2 class="text-[10px] font-black uppercase tracking-wider text-slate-900">Ringkasan Mutasi</h2>
+                </div>
+                <button onclick="closeSummaryModal()" class="h-8 w-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div id="summary-container" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <!-- Summary items will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-green-500 border-b border-green-600 sticky top-0 z-50 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-2 rounded-lg shadow-sm">
+                    <i data-lucide="activity" class="text-green-500 w-[18px] h-[18px]"></i>
+                </div>
+                <div>
+                    <h1 class="text-[11px] font-black text-white tracking-tight leading-none uppercase text-shadow-sm">MONITORING PELAYANAN REHABILITASI SOSIAL</h1>
+                    <p class="text-[8px] font-bold text-green-50 mt-1 uppercase tracking-widest opacity-90">Capaian kinerja Periode Bulan</p>
+                </div>
+            </div>
+            <nav class="flex bg-white/20 p-0.5 rounded-lg border border-white/20 backdrop-blur-sm">
+                <button onclick="switchTab('input')" id="tab-input-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-green-50 hover:text-white">
+                    <i data-lucide="plus" class="w-3 h-3"></i> Input
+                </button>
+                <button onclick="switchTab('history')" id="tab-history-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab">
+                    <i data-lucide="layout-grid" class="w-3 h-3"></i> Riwayat
+                </button>
+                <button onclick="switchTab('database')" id="tab-database-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-green-50 hover:text-white">
+                    <i data-lucide="database" class="w-3 h-3"></i> Database
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-4">
+        <!-- Input Tab -->
+        <div id="tab-input" class="max-w-xl mx-auto hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5">
+                    <h2 id="form-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <i data-lucide="clipboard-list" class="text-indigo-600 w-3.5 h-3.5"></i> Input Laporan Baru
+                    </h2>
+                    <form id="mutasi-form" class="space-y-4">
+                        <input type="hidden" id="edit-id">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase px-1">Unit Pelayanan</label>
+                                <select id="unitPelayanan" class="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-indigo-500 outline-none" required>
+                                    <option value="">Pilih Unit</option>
+                                    <option value="PPSDI Raharjo">PPSDI Raharjo</option>
+                                    <option value="RPSLU Mojomulyo">RPSLU Mojomulyo</option>
+                                    <option value="RPSA Pamardi Siwi">RPSA Pamardi Siwi</option>
+                                    <option value="RPS PMKS Gondang">RPS PMKS Gondang</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase px-1">Periode</label>
+                                <input type="month" id="bulanTahun" class="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-indigo-500 outline-none" required />
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-100 p-1 rounded-xl grid grid-cols-4 gap-1">
+                            <div class="bg-white rounded-lg p-2 text-center">
+                                <p class="text-[8px] font-bold text-slate-600 uppercase mb-1">Awal</p>
+                                <input type="number" id="jumlahAwal" class="w-full bg-transparent text-center font-bold text-sm outline-none text-slate-600" placeholder="0" value="0">
+                            </div>
+                            <div class="bg-white rounded-lg p-2 text-center">
+                                <p class="text-[8px] font-bold text-emerald-600 uppercase mb-1">Masuk</p>
+                                <input type="number" id="pmMasuk" class="w-full bg-transparent text-center font-bold text-sm outline-none text-emerald-600" placeholder="0" value="0">
+                            </div>
+                            <div class="bg-white rounded-lg p-2 text-center">
+                                <p class="text-[8px] font-bold text-rose-600 uppercase mb-1">Keluar</p>
+                                <input type="number" id="pmKeluar" class="w-full bg-transparent text-center font-bold text-sm outline-none text-rose-600" placeholder="0" value="0">
+                            </div>
+                            <div class="bg-indigo-600 rounded-lg p-2 text-center flex flex-col justify-center">
+                                <p class="text-[8px] font-bold text-indigo-200 uppercase mb-0.5">Akhir</p>
+                                <div id="jumlahAkhir" class="text-white font-black text-sm">0</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Lampiran PDF</label>
+                                <label class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[80px] flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-all">
+                                    <i data-lucide="file-up" class="text-slate-300 w-4 h-4"></i>
+                                    <span id="file-label" class="text-[8px] font-bold uppercase text-slate-400 mt-1 max-w-[80px] truncate text-center px-2">
+                                        Pilih Berkas
+                                    </span>
+                                    <input type="file" id="file-input" accept="application/pdf,image/*" class="hidden" />
+                                </label>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Catatan</label>
+                                <textarea id="catatan" class="flex-grow w-full h-[80px] p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-medium outline-none focus:border-indigo-500 resize-none" placeholder="PM Masuk: Rizky, Anang. PM Keluar: Yanti."></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="w-full h-10 bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                            <span id="btn-text">Simpan Laporan</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="tab-history" class="space-y-3">
+            <div class="bg-white p-2 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-1 bg-indigo-50 px-2 py-1.5 rounded-lg">
+                    <i data-lucide="info" class="text-indigo-600 w-3 h-3"></i>
+                    <span class="text-[8px] font-bold text-indigo-700 uppercase">Filter:</span>
+                </div>
+
+                <select id="filterUnit" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="Semua">Semua Unit</option>
+                    <option value="PPSDI Raharjo">PPSDI Raharjo</option>
+                    <option value="RPSLU Mojomulyo">RPSLU Mojomulyo</option>
+                    <option value="RPSA Pamardi Siwi">RPSA Pamardi Siwi</option>
+                    <option value="RPS PMKS Gondang">RPS PMKS Gondang</option>
+                </select>
+
+                <select id="filterTahun" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="Semua">Tahun</option>
+                </select>
+
+                <select id="filterBulan" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="Semua">Bulan</option>
+                    <option value="01">Januari</option>
+                    <option value="02">Februari</option>
+                    <option value="03">Maret</option>
+                    <option value="04">April</option>
+                    <option value="05">Mei</option>
+                    <option value="06">Juni</option>
+                    <option value="07">Juli</option>
+                    <option value="08">Agustus</option>
+                    <option value="09">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                </select>
+
+                <select id="filterRentang" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="Semua">Periode</option>
+                    <option value="TW1">Tri Wulan I</option>
+                    <option value="TW2">Tri Wulan II</option>
+                    <option value="TW3">Tri Wulan III</option>
+                    <option value="TW4">Tri Wulan IV</option>
+                    <option value="S1">Semester I</option>
+                    <option value="S2">Semester II</option>
+                </select>
+
+                <div class="flex items-center gap-1 ml-auto">
+                    <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-2 h-8">
+                        <i data-lucide="rows" class="text-slate-400 w-2.5 h-2.5"></i>
+                        <select id="rowsPerPage" class="bg-transparent text-[9px] font-black uppercase outline-none cursor-pointer">
+                            <option value="10">View 10</option>
+                            <option value="20">View 20</option>
+                            <option value="50">View 50</option>
+                        </select>
+                    </div>
+                    <button onclick="resetFilters()" title="Reset Filter" class="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-500 border border-slate-200 rounded transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    </button>
+                    <button onclick="openSummaryModal()" class="h-8 px-3 flex items-center gap-2 bg-indigo-600 text-white rounded text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                        <i data-lucide="briefcase" class="w-3 h-3"></i> Ringkasan
+                    </button>
+                    <button onclick="exportToExcel()" class="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                        <i data-lucide="download" class="w-3 h-3"></i> Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left table-auto border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr class="text-[8px] font-black text-slate-400 uppercase tracking-wider">
+                                <th class="px-3 py-2.5">Unit Pelayanan</th>
+                                <th class="px-1 py-2.5 text-center">Bulan</th>
+                                <th class="px-1 py-2.5 text-center">Awal</th>
+                                <th class="px-1 py-2.5 text-center">Masuk</th>
+                                <th class="px-1 py-2.5 text-center">Keluar</th>
+                                <th class="px-1 py-2.5 text-center">Akhir</th>
+                                <th class="px-2 py-2.5">Catatan</th>
+                                <th class="px-1 py-2.5 text-center">Status File</th>
+                                <th class="px-2 py-2.5 text-right">Opsi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mutasi-table-body" class="divide-y divide-slate-50">
+                            <!-- Table rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-between">
+                    <p id="pagination-info" class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                        Menampilkan 0 dari 0 rekaman
+                    </p>
+                    <div class="flex items-center gap-1">
+                        <button id="prev-page" class="h-7 w-7 flex items-center justify-center rounded border transition-all text-slate-200 border-slate-100 disabled:cursor-not-allowed">
+                            <i data-lucide="chevron-left" class="w-3 h-3"></i>
+                        </button>
+                        <div id="page-indicator" class="flex items-center gap-1 px-3 h-7 bg-white border border-slate-200 rounded text-[9px] font-black text-slate-700">
+                            1 / 1
+                        </div>
+                        <button id="next-page" class="h-7 w-7 flex items-center justify-center rounded border transition-all text-slate-200 border-slate-100 disabled:cursor-not-allowed">
+                            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Database Tab -->
+        <div id="tab-database" class="max-w-xl mx-auto hidden space-y-6 animate-in">
+            <div class="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl">
+                <h2 class="text-sm font-black uppercase mb-8 flex items-center gap-4">
+                    <div class="p-3 bg-indigo-600 rounded-2xl"><i data-lucide="database" class="w-5 h-5 text-white"></i></div>
+                    Manajemen Database
+                </h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="backupData()" class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group transition-all">
+                        <div class="text-left">
+                            <span class="block font-black uppercase text-[10px] group-hover:text-indigo-400">Unduh Backup (JSON)</span>
+                            <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Ekspor semua data mutasi</span>
+                        </div>
+                        <i data-lucide="download" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                    
+                    <label class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group cursor-pointer transition-all">
+                        <div class="text-left">
+                            <span class="block font-black uppercase text-[10px] group-hover:text-emerald-400">Pulihkan Data (JSON)</span>
+                            <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Import data dari file backup</span>
+                        </div>
+                        <i data-lucide="upload" class="w-5 h-5 text-slate-400"></i>
+                        <input type="file" id="restore-input" class="hidden" accept=".json" onchange="handleRestoreFile(event)" />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const CLOUDINARY_CLOUD_NAME = "dkxehjgu0";
+        const CLOUDINARY_UPLOAD_PRESET = "mutasi_pm";
+        const ADMIN_PIN = "888";
+        const TABLE_NAME = "mutasi_pm";
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // State
+        let listMutasi = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let rowsPerPage = 10;
+        let activeTab = 'history';
+        let targetItem = null;
+        let pinAction = null;
+        let selectedFile = null;
+
+        // Elements
+        const form = document.getElementById('mutasi-form');
+        const fileInput = document.getElementById('file-input');
+        const fileLabel = document.getElementById('file-label');
+        const jumlahAwalInput = document.getElementById('jumlahAwal');
+        const pmMasukInput = document.getElementById('pmMasuk');
+        const pmKeluarInput = document.getElementById('pmKeluar');
+        const jumlahAkhirDisplay = document.getElementById('jumlahAkhir');
+
+        // Init Lucide
+        lucide.createIcons();
+
+        // --- Core Functions ---
+
+        async function syncData() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .order('bulan_tahun', { ascending: false });
+                
+                if (error) throw error;
+                listMutasi = data || [];
+                updateYearOptions();
+                applyFilters();
+            } catch (err) {
+                console.error("Sync error:", err);
+                showNotif("Gagal sinkronisasi data", "error");
+            }
+        }
+
+        function updateYearOptions() {
+            const years = [...new Set(listMutasi.map(item => item.bulan_tahun?.split('-')[0]))].filter(Boolean);
+            const select = document.getElementById('filterTahun');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="Semua">Tahun</option>';
+            years.sort((a, b) => b - a).forEach(y => {
+                select.innerHTML += `<option value="${y}">${y}</option>`;
+            });
+            select.value = currentVal;
+        }
+
+        function calculateAkhir() {
+            const a = parseInt(jumlahAwalInput.value) || 0;
+            const m = parseInt(pmMasukInput.value) || 0;
+            const k = parseInt(pmKeluarInput.value) || 0;
+            jumlahAkhirDisplay.innerText = (a + m) - k;
+        }
+
+        [jumlahAwalInput, pmMasukInput, pmKeluarInput].forEach(el => el.addEventListener('input', calculateAkhir));
+
+        fileInput.onchange = (e) => {
+            selectedFile = e.target.files[0];
+            fileLabel.innerText = selectedFile ? selectedFile.name : 'Pilih Berkas';
+        };
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.getElementById('tab-input').classList.toggle('hidden', tab !== 'input');
+            document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history');
+            document.getElementById('tab-database').classList.toggle('hidden', tab !== 'database');
+            
+            document.getElementById('tab-input-btn').className = tab === 'input' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-green-50 hover:text-white';
+            document.getElementById('tab-history-btn').className = tab === 'history' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-green-50 hover:text-white';
+            document.getElementById('tab-database-btn').className = tab === 'database' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-green-50 hover:text-white';
+
+            if (tab === 'history') {
+                syncData();
+            } else {
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = '';
+            form.reset();
+            jumlahAkhirDisplay.innerText = '0';
+            fileLabel.innerText = 'Pilih Berkas';
+            selectedFile = null;
+            document.getElementById('form-title').innerHTML = `<i data-lucide="clipboard-list" class="text-indigo-600 w-3.5 h-3.5"></i> Input Laporan Baru`;
+            document.getElementById('btn-text').innerText = 'Simpan Laporan';
+            lucide.createIcons();
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const unit = document.getElementById('unitPelayanan').value;
+            const periode = document.getElementById('bulanTahun').value;
+
+            // Duplicate check
+            const isDuplicate = listMutasi.some(item => 
+                item.unit_pelayanan === unit && 
+                item.bulan_tahun === periode && 
+                item.id !== editId
+            );
+
+            if (isDuplicate) {
+                showNotif("Data pada unit ini sudah tersimpan", "error");
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+            try {
+                let finalPdfUrl = "";
+                let finalPublicId = "";
+
+                if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append("file", selectedFile);
+                    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+                    formData.append("folder", "mutasi_pm");
+                    formData.append("resource_type", "auto");
+
+                    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (!res.ok) throw new Error("Gagal mengunggah ke Cloudinary");
+                    const data = await res.json();
+                    finalPdfUrl = data.secure_url;
+                    finalPublicId = data.public_id;
+                } else if (editId) {
+                    const existing = listMutasi.find(i => i.id === editId);
+                    finalPdfUrl = existing.pdf_url;
+                    finalPublicId = existing.public_id;
+                }
+
+                const payload = {
+                    unit_pelayanan: unit,
+                    bulan_tahun: periode,
+                    jumlah_awal: parseInt(jumlahAwalInput.value) || 0,
+                    pm_masuk: parseInt(pmMasukInput.value) || 0,
+                    pm_keluar: parseInt(pmKeluarInput.value) || 0,
+                    jumlah_akhir: parseInt(jumlahAkhirDisplay.innerText) || 0,
+                    catatan: document.getElementById('catatan').value,
+                    pdf_url: finalPdfUrl,
+                    public_id: finalPublicId,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (editId) {
+                    const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', editId);
+                    if (error) throw error;
+                    showNotif("Laporan berhasil diperbarui");
+                } else {
+                    payload.id = 'MUT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                    payload.created_at = new Date().toISOString();
+                    const { error } = await supabaseClient.from(TABLE_NAME).insert(payload);
+                    if (error) throw error;
+                    showNotif("Laporan berhasil disimpan");
+                }
+
+                switchTab('history');
+            } catch (err) {
+                console.error(err);
+                showNotif(err.message || "Gagal menyimpan data", "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> <span id="btn-text">Simpan Laporan</span>`;
+                lucide.createIcons();
+            }
+        };
+
+        // --- Table & Filtering ---
+
+        function applyFilters() {
+            const unit = document.getElementById('filterUnit').value;
+            const tahun = document.getElementById('filterTahun').value;
+            const bulan = document.getElementById('filterBulan').value;
+            const rentang = document.getElementById('filterRentang').value;
+
+            filteredData = listMutasi.filter(item => {
+                const parts = (item.bulan_tahun || "").split('-');
+                const y = parts[0];
+                const m = parts[1];
+
+                const matchUnit = unit === 'Semua' || item.unit_pelayanan === unit;
+                const matchTahun = tahun === 'Semua' || y === tahun;
+                const matchBulan = bulan === 'Semua' || m === bulan;
+
+                let matchR = true;
+                const mInt = parseInt(m);
+                if (rentang === "TW1") matchR = mInt >= 1 && mInt <= 3;
+                else if (rentang === "TW2") matchR = mInt >= 4 && mInt <= 6;
+                else if (rentang === "TW3") matchR = mInt >= 7 && mInt <= 9;
+                else if (rentang === "TW4") matchR = mInt >= 10 && mInt <= 12;
+                else if (rentang === "S1") matchR = mInt >= 1 && mInt <= 6;
+                else if (rentang === "S2") matchR = mInt >= 7 && mInt <= 12;
+
+                return matchUnit && matchTahun && matchBulan && matchR;
+            });
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        document.querySelectorAll('#filterUnit, #filterTahun, #filterBulan, #filterRentang, #rowsPerPage').forEach(el => {
+            el.onchange = () => {
+                if (el.id === 'rowsPerPage') rowsPerPage = parseInt(el.value);
+                applyFilters();
+            };
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('mutasi-table-body');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-10 text-center text-slate-400 font-bold italic">Tidak ada data yang sesuai filter</td></tr>`;
+            } else {
+                pageData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50/50 transition-all group';
+                    row.innerHTML = `
+                        <td class="px-3 py-2">
+                            <p class="text-[9px] font-bold text-slate-800 leading-tight">${item.unit_pelayanan}</p>
+                            ${item.is_locked ? '<span class="text-[7px] text-amber-500 flex items-center gap-0.5 mt-0.5 font-bold uppercase"><i data-lucide="lock" class="w-2 h-2"></i> Terkunci</span>' : ''}
+                        </td>
+                        <td class="px-1 py-2 text-center text-[9px] font-bold text-slate-500">${item.bulan_tahun}</td>
+                        <td class="px-1 py-2 text-center text-[9px] font-bold text-slate-400">${item.jumlah_awal}</td>
+                        <td class="px-1 py-2 text-center text-[9px] font-black text-emerald-600">+${item.pm_masuk}</td>
+                        <td class="px-1 py-2 text-center text-[9px] font-black text-rose-600">-${item.pm_keluar}</td>
+                        <td class="px-1 py-2 text-center text-[9px] font-black text-indigo-700 bg-indigo-50/30">${item.jumlah_akhir}</td>
+                        <td class="px-2 py-2">
+                            <div onclick="openNoteModal('${item.id}')" class="flex items-start gap-1 ${item.catatan ? 'cursor-pointer hover:text-indigo-600' : 'text-slate-300'}">
+                                <i data-lucide="message-square" class="w-2 h-2 mt-0.5 shrink-0"></i>
+                                <p class="text-[8px] italic whitespace-pre-wrap leading-tight">${item.catatan || '-'}</p>
+                            </div>
+                        </td>
+                        <td class="px-1 py-2 text-center">
+                            ${item.pdf_url ? `
+                                <div class="flex items-center justify-center gap-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100">
+                                    <i data-lucide="check-circle-2" class="w-2.5 h-2.5"></i>
+                                    <span class="text-[8px] font-black uppercase tracking-tighter">Tersimpan</span>
+                                </div>
+                            ` : `
+                                <div class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 text-slate-300 rounded border border-slate-100">
+                                    <i data-lucide="file-x" class="w-2.5 h-2.5"></i>
+                                    <span class="text-[8px] font-black uppercase">Kosong</span>
+                                </div>
+                            `}
+                        </td>
+                        <td class="px-2 py-2 text-right">
+                            <div class="flex items-center justify-end gap-0.5">
+                                ${item.pdf_url ? `<a href="${item.pdf_url}" target="_blank" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><i data-lucide="external-link" class="w-3 h-3"></i></a>` : ''}
+                                ${!item.is_locked ? `
+                                    <button onclick="editItem('${item.id}')" class="p-1 text-slate-400 hover:text-indigo-600 rounded"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                    <button onclick="handlePinAction('delete', '${item.id}')" class="p-1 text-slate-300 hover:text-rose-500 rounded"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                ` : ''}
+                                <button onclick="handlePinAction('toggleLock', '${item.id}')" class="p-1 rounded ${item.is_locked ? 'text-amber-500' : 'text-slate-200'}">
+                                    <i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            lucide.createIcons();
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            const start = (currentPage - 1) * rowsPerPage + 1;
+            const end = Math.min(currentPage * rowsPerPage, filteredData.length);
+            
+            document.getElementById('pagination-info').innerText = `Menampilkan ${filteredData.length > 0 ? start : 0} s/d ${end} dari ${filteredData.length} rekaman`;
+            document.getElementById('page-indicator').innerText = `${currentPage} / ${totalPages}`;
+            
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages || filteredData.length === 0;
+            
+            prevBtn.className = currentPage === 1 ? 'h-7 w-7 flex items-center justify-center rounded border transition-all text-slate-200 border-slate-100' : 'h-7 w-7 flex items-center justify-center rounded border transition-all text-indigo-600 border-slate-200 hover:bg-indigo-50';
+            nextBtn.className = (currentPage === totalPages || filteredData.length === 0) ? 'h-7 w-7 flex items-center justify-center rounded border transition-all text-slate-200 border-slate-100' : 'h-7 w-7 flex items-center justify-center rounded border transition-all text-indigo-600 border-slate-200 hover:bg-indigo-50';
+        }
+
+        document.getElementById('prev-page').onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+        document.getElementById('next-page').onclick = () => { 
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage < totalPages) { currentPage++; renderTable(); } 
+        };
+
+        // --- Modals & Actions ---
+
+        function handlePinAction(action, id) {
+            pinAction = action;
+            targetItem = listMutasi.find(i => i.id === id);
+            document.getElementById('modal-pin').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('modal-pin').classList.add('hidden');
+            pinAction = null;
+            targetItem = null;
+        }
+
+        async function processPinAction() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin !== ADMIN_PIN) {
+                showNotif("PIN Salah", "error");
+                return;
+            }
+
+            try {
+                if (pinAction === 'delete') {
+                    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif("Data Dihapus");
+                } else if (pinAction === 'toggleLock') {
+                    const newState = !targetItem.is_locked;
+                    const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: newState }).eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif(newState ? "Data Terkunci" : "Data Terbuka");
+                } else if (pinAction === 'restore') {
+                    await performRestore(targetItem);
+                }
+                syncData();
+                closePinModal();
+            } catch (err) {
+                showNotif("Aksi Gagal", "error");
+            }
+        }
+
+        function editItem(id) {
+            const item = listMutasi.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('unitPelayanan').value = item.unit_pelayanan;
+            document.getElementById('bulanTahun').value = item.bulan_tahun;
+            document.getElementById('jumlahAwal').value = item.jumlah_awal;
+            document.getElementById('pmMasuk').value = item.pm_masuk;
+            document.getElementById('pmKeluar').value = item.pm_keluar;
+            document.getElementById('catatan').value = item.catatan || '';
+            jumlahAkhirDisplay.innerText = item.jumlah_akhir;
+            fileLabel.innerText = item.pdf_url ? 'Ganti Berkas' : 'Pilih Berkas';
+
+            document.getElementById('form-title').innerText = 'Perbarui Laporan';
+            document.getElementById('btn-text').innerText = 'Perbarui Laporan';
+            switchTab('input');
+        }
+
+        function openNoteModal(id) {
+            const item = listMutasi.find(i => i.id === id);
+            if (!item || !item.catatan) return;
+            document.getElementById('note-content').innerText = `"${item.catatan}"`;
+            document.getElementById('modal-note').classList.remove('hidden');
+        }
+
+        function closeNoteModal() {
+            document.getElementById('modal-note').classList.add('hidden');
+        }
+
+        function openSummaryModal() {
+            const container = document.getElementById('summary-container');
+            container.innerHTML = '';
+
+            const units = ["PPSDI Raharjo", "RPSLU Mojomulyo", "RPSA Pamardi Siwi", "RPS PMKS Gondang"];
+            const sums = {};
+            const total = { awal: 0, masuk: 0, keluar: 0, akhir: 0 };
+            
+            units.forEach(u => sums[u] = { awal: 0, masuk: 0, keluar: 0, akhir: 0, firstMonth: '9999-99', lastMonth: '0000-00' });
+
+            filteredData.forEach(item => {
+                const u = item.unit_pelayanan;
+                if (sums[u]) {
+                    // Masuk & Keluar di-akumulasi
+                    sums[u].masuk += item.pm_masuk;
+                    sums[u].keluar += item.pm_keluar;
+
+                    // Cari bulan terawal untuk PM Awal
+                    if (item.bulan_tahun < sums[u].firstMonth) {
+                        sums[u].firstMonth = item.bulan_tahun;
+                        sums[u].awal = item.jumlah_awal;
+                    }
+
+                    // Cari bulan terakhir untuk PM Akhir
+                    if (item.bulan_tahun > sums[u].lastMonth) {
+                        sums[u].lastMonth = item.bulan_tahun;
+                        sums[u].akhir = item.jumlah_akhir;
+                    }
+                }
+            });
+
+            // Hitung Total Seluruh Unit
+            units.forEach(u => {
+                total.awal += sums[u].awal;
+                total.masuk += sums[u].masuk;
+                total.keluar += sums[u].keluar;
+                total.akhir += sums[u].akhir;
+            });
+
+            units.forEach(u => {
+                const s = sums[u];
+                if (s.lastMonth === '0000-00') return; // Skip unit tanpa data terfilter
+
+                container.innerHTML += `
+                    <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex flex-col gap-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] font-black uppercase text-slate-800">${u}</span>
+                            <span class="text-[7px] font-bold text-slate-400 italic">${s.firstMonth} s/d ${s.lastMonth}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-[9px] font-bold text-slate-600">
+                            <span>Awal:&nbsp;${s.awal}</span>
+                            <span>PM Masuk:&nbsp;<span class="text-emerald-600">+${s.masuk}</span></span>
+                            <span>PM Keluar:&nbsp;<span class="text-rose-600">-${s.keluar}</span></span>
+                            <span>Akhir:&nbsp;<span class="text-indigo-600">${s.akhir}</span></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML += `
+                <div class="p-3 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col gap-1 ring-1 ring-indigo-200">
+                    <span class="text-[9px] font-black uppercase text-indigo-900">Total Seluruh Unit</span>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[9px] font-black text-indigo-700">
+                        <span>Awal:&nbsp;${total.awal}</span>
+                        <span>PM Masuk:&nbsp;<span class="text-emerald-600">+${total.masuk}</span></span>
+                        <span>PM Keluar:&nbsp;<span class="text-rose-600">-${total.keluar}</span></span>
+                        <span>Akhir:&nbsp;<span class="text-indigo-600">${total.akhir}</span></span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('modal-summary').classList.remove('hidden');
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('modal-summary').classList.add('hidden');
+        }
+
+        function resetFilters() {
+            document.getElementById('filterUnit').value = 'Semua';
+            document.getElementById('filterTahun').value = 'Semua';
+            document.getElementById('filterBulan').value = 'Semua';
+            document.getElementById('filterRentang').value = 'Semua';
+            applyFilters();
+        }
+
+        function exportToExcel() {
+            if (filteredData.length === 0) {
+                showNotif("Tidak ada data untuk dieksport", "error");
+                return;
+            }
+            const dataExcel = filteredData.map(item => ({
+                'Unit Pelayanan': item.unit_pelayanan,
+                'Bulan-Tahun': item.bulan_tahun,
+                'PM Awal': item.jumlah_awal,
+                'PM Masuk': item.pm_masuk,
+                'PM Keluar': item.pm_keluar,
+                'PM Akhir': item.jumlah_akhir,
+                'Catatan': item.catatan || '-',
+                'URL File': item.pdf_url
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Mutasi PM");
+            XLSX.writeFile(workbook, `Laporan_Mutasi_PM_${new Date().getTime()}.xlsx`);
+            showNotif("Excel berhasil diunduh");
+        }
+
+        function showNotif(message, type = 'success') {
+            const el = document.getElementById('notification');
+            const msgEl = document.getElementById('notification-message');
+            msgEl.innerText = message;
+            el.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 transition-opacity duration-300 ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'} opacity-100`;
+            setTimeout(() => { el.style.opacity = '0'; }, 3000);
+        }
+
+        // --- Database Functions ---
+
+        function backupData() {
+            if (listMutasi.length === 0) {
+                showNotif("Tidak ada data untuk backup", "error");
+                return;
+            }
+            const data = {
+                vouchers: listMutasi.map(({ id, created_at, updated_at, ...r }) => r),
+                timestamp: new Date().toISOString(),
+                app: "Monitoring Resos"
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `BACKUP_MUTASI_PM_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            showNotif("Backup berhasil diunduh");
+        }
+
+        function handleRestoreFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (!json.vouchers) throw new Error("Format file tidak valid");
+                    
+                    // Trigger PIN Verification for Restore
+                    pinAction = 'restore';
+                    targetItem = json.vouchers; // Hack: reuse targetItem to store data
+                    document.getElementById('modal-pin').classList.remove('hidden');
+                    document.getElementById('pin-input').value = '';
+                    document.getElementById('pin-input').focus();
+                } catch (err) {
+                    showNotif("Gagal membaca file backup", "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        async function performRestore(data) {
+            try {
+                showNotif("Memulihkan data...", "info");
+                
+                // Chunk restore (10 items at a time)
+                for (let i = 0; i < data.length; i += 10) {
+                    const chunk = data.slice(i, i + 10).map(v => ({
+                        ...v,
+                        id: 'MUT-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }));
+                    const { error } = await supabaseClient.from(TABLE_NAME).insert(chunk);
+                    if (error) throw error;
+                }
+
+                showNotif("Data berhasil dipulihkan", "success");
+                syncData();
+                switchTab('history');
+            } catch (err) {
+                console.error(err);
+                showNotif("Gagal memulihkan data: " + err.message, "error");
+            }
+        }
+
+        // Init
+        syncData();
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>

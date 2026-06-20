@@ -1,0 +1,545 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan BMD - PPSDI Raharjo</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    body {
+      background-color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #1e293b;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeIn 0.2s ease-out forwards; }
+    .custom-shadow { box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08); }
+
+    .form-field {
+      width: 100%;
+      padding: 0.85rem 1.1rem;
+      background-color: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 1.1rem;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e293b;
+      outline: none;
+      transition: all 0.2s;
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+    }
+
+    .form-field:focus {
+      border-color: #2563eb;
+      background-color: white;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Firebase Scripts (Compat Version for ease of use in HTML) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+  <!-- React & Other Scripts -->
+  <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide-react@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    const { 
+      Plus, Trash2, Edit3, Search, X, FileDown, ExternalLink, 
+      AlertCircle, ShieldCheck, Lock, Unlock, CheckCircle2, 
+      StickyNote, AlertTriangle, FileText, History 
+    } = LucideReact;
+
+    // --- FIREBASE CONFIG (FROM USER SCRIPT) ---
+    const firebaseConfig = JSON.parse(window.parent.__firebase_config || '{}');
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const appId = window.parent.__app_id || 'arsip-bmd-sragen';
+    const MASTER_PIN = '888';
+
+    const UNIT_OPTIONS = ["PPSDI Raharjo Sragen", "RPSLU Mojomulyo Sragen", "RPSLU Pamardi Siwi Sragen", "RPS PMKS Gondang"];
+    const PERIODE_OPTIONS = ["SEMESTER I", "SEMESTER II"];
+    const JENIS_LAPORAN_OPTIONS = [
+      "KIB A (Tanah)", "KIB B (Peralatan & Mesin)", "KIB C (Gedung & Bangunan)", 
+      "KIB D (Jalan, Irigasi & Jaringan)", "KIB E (Aset Tetap Lainnya)", "KIB F (Konstruksi Dalam Pengerjaan)"
+    ];
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [reports, setReports] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [activeTab, setActiveTab] = useState('input');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [uploading, setUploading] = useState(false);
+      const [editingId, setEditingId] = useState(null);
+      const [notification, setNotification] = useState(null);
+      
+      const initialFormState = {
+        jenisLaporan: JENIS_LAPORAN_OPTIONS[0],
+        subKategori: PERIODE_OPTIONS[0],
+        unitKerja: UNIT_OPTIONS[0],
+        tahun: new Date().getFullYear().toString(),
+        pelapor: '',
+        catatan: '',
+        externalLink: '',
+        pdfData: '',
+        pdfName: '',
+        isLocked: false
+      };
+
+      const [formData, setFormData] = useState(initialFormState);
+      const [pinModal, setPinModal] = useState({ show: false, type: '', extra: null });
+      const [pinInput, setPinInput] = useState('');
+
+      // Firebase Collection Path
+      const getBmdCollection = () => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('bmd');
+
+      useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((u) => {
+          if (!u) {
+            auth.signInAnonymously().catch(console.error);
+          }
+          setUser(u);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+        const reportsRef = getBmdCollection();
+        const unsubscribe = reportsRef.onSnapshot((snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setReports(data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+          setLoading(false);
+        }, (error) => {
+          console.error("Firestore Error:", error);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      }, [user]);
+
+      const showToast = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000);
+      };
+
+      const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 1024 * 1024) { // 1MB limit for Firestore doc
+           showToast("File > 1MB tidak didukung di sistem ini. Gunakan Link Drive.", "error");
+           return;
+        }
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setFormData(prev => ({ ...prev, pdfData: event.target.result, pdfName: file.name }));
+          setUploading(false);
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const handleSave = async (e) => {
+        e.preventDefault();
+        if (!formData.externalLink.trim() && !formData.pdfData) {
+          return showToast("Gagal: Link Drive atau File PDF wajib diisi salah satu!", "error");
+        }
+
+        const payload = { ...formData, updatedAt: Date.now() };
+
+        try {
+          const reportsRef = getBmdCollection();
+          if (editingId) {
+            await reportsRef.doc(editingId).update(payload);
+            showToast("Perubahan Disimpan", "success");
+          } else {
+            await reportsRef.add({ ...payload, createdAt: Date.now(), userId: user.uid });
+            showToast("Data BMD Diarsipkan", "success");
+          }
+          resetForm();
+          setActiveTab('riwayat');
+        } catch (error) {
+          showToast("Gagal menyimpan data: " + error.message, "error");
+        }
+      };
+
+      const resetForm = () => {
+        setFormData(initialFormState);
+        setEditingId(null);
+      };
+
+      const handlePinSubmit = (pin) => {
+        if (pin === MASTER_PIN) {
+          const { type, extra } = pinModal;
+          if (type === 'delete') deleteData(extra);
+          if (type === 'lock') toggleLock(extra);
+          setPinModal({ show: false });
+          setPinInput('');
+        } else {
+          showToast("PIN Salah!", "error");
+          setPinInput('');
+        }
+      };
+
+      const deleteData = async (id) => {
+        try {
+          await getBmdCollection().doc(id).delete();
+          showToast("Data Dihapus", "success");
+        } catch (e) { showToast("Gagal Hapus", "error"); }
+      };
+
+      const toggleLock = async (item) => {
+        try {
+          await getBmdCollection().doc(item.id).update({ 
+            isLocked: !item.isLocked,
+            lockedAt: item.isLocked ? null : Date.now()
+          });
+          showToast(item.isLocked ? "Kunci Dibuka" : "Data Terkunci");
+        } catch (e) { showToast("Gagal Update", "error"); }
+      };
+
+      const filteredReports = useMemo(() => {
+        return reports.filter(r =>
+          Object.values(r).some(val => String(val).toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      }, [reports, searchTerm]);
+
+      const exportExcel = () => {
+        const ws = XLSX.utils.json_to_sheet(filteredReports.map(d => ({
+          'Unit Kerja': d.unitKerja,
+          'Jenis Laporan/KIB': d.jenisLaporan,
+          'Periode': d.subKategori,
+          'Tahun': d.tahun,
+          'Petugas': d.pelapor,
+          'Link External': d.externalLink,
+          'Catatan': d.catatan
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan BMD");
+        XLSX.writeFile(wb, `Rekap_BMD_${new Date().toISOString().split('T')[0]}.xlsx`);
+      };
+
+      const handleBackup = () => {
+        const b = new Blob([JSON.stringify(reports, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(b);
+        const l = document.createElement('a');
+        l.href = url; l.download = `BACKUP_BMD_${new Date().toISOString().split('T')[0]}.json`;
+        l.click();
+      };
+
+      return (
+        <div className="min-h-screen py-6 px-4 lg:px-12 bg-slate-50">
+          {notification && (
+            <div className={`fixed top-6 right-6 z-[1000] px-8 py-4 rounded-2xl shadow-2xl animate-in font-black text-[10px] uppercase tracking-widest ${notification.type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white'}`}>
+              {notification.message}
+            </div>
+          )}
+
+          {pinModal.show && (
+            <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+              <div className="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center space-y-8 shadow-2xl animate-in">
+                <div className="w-20 h-20 bg-slate-950 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl"><Unlock size={32} /></div>
+                <div>
+                  <h3 className="font-black uppercase text-base tracking-tight text-slate-900">Otentikasi PIN BMD</h3>
+                  <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Sesuai Script Master</p>
+                </div>
+                <input type="password" autoFocus maxLength={3} value={pinInput}
+                    onChange={e => {
+                        const val = e.target.value;
+                        setPinInput(val);
+                        if (val.length === 3) {
+                            setTimeout(() => handlePinSubmit(val), 100);
+                        }
+                    }}
+                    className="w-full text-center text-6xl font-black outline-none bg-slate-50 py-5 rounded-[2rem] tracking-[1.5rem] border-2 border-transparent focus:border-slate-950 shadow-inner"
+                    placeholder="···" />
+                <button onClick={() => setPinModal({ show: false })} className="text-[10px] font-black text-rose-500 uppercase hover:underline tracking-widest">Batalkan</button>
+              </div>
+            </div>
+          )}
+
+          <div className="max-w-[1400px] mx-auto space-y-6">
+            <div className="flex justify-between items-center px-6 py-2 bg-slate-900 text-white rounded-2xl text-[9px] font-black tracking-[0.2em] shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+                <span>BMD FIREBASE:ONLINE</span>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleBackup} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl transition-all shadow-lg active:scale-95 text-[8px]">BACKUP</button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[3rem] custom-shadow border border-slate-100 overflow-hidden">
+              {/* Header */}
+              <div className="bg-blue-900 px-10 py-8 text-white flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 bg-blue-500 rounded-3xl flex items-center justify-center shadow-lg text-white text-2xl"><ShieldCheck size={32} /></div>
+                  <div>
+                    <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">LAPORAN BMD</h1>
+                    <div className="flex items-center gap-3 mt-3">
+                      <div className="h-0.5 w-10 bg-blue-400"></div>
+                      <p className="text-[10px] font-bold text-blue-300 tracking-[0.4em] uppercase">Barang Milik Daerah (Script Pattern)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="bg-white border-b border-slate-100 flex p-2 gap-2">
+                <button onClick={() => { resetForm(); setActiveTab('input'); }} className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl text-[10px] font-black tracking-[0.2em] transition-all ${activeTab === 'input' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-50'}`}>
+                  <Plus size={14} /> INPUT BMD
+                </button>
+                <button onClick={() => setActiveTab('riwayat')} className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl text-[10px] font-black tracking-[0.2em] transition-all ${activeTab === 'riwayat' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-50'}`}>
+                  <History size={14} /> RIWAYAT BMD
+                </button>
+              </div>
+
+              <div className="p-10">
+                {activeTab === 'input' ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 animate-in">
+                    {/* Form Left */}
+                    <div className="lg:col-span-7 space-y-6">
+                      <div className="bg-slate-50 p-10 rounded-[2.5rem] border border-slate-200 border-dashed shadow-inner">
+                        <form onSubmit={handleSave} className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit Kerja</label>
+                              <select value={formData.unitKerja} onChange={e => setFormData({ ...formData, unitKerja: e.target.value })} className="form-field">
+                                {UNIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Jenis Laporan / KIB</label>
+                              <select value={formData.jenisLaporan} onChange={e => setFormData({ ...formData, jenisLaporan: e.target.value })} className="form-field">
+                                {JENIS_LAPORAN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode</label>
+                              <select value={formData.subKategori} onChange={e => setFormData({ ...formData, subKategori: e.target.value })} className="form-field">
+                                {PERIODE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Tahun</label>
+                              <input type="number" value={formData.tahun} onChange={e => setFormData({ ...formData, tahun: e.target.value })} className="form-field" />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Petugas Pelapor</label>
+                            <input type="text" value={formData.pelapor} onChange={e => setFormData({ ...formData, pelapor: e.target.value.toUpperCase() })} className="form-field" placeholder="NAMA LENGKAP..." required />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Link Google Drive / Spreadsheet</label>
+                            <input type="url" value={formData.externalLink} onChange={e => setFormData({ ...formData, externalLink: e.target.value })} className="form-field" placeholder="https://drive.google.com/..." />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Catatan</label>
+                            <textarea value={formData.catatan} onChange={e => setFormData({ ...formData, catatan: e.target.value })} className="form-field min-h-[80px] resize-none" placeholder="Keterangan aset..." />
+                          </div>
+
+                          <div className="bg-white p-6 rounded-3xl border border-slate-200">
+                            <div className="flex justify-between items-center mb-4">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Scan PDF KIB (Max 1Mb di Firestore)</span>
+                            </div>
+                            <input type="file" id="pdfUpload" accept=".pdf" className="hidden" onChange={handleFileChange} />
+                            <label htmlFor="pdfUpload" className="flex flex-col items-center justify-center py-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all group">
+                              {uploading ? <div className="animate-spin text-blue-600">⌛</div> : (
+                                <div className="text-center">
+                                  <div className="w-10 h-10 bg-white text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-2 group-hover:text-blue-500 transition-all"><FileDown size={20} /></div>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-600">{formData.pdfData ? 'Data Terlampir' : 'Klik Unggah Scan PDF'}</p>
+                                </div>
+                              )}
+                            </label>
+                          </div>
+
+                          <div className="flex gap-4">
+                            <button type="submit" disabled={uploading} className="flex-1 bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.2em] hover:scale-[1.01] active:scale-95 transition-all">
+                              {editingId ? 'UPDATE DATA BMD' : 'SIMPAN DATA BMD'}
+                            </button>
+                            {editingId && (
+                              <button onClick={resetForm} className="bg-slate-200 text-slate-600 px-6 rounded-xl hover:bg-slate-300 transition-all">
+                                <X size={20} />
+                              </button>
+                            )}
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+
+                    {/* Preview Right */}
+                    <div className="lg:col-span-5 border-l border-slate-100 pl-12 flex justify-center">
+                      <div className="sticky top-10 w-full max-w-[400px]">
+                        <div className="relative bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-2xl p-8 space-y-5 animate-in overflow-hidden text-center">
+                          <div className="relative z-10 space-y-1">
+                            <h2 className="text-xl font-black text-slate-950 leading-none tracking-tighter uppercase">BMD PPSDI</h2>
+                            <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em]">Arsip Aset Digital (Firebase)</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              <span className="text-[7px] font-black text-slate-400 uppercase block mb-0.5">Tahun</span>
+                              <span className="text-[10px] font-black text-blue-900">{formData.tahun || '-'}</span>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              <span className="text-[7px] font-black text-slate-400 uppercase block mb-0.5">Periode</span>
+                              <span className="text-[10px] font-black text-blue-900">{formData.subKategori || '-'}</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-1">
+                            <span className="text-[7px] font-black text-blue-400 uppercase block tracking-widest">Unit Kerja</span>
+                            <span className="text-[10px] font-black text-slate-800 leading-tight block uppercase">{formData.unitKerja || '-'}</span>
+                          </div>
+
+                          <div className="relative z-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1 text-left">
+                            <span className="text-[7px] font-black text-slate-400 uppercase block tracking-widest">KIB / Jenis Laporan</span>
+                            <span className="text-[10px] font-black text-slate-800 leading-tight block uppercase">{formData.jenisLaporan || '-'}</span>
+                          </div>
+
+                          <div className="relative z-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1 text-left">
+                            <span className="text-[7px] font-black text-slate-400 uppercase block tracking-widest">Petugas</span>
+                            <span className="text-[10px] font-black text-blue-600 leading-tight block uppercase">{formData.pelapor || '-'}</span>
+                          </div>
+
+                          <div className="relative">
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-[0.1] z-[30]">
+                              <img src="logo-ppsdri-raharjo.png" className="w-20 h-20 object-contain" alt="" />
+                            </div>
+
+                            <div className="relative z-10 bg-blue-900 p-5 rounded-2xl text-white shadow-xl flex justify-between items-center text-left">
+                              <div>
+                                <span className="text-[7px] font-black uppercase tracking-[0.2em] text-blue-400 block mb-1">Status Sinkron</span>
+                                <span className="text-[11px] font-black uppercase tracking-widest">{(formData.pdfData || formData.externalLink) ? 'BERKAS SIAP' : 'BELUM ADA DATA'}</span>
+                              </div>
+                              <CheckCircle2 size={20} className="text-blue-400" />
+                            </div>
+                          </div>
+
+                          <div className="relative z-10 text-center pt-4 border-t border-slate-50">
+                            <p className="text-[10px] font-black text-blue-900 italic tracking-widest uppercase">====== Aset Negara Digital ======</p>
+                            <p className="text-[7px] text-slate-400 uppercase mt-1">Sistem Informasi Pandu (SIPANDU)</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-in">
+                    <div className="bg-slate-50 border border-slate-100 py-4 px-10 rounded-[2.5rem] shadow-inner flex flex-wrap items-center justify-between gap-6">
+                      <div className="flex flex-wrap items-center gap-6">
+                        <div className="mr-4">
+                          <h3 className="text-lg font-black text-slate-950 uppercase tracking-tighter leading-none">Riwayat BMD</h3>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Firebase Real-time Store</p>
+                        </div>
+                        <div className="flex items-center bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-[10px] font-black shadow-inner">
+                          TOTAL: {filteredReports.length} ARSIP
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative w-72">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-400 transition-all shadow-sm" placeholder="Cari aset..." />
+                        </div>
+                        <button onClick={exportExcel} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-95 transition-all">EKSPOR EXCEL</button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-[3rem] custom-shadow border border-slate-100 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                              <th className="px-8 py-5">Unit & KIB</th>
+                              <th className="px-8 py-5">Periode & Tahun</th>
+                              <th className="px-8 py-5">Petugas</th>
+                              <th className="px-8 py-5">Berkas</th>
+                              <th className="px-8 py-5 text-center">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {loading ? (
+                              <tr><td colSpan="5" className="py-20 text-center text-slate-300 font-black uppercase animate-pulse">Syncing Firebase...</td></tr>
+                            ) : filteredReports.length === 0 ? (
+                              <tr><td colSpan="5" className="py-20 text-center text-slate-300 font-black uppercase">Data Belum Ditemukan</td></tr>
+                            ) : filteredReports.map(item => (
+                              <tr key={item.id} className={`hover:bg-blue-50/40 transition-all group text-[11px] ${item.isLocked ? 'opacity-60' : ''}`}>
+                                <td className="px-8 py-5">
+                                  <div className="text-sm font-black text-slate-800 tracking-tight uppercase">{item.unitKerja}</div>
+                                  <div className="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-1">{item.jenisLaporan}</div>
+                                </td>
+                                <td className="px-8 py-5">
+                                  <div className="text-xs font-black text-slate-700 uppercase">{item.subKategori}</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1">{item.tahun}</div>
+                                </td>
+                                <td className="px-8 py-5">
+                                  <div className="text-xs font-black text-slate-600 uppercase tracking-tight">{item.pelapor}</div>
+                                </td>
+                                <td className="px-8 py-5">
+                                  <div className="flex gap-2">
+                                    {item.pdfData && (
+                                      <button onClick={() => {
+                                        const win = window.open();
+                                        win.document.write(`<iframe src="${item.pdfData}" frameborder="0" style="width:100%; height:100vh;"></iframe>`);
+                                      }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all">PDF</button>
+                                    )}
+                                    {item.externalLink && <a href={item.externalLink} target="_blank" className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase hover:bg-emerald-600 hover:text-white transition-all">LINK</a>}
+                                  </div>
+                                </td>
+                                <td className="px-8 py-5">
+                                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                    {item.isLocked ? (
+                                      <button onClick={() => setPinModal({ show: true, type: 'lock', extra: item })} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Lock size={16} /></button>
+                                    ) : (
+                                      <>
+                                        <button onClick={() => { setFormData(item); setEditingId(item.id); setActiveTab('input'); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit3 size={16} /></button>
+                                        <button onClick={() => setPinModal({ show: true, type: 'delete', extra: item.id })} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                                        <button onClick={() => setPinModal({ show: true, type: 'lock', extra: item })} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"><Unlock size={16} /></button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+
+</html>

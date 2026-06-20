@@ -1,0 +1,898 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BELANJA PAKAIAN - SIPANDU</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 overflow-hidden p-3 h-screen flex flex-col gap-3">
+    <div id="root" class="flex-1 flex flex-col gap-3 overflow-hidden"></div>
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- KONFIGURASI SUPABASE ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const PIN_AKSES = "888";
+        const CLOUDINARY_CLOUD_NAME = "dkxehjgu0";
+        const CLOUDINARY_UPLOAD_PRESET = "belanja_pakaian";
+
+        // --- MOCK LUCIDE ICONS (SVG) ---
+        const Icon = ({ path, size = 24, className = '', viewBox = "0 0 24 24" }) => (
+            <svg className={className} width={size} height={size} fill="none" viewBox={viewBox} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+
+        const Save = (props) => <Icon {...props} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />;
+        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />;
+        const Shirt = (props) => <Icon {...props} path={<><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></>} />;
+        const Tv = (props) => <Icon {...props} path={<><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></>} />;
+        const Edit3 = (props) => <Icon {...props} path={<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>} />;
+        const Loader2 = (props) => <Icon {...props} className={`${props.className} animate-spin`} path={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+        const Lock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+        const Unlock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
+        const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+        const PlusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>} />;
+        const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+        const History = (props) => <Icon {...props} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></>} />;
+        const RotateCcw = (props) => <Icon {...props} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></>} />;
+        const RotateCw = (props) => <Icon {...props} path={<><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></>} />;
+        const Database = (props) => <Icon {...props} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></>} />;
+        const UploadCloud = (props) => <Icon {...props} path={<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></>} />;
+        const FileSpreadsheet = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />;
+        const ShieldCheck = (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>} />;
+        const ChevronUp = (props) => <Icon {...props} path={<polyline points="18 15 12 9 6 15"/>} />;
+        const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />;
+        const ArrowUpDown = (props) => <Icon {...props} path={<path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/>} />;
+        const Printer = (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />;
+        const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+        const Camera = (props) => <Icon {...props} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
+        const Calendar = (props) => <Icon {...props} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />;
+        const Box = (props) => <Icon {...props} path={<><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></>} />;
+        const FileUp = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></>} />;
+        const ExternalLink = (props) => <Icon {...props} path={<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>} />;
+        const FileText = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>} />;
+        const XCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>} />;
+
+        const labelClass = "text-[9px] font-black uppercase text-slate-400 mb-1 flex items-center gap-1 opacity-70";
+        const inputBase = "w-full p-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-sky-400 rounded-lg text-[10.5px] font-bold text-slate-700 outline-none transition-all appearance-none";
+
+        const formatRibuan = (v) => {
+            if (v === undefined || v === null || v === '') return "0";
+            const valueStr = v.toString().replace(/\D/g, "");
+            if (!valueStr) return "0";
+            return new Intl.NumberFormat('id-ID').format(valueStr);
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('history'); 
+            const [syncStatus, setSyncStatus] = useState('Menghubungkan...');
+            const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+            const [listPakaian, setListPakaian] = useState([]);
+            const [editId, setEditId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterUnit, setFilterUnit] = useState('Semua');
+            const [filterStartMonth, setFilterStartMonth] = useState('');
+            const [filterEndMonth, setFilterEndMonth] = useState('');
+            const [sortConfig, setSortConfig] = useState({ key: 'nomor_bp', direction: 'desc' });
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [uploadingIdx, setUploadingIdx] = useState(null);
+            const [uploadingDoc, setUploadingDoc] = useState(false);
+            const [photoRotations, setPhotoRotations] = useState([0, 0, 0, 0]);
+            const [showLainnya, setShowLainnya] = useState(false);
+            const [customPenyedia, setCustomPenyedia] = useState('');
+            
+            const [showPinModal, setShowPinModal] = useState({ 
+                show: false, 
+                targetId: null, 
+                action: null, 
+                value: '', 
+                currentLockStatus: null 
+            });
+
+            const [printDateModal, setPrintDateModal] = useState({
+                show: false,
+                item: null,
+                date: new Date().toISOString().split('T')[0]
+            });
+            
+            const restoreInputRef = useRef(null);
+
+            const initialForm = {
+                unit_kerja: '', 
+                tanggal_belanja: '', 
+                nomor_bp: '', 
+                jenis_pakaian: '', 
+                uraian: '', 
+                penyedia: '', 
+                penerima_barang: '',
+                volume: '', 
+                satuan: 'Pcs', 
+                harga_satuan: '', 
+                nominal: 0, 
+                photos: [null, null, null, null],
+                document_url: null,
+                is_locked: false
+            };
+
+            const [form, setForm] = useState(initialForm);
+
+            const unitKerjaOptions = ["PPSDI Raharjo", "RPSLU Mojomulyo", "RPSA Pamardi Siwi", "RPS PMKS Gondang"];
+            const jenisPakaianOptions = ["Pakaian Panti", "Pakaian Sekolah (RPSA)", "Pakaian Dalam", "Lainnya (Sepatu/Sandal)"];
+            const satuanOptions = ["Pcs", "Stel", "Pasang", "Paket", "Unit", "Set", "Kodi"];
+            const defaultPenyedia = ["CV. Renata Citra Mandiri", "CV. Wibowo"];
+
+            const penyediaOptions = useMemo(() => {
+                const unique = new Set([...defaultPenyedia, ...listPakaian.map(item => item.penyedia).filter(Boolean)]);
+                return Array.from(unique).sort();
+            }, [listPakaian]);
+
+            const penerimaOptions = useMemo(() => {
+                const unique = new Set(listPakaian.map(item => item.penerima_barang).filter(Boolean));
+                return Array.from(unique).sort();
+            }, [listPakaian]);
+
+            const fetchData = async () => {
+                setSyncStatus('Menghubungkan...');
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('pakaian')
+                        .select('*')
+                        .order('nomor_bp', { ascending: false, nullsFirst: false });
+                    
+                    if (error) {
+                        console.error("Supabase Error:", error);
+                        setSyncStatus('Terputus');
+                        showNotif(`Gagal Memuat Data: ${error.message}`, "error");
+                    } else {
+                        setListPakaian(data || []);
+                        setSyncStatus('Terkoneksi');
+                    }
+                } catch (err) {
+                    console.error("Fetch Error:", err);
+                    setSyncStatus('Terputus');
+                    showNotif("Kesalahan Koneksi", "error");
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+                // Realtime subscription
+                const channel = supabaseClient
+                    .channel('schema-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'pakaian' }, fetchData)
+                    .subscribe();
+                
+                return () => supabaseClient.removeChannel(channel);
+            }, []);
+
+            const handleSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+                setSortConfig({ key, direction });
+            };
+
+            const filteredData = useMemo(() => {
+                let result = listPakaian.filter(item => {
+                    const matchSearch = (item.uraian?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || 
+                                        (item.penerima_barang?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+                                        (item.penyedia?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+                                        (item.nomor_bp?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+                    const matchUnit = filterUnit === 'Semua' || item.unit_kerja === filterUnit;
+                    const itemMonth = item.tanggal_belanja?.substring(0, 7); 
+                    const matchStart = !filterStartMonth || itemMonth >= filterStartMonth;
+                    const matchEnd = !filterEndMonth || itemMonth <= filterEndMonth;
+                    return matchSearch && matchUnit && matchStart && matchEnd;
+                });
+                result.sort((a, b) => {
+                    if (sortConfig.key === 'nomor_bp') {
+                        // Extract numeric parts for proper sorting
+                        const numA = parseFloat(a.nomor_bp) || 0;
+                        const numB = parseFloat(b.nomor_bp) || 0;
+                        if (numA !== numB) {
+                            return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                        }
+                    }
+                    const valA = a[sortConfig.key];
+                    const valB = b[sortConfig.key];
+                    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                return result;
+            }, [listPakaian, searchTerm, filterUnit, filterStartMonth, filterEndMonth, sortConfig]);
+
+            const totalNilai = useMemo(() => filteredData.reduce((acc, curr) => acc + (parseFloat(curr.nominal) || 0), 0), [filteredData]);
+
+            const showNotif = (message, type = 'success') => {
+                setNotification({ show: true, message: String(message), type });
+                setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+            };
+
+            const resetAllFilters = () => {
+                setSearchTerm('');
+                setFilterUnit('Semua');
+                setFilterStartMonth('');
+                setFilterEndMonth('');
+                showNotif("Filter Telah Direset");
+            };
+
+            const handleRotate = (idx) => {
+                setPhotoRotations(prev => {
+                    const next = [...prev];
+                    next[idx] = (next[idx] + 90) % 360;
+                    return next;
+                });
+            };
+
+            const handleExportXLSX = () => {
+                if (filteredData.length === 0) {
+                    showNotif("Tidak ada data untuk diekspor", "error");
+                    return;
+                }
+                const dataExcel = filteredData.map((item, index) => ({
+                    "NO": index + 1,
+                    "TANGGAL": item.tanggal_belanja,
+                    "NOMOR BP": item.nomor_bp,
+                    "UNIT KERJA": item.unit_kerja,
+                    "KATEGORI": item.jenis_pakaian,
+                    "PENYEDIA": item.penyedia,
+                    "URAIAN BARANG": item.uraian,
+                    "VOLUME": parseFloat(item.volume) || 0,
+                    "SATUAN": item.satuan,
+                    "HARGA SATUAN": parseFloat(item.harga_satuan) || 0,
+                    "TOTAL NOMINAL": parseFloat(item.nominal) || 0,
+                    "PENERIMA": item.penerima_barang,
+                    "STATUS": item.is_locked ? "TERKUNCI" : "AKTIF",
+                    "INPUT PADA": item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : "-",
+                    "ID TRANSAKSI": item.id
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(dataExcel);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Database Pengadaan");
+                XLSX.writeFile(wb, `REKAP_PENGADAAN_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showNotif("File Excel Berhasil Dibuat");
+            };
+
+            const uploadToCloudinary = async (file, index = null) => {
+                if (!file) return;
+                if (index !== null) setUploadingIdx(index);
+                else setUploadingDoc(true);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                try {
+                    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.secure_url) {
+                        if (index !== null) {
+                            setForm(prev => {
+                                const ph = [...prev.photos];
+                                ph[index] = data.secure_url;
+                                return { ...prev, photos: ph };
+                            });
+                            showNotif("Foto Berhasil Diunggah");
+                        } else {
+                            setForm(prev => ({ ...prev, document_url: data.secure_url }));
+                            showNotif("Unggah dokumen PDF berhasil");
+                        }
+                    }
+                } catch (err) {
+                    showNotif("Gagal Upload", "error");
+                } finally {
+                    setUploadingIdx(null);
+                    setUploadingDoc(false);
+                }
+            };
+
+            const handleFileChange = (e, index) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) return showNotif("Ukuran Maks 10MB", "error");
+                uploadToCloudinary(file, index);
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (isSubmitting || uploadingIdx !== null) return;
+                const finalPenyedia = showLainnya ? customPenyedia.trim() : form.penyedia;
+                if (!finalPenyedia) return showNotif("Penyedia wajib diisi", "error");
+                
+                setIsSubmitting(true);
+                const hs = parseFloat(form.harga_satuan.toString().replace(/\D/g, "")) || 0;
+                const vol = parseFloat(form.volume) || 0;
+                
+                // Bersihkan payload: hapus id/metadata untuk insert, filter photos null
+                const cleanPhotos = form.photos.filter(p => p !== null);
+                const { id, created_at, updated_at, ...rest } = form;
+                
+                const payload = { 
+                    ...rest, 
+                    penyedia: finalPenyedia,
+                    harga_satuan: hs,
+                    nominal: vol * hs,
+                    photos: cleanPhotos,
+                    updated_at: new Date().toISOString()
+                };
+                
+                try {
+                    let error;
+                    if (editId) {
+                        ({ error } = await supabaseClient.from('pakaian').update(payload).eq('id', editId));
+                    } else {
+                        ({ error } = await supabaseClient.from('pakaian').insert([payload]));
+                    }
+                    if (error) throw error;
+                    
+                    showNotif("Data Berhasil Disimpan");
+                    setActiveTab('history');
+                    resetForm();
+                    fetchData();
+                } catch (err) { showNotif(err.message, "error"); }
+                finally { setIsSubmitting(false); }
+            };
+
+            const resetForm = () => {
+                setEditId(null);
+                setShowLainnya(false);
+                setCustomPenyedia('');
+                setForm(initialForm);
+            };
+
+            const handleEdit = (item) => {
+                if(item.is_locked) return;
+                setEditId(item.id);
+                
+                // Cek apakah penyedia ada di default, jika tidak aktifkan input manual
+                const isCustomPenyedia = !defaultPenyedia.includes(item.penyedia);
+                if (isCustomPenyedia) {
+                    setShowLainnya(true);
+                    setCustomPenyedia(item.penyedia);
+                } else {
+                    setShowLainnya(false);
+                    setCustomPenyedia('');
+                }
+
+                // Pastikan photos selalu memiliki 4 elemen untuk UI boxes
+                const ph = [...(item.photos || [])];
+                while(ph.length < 4) ph.push(null);
+                
+                // Konversi harga_satuan ke string agar formatRibuan bekerja
+                setForm({ 
+                    ...item, 
+                    photos: ph,
+                    harga_satuan: item.harga_satuan ? item.harga_satuan.toString() : ''
+                });
+                setActiveTab('input');
+            };
+
+            const handleVerifyPin = async () => {
+                if (showPinModal.value !== PIN_AKSES) {
+                    showNotif("PIN Salah!", "error");
+                    return;
+                }
+                const { action, targetId, currentLockStatus } = showPinModal;
+                setShowPinModal({ show: false, targetId: null, action: null, value: '', currentLockStatus: null });
+
+                try {
+                    if (action === 'DELETE') {
+                        const { error } = await supabaseClient.from('pakaian').delete().eq('id', targetId);
+                        if (error) throw error;
+                        showNotif("Data Dihapus");
+                    } else if (action === 'TOGGLE_LOCK') {
+                        const { error } = await supabaseClient.from('pakaian').update({
+                            is_locked: !currentLockStatus, updated_at: new Date().toISOString()
+                        }).eq('id', targetId);
+                        if (error) throw error;
+                        showNotif(!currentLockStatus ? "Data Terkunci" : "Kunci Dibuka");
+                    } else if (action === 'BACKUP') {
+                        const link = document.createElement('a');
+                        link.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(listPakaian, null, 2));
+                        link.download = `BACKUP_SIPANDU_PAKAIAN_${new Date().toISOString().split('T')[0]}.json`;
+                        link.click();
+                        showNotif("Backup Berhasil");
+                    } else if (action === 'RESTORE') {
+                        restoreInputRef.current?.click();
+                    }
+                    fetchData();
+                } catch (err) { showNotif(err.message, "error"); }
+            };
+
+            const handleRestore = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        let data = JSON.parse(event.target.result);
+                        if (!Array.isArray(data)) throw new Error("Format file tidak valid (Harus Array)");
+                        
+                        setIsSubmitting(true);
+                        
+                        // Pembersihan data yang lebih kuat
+                        const cleanData = data.map(item => {
+                            // Cek berbagai kemungkinan nama field untuk nomor BP
+                            const bp = item.nomor_bp || item.nomor_bukti || item.no_bp || item.no_bukti || "-";
+
+                            // Ambil hanya field yang ada di skema database pakaian
+                            const { 
+                                unit_kerja, tanggal_belanja,
+                                jenis_pakaian, uraian, penyedia, penerima_barang, 
+                                volume, satuan, harga_satuan, nominal, 
+                                photos, document_url, is_locked 
+                            } = item;
+
+                            return {
+                                unit_kerja: unit_kerja || "Tanpa Unit",
+                                tanggal_belanja: tanggal_belanja || new Date().toISOString().split('T')[0],
+                                nomor_bp: bp,
+                                jenis_pakaian: jenis_pakaian || "Lainnya",
+                                uraian: uraian || "-",
+                                penyedia: penyedia || "-",
+                                penerima_barang: penerima_barang || "-",
+                                volume: parseFloat(volume) || 0,
+                                satuan: satuan || "Pcs",
+                                harga_satuan: parseFloat(harga_satuan) || 0,
+                                nominal: parseFloat(nominal) || (parseFloat(volume) || 0) * (parseFloat(harga_satuan) || 0),
+                                photos: Array.isArray(photos) ? photos : [],
+                                document_url: document_url || null,
+                                is_locked: !!is_locked,
+                                updated_at: new Date().toISOString()
+                            };
+                        });
+
+                        // Insert ke Supabase
+                        const { error } = await supabaseClient.from('pakaian').insert(cleanData);
+                        
+                        if (error) {
+                            console.error("Restore Error Details:", error);
+                            throw new Error(`Gagal Simpan ke Database: ${error.message}`);
+                        }
+                        
+                        showNotif(`Berhasil restore ${data.length} data`);
+                        fetchData();
+                    } catch (err) {
+                        console.error("Restore Catch:", err);
+                        showNotif("Gagal Restore: " + err.message, "error");
+                    } finally {
+                        setIsSubmitting(false);
+                        e.target.value = "";
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const executePrint = (item, selectedDate) => {
+                const reportDate = new Date(selectedDate);
+                const formattedReportDate = reportDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                const activePhotos = item.photos?.filter(p => p) || [];
+                
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>LAPORAN REALISASI - ${item.uraian}</title>
+                            <style>
+                                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+                                @page { size: 215mm 330mm; margin: 10mm 15mm; }
+                                body { font-family: 'Inter', sans-serif; font-size: 11pt; line-height: 1.4; color: #000; margin: 0; padding: 0; background: white; }
+                                .container { display: flex; flex-direction: column; max-width: 100%; }
+                                .doc-title { text-align: center; font-weight: 900; font-size: 15pt; text-decoration: underline; margin-bottom: 20px; text-transform: uppercase; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                                th { text-align: left; width: 170px; padding: 6px 0; font-size: 10pt; color: #333; font-weight: 500; }
+                                td { font-weight: 700; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 11pt; }
+                                .total-box { background: #f8fafc !important; border: 2px solid #000; padding: 12px; text-align: center; font-size: 14pt; font-weight: 900; margin: 10px 0; -webkit-print-color-adjust: exact; }
+                                .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+                                .photo-grid img { width: 100%; height: ${activePhotos.length > 2 ? '230px' : '260px'}; object-fit: cover; border: 1px solid #ccc; border-radius: 4px; }
+                                .signature-area { margin-top: 20px; display: flex; justify-content: flex-end; text-align: center; }
+                                .sig-box { width: 250px; }
+                                .sig-name { margin-top: 65px; font-weight: 900; text-decoration: underline; text-transform: uppercase; font-size: 11pt; }
+                                @media print { .total-box { border-color: #000; } body { -webkit-print-color-adjust: exact; } }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="doc-title">DOKUMENTASI BELANJA PAKAIAN</div>
+                                <table>
+                                    <tr><th>Unit Kerja</th><td>: ${item.unit_kerja}</td></tr>
+                                    <tr><th>Tanggal Belanja</th><td>: ${item.tanggal_belanja}</td></tr>
+                                    <tr><th>Nomor BP</th><td>: ${item.nomor_bp}</td></tr>
+                                    <tr><th>Kategori Barang</th><td>: ${item.jenis_pakaian}</td></tr>
+                                    <tr><th>Uraian Detail</th><td>: ${item.uraian}</td></tr>
+                                    <tr><th>Nama Penyedia / Toko</th><td>: ${item.penyedia}</td></tr>
+                                    <tr><th>Volume & Harga</th><td>: ${item.volume} ${item.satuan} x Rp ${formatRibuan(item.harga_satuan)}</td></tr>
+                                </table>
+                                <div class="total-box">TOTAL BELANJA: Rp ${formatRibuan(item.nominal)}</div>
+                                <div class="photo-grid">
+                                    ${activePhotos.map(p => `<img src="${p}" />`).join('')}
+                                </div>
+                                <div class="signature-area">
+                                    <div class="sig-box">
+                                        Sragen, ${formattedReportDate}<br/>Penerima Barang,<br/><br/>
+                                        <p class="sig-name">${item.penerima_barang}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <script>
+                                window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }
+                            <\/script>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            };
+
+            const SortIcon = ({ columnKey }) => {
+                if (sortConfig.key !== columnKey) return <ArrowUpDown size={10} className="ml-1 opacity-50" />;
+                return sortConfig.direction === 'asc' ? <ChevronUp size={10} className="ml-1" /> : <ChevronDown size={10} className="ml-1" />;
+            };
+
+            const thClass = "px-4 py-3.5 text-[9.5px] font-black uppercase tracking-wider text-white border-r border-sky-400/40 last:border-0 cursor-pointer hover:bg-sky-600 transition-colors";
+
+            return (
+                <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                    {/* Notification */}
+                    {notification.show && (
+                        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[1001] px-6 py-3 rounded-full shadow-2xl font-bold text-[11px] uppercase tracking-widest animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-sky-500 text-white' : 'bg-rose-600 text-white'}`}>
+                            <div className="flex items-center gap-2"><CheckCircle2 size={16} />{notification.message}</div>
+                        </div>
+                    )}
+
+                    {/* PIN Modal */}
+                    {showPinModal.show && (
+                        <div className="fixed inset-0 z-[1002] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-[320px] rounded-[2rem] p-8 shadow-2xl border border-slate-100">
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="w-14 h-14 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center mb-4"><ShieldCheck size={28} /></div>
+                                    <h3 className="font-black text-sm uppercase text-slate-800">Verifikasi PIN</h3>
+                                    <input type="password" autoFocus maxLength={4} value={showPinModal.value} onChange={e => setShowPinModal(p => ({ ...p, value: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleVerifyPin()} className="w-full text-center text-3xl tracking-[0.5em] font-black py-3 bg-slate-50 rounded-2xl border-2 border-slate-100 focus:border-sky-500 outline-none mt-6" />
+                                    <div className="grid grid-cols-2 gap-3 w-full mt-6">
+                                        <button onClick={() => setShowPinModal({ show: false, targetId: null, action: null, value: '', currentLockStatus: null })} className="py-3 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl">Batal</button>
+                                        <button onClick={handleVerifyPin} className="py-3 bg-sky-500 text-white font-black text-[10px] uppercase rounded-xl">Lanjutkan</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Print Date Modal */}
+                    {printDateModal.show && (
+                        <div className="fixed inset-0 z-[1003] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="p-2 bg-sky-100 text-sky-600 rounded-xl"><Printer size={20}/></div>
+                                    <h3 className="font-black text-[12px] uppercase text-slate-700">Tanggal Cetak Laporan</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <span className={labelClass}>Pilih Tanggal Cetak</span>
+                                        <input 
+                                            type="date" 
+                                            value={printDateModal.date} 
+                                            onChange={e => setPrintDateModal(p => ({...p, date: e.target.value}))}
+                                            className={inputBase}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                        <button onClick={() => setPrintDateModal({show: false, item: null, date: ''})} className="flex-1 py-3 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl">Batal</button>
+                                        <button onClick={() => { executePrint(printDateModal.item, printDateModal.date); setPrintDateModal({show: false, item: null, date: ''}); }} className="flex-1 py-3 bg-sky-500 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-sky-100">Cetak Sekarang</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <header className="h-16 flex-none bg-white border border-slate-200 px-6 flex justify-between items-center rounded-2xl shadow-sm z-20">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-sky-500 p-2 rounded-xl text-white shadow-lg shadow-sky-100"><Shirt size={18} /></div>
+                            <div>
+                                <h1 className="font-black text-[13px] uppercase tracking-tight text-slate-800 leading-none mb-0.5">BELANJA <span className="text-sky-500">PAKAIAN</span></h1>
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pengadaan Pakaian Penerima Manfaat </p>
+                            </div>
+                        </div>
+                        <nav className="flex bg-slate-100 p-0.5 rounded-xl gap-0.5">
+                            <button onClick={() => { setActiveTab('input'); resetForm(); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === 'input' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}><PlusCircle size={12} /> INPUT</button>
+                            <button onClick={() => setActiveTab('history')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === 'history' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}><History size={12} /> RIWAYAT</button>
+                            <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === 'settings' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}><Database size={12} /> SETTING</button>
+                        </nav>
+                    </header>
+
+                    <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        {activeTab === 'input' && (
+                            <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                                    <div className="bg-sky-500 p-6 text-white relative">
+                                        <h2 className="text-lg font-black uppercase tracking-tight">{editId ? 'Edit Data Pengadaan' : 'Input Pengadaan Baru'}</h2>
+                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div><span className={labelClass}>Unit Kerja</span><select required value={form.unit_kerja} onChange={e=>setForm({...form, unit_kerja: e.target.value})} className={inputBase}><option value="">Pilih...</option>{unitKerjaOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                            <div><span className={labelClass}>Tanggal</span><input required type="date" value={form.tanggal_belanja} onChange={e=>setForm({...form, tanggal_belanja: e.target.value})} className={inputBase} /></div>
+                                            <div><span className={labelClass}>Nomor BP</span><input required value={form.nomor_bp} onChange={e=>setForm({...form, nomor_bp: e.target.value})} placeholder="Contoh: BP-001" className={inputBase} /></div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div><span className={labelClass}>Kategori</span><select required value={form.jenis_pakaian} onChange={e=>setForm({...form, jenis_pakaian: e.target.value})} className={inputBase}><option value="">Pilih...</option>{jenisPakaianOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-0.5"><span className={labelClass}>Penyedia</span><button type="button" onClick={()=>setShowLainnya(!showLainnya)} className="text-[8px] font-black text-sky-600 uppercase hover:underline">{showLainnya ? 'Batal' : '+ Tambah Baru'}</button></div>
+                                                {showLainnya ? (
+                                                    <>
+                                                        <input placeholder="Nama Toko..." list="penyedia-list" value={customPenyedia} onChange={e=>setCustomPenyedia(e.target.value)} className={inputBase} />
+                                                        <datalist id="penyedia-list">
+                                                            {penyediaOptions.map(o => <option key={o} value={o} />)}
+                                                        </datalist>
+                                                    </>
+                                                ) : (
+                                                    <select value={form.penyedia} onChange={e=>setForm({...form, penyedia: e.target.value})} className={inputBase}>
+                                                        <option value="">Pilih...</option>
+                                                        {penyediaOptions.map(o=><option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div><span className={labelClass}>Uraian Barang</span><input required placeholder="Uraian Belanja Sesuai Bukti Pembayaran..." value={form.uraian} onChange={e=>setForm({...form, uraian: e.target.value})} className={inputBase} /></div>
+                                        
+                                        <div className="bg-slate-50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                             <div className="md:col-span-2"><span className={labelClass}>Vol</span><input required type="number" step="any" value={form.volume} onChange={e=>setForm({...form, volume: e.target.value})} className={`${inputBase} bg-white`} /></div>
+                                             <div className="md:col-span-2"><span className={labelClass}>Satuan</span><select value={form.satuan} onChange={e=>setForm({...form, satuan: e.target.value})} className={`${inputBase} bg-white`}>{satuanOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                             <div className="md:col-span-3"><span className={labelClass}>Harga (Rp)</span><input required value={formatRibuan(form.harga_satuan)} onChange={e=>setForm({...form, harga_satuan: e.target.value.replace(/\D/g, "")})} className={`${inputBase} bg-white`} /></div>
+                                             <div className="md:col-span-5"><span className={labelClass}>Total Realisasi</span><div className="w-full p-2 bg-sky-50 border border-sky-100 rounded-lg text-[13px] font-black text-sky-700 flex items-center"><span className="text-[9px] mr-1 opacity-60">Rp</span>{formatRibuan((parseFloat(form.volume)||0)*(parseFloat(form.harga_satuan)||0))}</div></div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <span className={labelClass}>Dokumentasi Foto (Maks 4)</span>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-1.5">
+                                                    {form.photos.map((p, idx)=>(
+                                                        <div key={idx} className="aspect-square bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 relative flex items-center justify-center overflow-hidden group">
+                                                            {p ? (
+                                                                <>
+                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-100"><img src={p} style={{ transform: `rotate(${photoRotations[idx]}deg)` }} className="max-w-full max-h-full object-contain transition-transform duration-300" /></div>
+                                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                                                                        <button type="button" onClick={()=>handleRotate(idx)} className="bg-sky-500 text-white p-1.5 rounded-lg shadow-lg" title="Putar"><RotateCw size={12}/></button>
+                                                                        <button type="button" onClick={()=>setForm(prev=>{const ph=[...prev.photos]; ph[idx]=null; return {...prev, photos:ph}})} className="bg-rose-600 text-white p-1.5 rounded-lg shadow-lg" title="Hapus"><Trash2 size={12}/></button>
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <label className="cursor-pointer text-slate-400 hover:text-sky-600 flex flex-col items-center gap-0.5">
+                                                                    {uploadingIdx===idx ? <Loader2 className="animate-spin text-sky-500" size={18}/> : <><Camera size={18}/><span className="text-[7px] font-black uppercase">Upload</span></>}
+                                                                    <input type="file" hidden accept="image/*" onChange={e=>uploadToCloudinary(e.target.files[0], idx)}/>
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className={labelClass}>Dokumen Pendukung (PDF / Berkas)</span>
+                                                <div className="mt-1.5">
+                                                    {form.document_url ? (
+                                                        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                                            <div className="p-2 bg-emerald-600 text-white rounded-lg"><FileText size={18} /></div>
+                                                            <div className="flex-1 min-w-0"><p className="text-[10px] font-black text-emerald-900 uppercase truncate">Dokumen Terupload</p><a href={form.document_url} target="_blank" rel="noopener noreferrer" className="text-[8px] font-black text-emerald-600 flex items-center gap-1 hover:underline">BUKA PDF <ExternalLink size={10}/></a></div>
+                                                            <button type="button" onClick={()=>setForm(prev=>({...prev, document_url: null}))} className="p-2 text-emerald-900/30 hover:text-rose-600 transition-colors"><XCircle size={18}/></button>
+                                                        </div>
+                                                    ) : (
+                                                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 hover:bg-white hover:border-sky-400 cursor-pointer transition-all">
+                                                            {uploadingDoc ? <div className="flex flex-col items-center gap-2"><Loader2 className="animate-spin text-sky-500" size={20}/><span className="text-[8px] font-black text-slate-400 uppercase">Mengunggah PDF </span></div> : <><FileUp size={20} className="text-slate-300" /><span className="text-[8px] font-black text-slate-400 mt-2 uppercase">Klik untuk Upload PDF</span></>}
+                                                            <input type="file" accept=".pdf,image/*" hidden onChange={e=>uploadToCloudinary(e.target.files[0])}/>
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span className={labelClass}>Penerima Barang</span>
+                                            <input required placeholder="Nama Lengkap..." list="penerima-list" value={form.penerima_barang} onChange={e=>setForm({...form, penerima_barang: e.target.value})} className={inputBase} />
+                                            <datalist id="penerima-list">
+                                                {penerimaOptions.map(o => <option key={o} value={o} />)}
+                                            </datalist>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                                            <button type="button" onClick={() => { setActiveTab('history'); resetForm(); }} className="py-3 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2"><X size={14}/> Batal</button>
+                                            <button type="submit" disabled={isSubmitting || uploadingIdx!==null} className="py-3 bg-sky-500 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-sky-100 flex items-center justify-center gap-2 transition-all hover:bg-sky-600">
+                                                {isSubmitting ? <Loader2 className="animate-spin" size={14}/> : <Save size={14}/>} Simpan Data
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <div className="space-y-4 animate-in fade-in duration-500">
+                                {/* Filter Panel */}
+                                <div className="bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+                                    <div className="flex flex-nowrap items-center gap-3 min-w-max">
+                                        <div className="w-48 relative">
+                                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+                                            <input type="text" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className={`${inputBase} pl-8 py-1.5`} placeholder="Cari Data..."/>
+                                        </div>
+                                        <div className="w-36">
+                                            <select value={filterUnit} onChange={e=>setFilterUnit(e.target.value)} className={`${inputBase} py-1.5`}>
+                                                <option value="Semua">Semua Unit</option>
+                                                {unitKerjaOptions.map(o=><option key={o} value={o}>{o}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 p-1 rounded-lg">
+                                            <Calendar size={12} className="ml-1 text-slate-400"/>
+                                            <input type="month" value={filterStartMonth} onChange={e=>setFilterStartMonth(e.target.value)} className="bg-transparent text-[10px] font-bold outline-none border-none p-0.5 w-24"/>
+                                            <span className="text-slate-300">-</span>
+                                            <input type="month" value={filterEndMonth} onChange={e=>setFilterEndMonth(e.target.value)} className="bg-transparent text-[10px] font-bold outline-none border-none p-0.5 w-24"/>
+                                        </div>
+                                        <button onClick={resetAllFilters} className="p-2 text-slate-400 hover:text-rose-500 transition-colors"><RotateCcw size={16}/></button>
+                                        <div className="ml-auto flex items-center gap-2">
+                                             <div className="bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-100">
+                                                    <span className="text-[8px] font-black text-sky-400 block uppercase leading-tight">Total Nilai</span>
+                                                    <span className="text-[11px] font-black text-sky-700">Rp {formatRibuan(totalNilai)}</span>
+                                             </div>
+                                             <button onClick={handleExportXLSX} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-[9px] uppercase shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all"><FileSpreadsheet size={14}/> EXCEL</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Table Container */}
+                                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="bg-sky-500">
+                                                <tr>
+                                                    <th className={`${thClass} w-12 text-center hover:bg-sky-500 cursor-default`}>No</th>
+                                                    <th className={thClass} onClick={()=>handleSort('tanggal_belanja')}>Tanggal <SortIcon columnKey="tanggal_belanja"/></th>
+                                                    <th className={thClass} onClick={()=>handleSort('unit_kerja')}>Unit Kerja <SortIcon columnKey="unit_kerja"/></th>
+                                                    <th className={thClass} onClick={()=>handleSort('nomor_bp')}>Nomor BP <SortIcon columnKey="nomor_bp"/></th>
+                                                    <th className={thClass} onClick={()=>handleSort('uraian')}>Uraian Barang <SortIcon columnKey="uraian"/></th>
+                                                    <th className={thClass}>Penyedia</th>
+                                                    <th className={thClass} onClick={()=>handleSort('nominal')}>Total (Rp) <SortIcon columnKey="nominal"/></th>
+                                                    <th className={thClass}>Penerima</th>
+                                                    <th className={`${thClass} text-center hover:bg-sky-500 cursor-default`}>Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {filteredData.length > 0 ? filteredData.map((item, index) => (
+                                                    <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${item.is_locked ? 'bg-slate-50/50' : ''}`}>
+                                                        <td className="px-4 py-3 text-[10px] font-black text-slate-400 text-center">{index + 1}</td>
+                                                        <td className="px-4 py-3 text-[10.5px] font-bold text-slate-600 whitespace-nowrap">{item.tanggal_belanja}</td>
+                                                        <td className="px-4 py-3 text-[10.5px] font-black text-slate-800">{item.unit_kerja}</td>
+                                                        <td className="px-4 py-3 text-[10.5px] font-black text-slate-700">{item.nomor_bp || '-'}</td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="text-[10.5px] font-black text-slate-700 leading-tight flex items-center gap-2">{item.uraian} {item.document_url && <span className="text-emerald-500" title="Dokumen Tersedia"><FileText size={10}/></span>}</div>
+                                                            <div className="text-[8px] font-bold text-sky-500 uppercase tracking-wider">{item.jenis_pakaian}</div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-[10.5px] font-bold text-slate-600 whitespace-nowrap">{item.penyedia}</td>
+                                                        <td className="px-4 py-3 text-[11px] font-black text-slate-800">Rp {formatRibuan(item.nominal)}</td>
+                                                        <td className="px-4 py-3 text-[10px] font-bold text-slate-500 whitespace-nowrap">{item.penerima_barang}</td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button onClick={() => setPrintDateModal({show: true, item, date: new Date().toISOString().split('T')[0]})} className="p-1.5 bg-slate-100 text-slate-500 hover:bg-sky-500 hover:text-white rounded-lg transition-all" title="Cetak Laporan"><Printer size={12}/></button>
+                                                                {item.document_url && <a href={item.document_url} target="_blank" rel="noopener noreferrer" className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all" title="Buka Dokumen PDF"><Download size={12}/></a>}
+                                                                <button onClick={() => handleEdit(item)} disabled={item.is_locked} className={`p-1.5 rounded-lg transition-all ${item.is_locked ? 'bg-slate-50 text-slate-300' : 'bg-slate-100 text-slate-500 hover:bg-amber-500 hover:text-white'}`} title="Edit Data"><Edit3 size={12}/></button>
+                                                                <button onClick={() => setShowPinModal({show: true, targetId: item.id, action: 'TOGGLE_LOCK', value: '', currentLockStatus: item.is_locked})} className={`p-1.5 rounded-lg transition-all ${item.is_locked ? 'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white' : 'bg-sky-50 text-sky-500 hover:bg-sky-500 hover:text-white'}`} title={item.is_locked ? "Buka Kunci" : "Kunci Data"}>{item.is_locked ? <Lock size={12}/> : <Unlock size={12}/>}</button>
+                                                                <button onClick={() => setShowPinModal({show: true, targetId: item.id, action: 'DELETE', value: '', currentLockStatus: item.is_locked})} className="p-1.5 bg-slate-100 text-slate-500 hover:bg-rose-600 hover:text-white rounded-lg transition-all" title="Hapus Data"><Trash2 size={12}/></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )) : (
+                                                    <tr>
+                                                        <td colSpan="8" className="px-4 py-20 text-center">
+                                                            <div className="flex flex-col items-center opacity-30">
+                                                                <Box size={40} className="mb-2"/>
+                                                                <p className="font-black text-[10px] uppercase">Tidak Ada Data Ditemukan</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8">
+                                    <div className="flex items-center gap-4 mb-8">
+                                        <div className="w-12 h-12 bg-sky-500 text-white rounded-2xl flex items-center justify-center"><Database size={24}/></div>
+                                        <div>
+                                            <h2 className="text-lg font-black uppercase text-slate-800 leading-tight">Database Management</h2>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Backup dan Restore Data Pengadaan</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 group hover:border-sky-200 transition-all">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="p-3 bg-sky-100 text-sky-600 rounded-2xl"><Download size={20}/></div>
+                                                <button onClick={() => setShowPinModal({show: true, targetId: null, action: 'BACKUP', value: '', currentLockStatus: null})} className="px-6 py-2.5 bg-sky-500 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-sky-100 hover:bg-sky-600">Ekspor JSON</button>
+                                            </div>
+                                            <h3 className="font-black text-xs uppercase text-slate-700 mb-1">Backup Database</h3>
+                                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Download seluruh data pengadaan dalam format .json untuk pengamanan arsip internal.</p>
+                                        </div>
+
+                                        <div className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 group hover:border-emerald-200 transition-all">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><UploadCloud size={20}/></div>
+                                                <button onClick={() => setShowPinModal({show: true, targetId: null, action: 'RESTORE', value: '', currentLockStatus: null})} className="px-6 py-2.5 bg-emerald-500 text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-emerald-100 hover:bg-emerald-600">Impor JSON</button>
+                                            </div>
+                                            <h3 className="font-black text-xs uppercase text-slate-700 mb-1">Restore Database</h3>
+                                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Unggah file backup .json untuk memulihkan data. <span className="text-rose-500 font-bold">Peringatan: Data akan ditambahkan ke database aktif.</span></p>
+                                            <input type="file" ref={restoreInputRef} hidden accept=".json" onChange={handleRestore} />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-10 pt-8 border-t border-slate-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${syncStatus === 'Terkoneksi' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{syncStatus}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer Info */}
+                    <footer className="mt-auto px-4 py-8 text-center">
+                        <div className="max-w-xs mx-auto flex flex-col items-center gap-2 opacity-20">
+                            <Shirt size={24} className="text-slate-400"/>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Sistem Informasi Pengadaan Panti v6.0</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>
+

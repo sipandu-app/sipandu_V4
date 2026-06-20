@@ -1,0 +1,960 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belanja Jasa - SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .active-tab { 
+            background-color: white; 
+            color: #059669; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
+        }
+        .text-shadow-sm { text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 pb-10 text-[11px]">
+
+    <!-- Notification -->
+    <div id="notification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- PIN Modal -->
+    <div id="modal-pin" class="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-[240px] rounded-2xl p-6 shadow-2xl text-center border border-slate-200">
+            <h3 class="text-[10px] font-black uppercase tracking-widest mb-4">Verifikasi Admin</h3>
+            <input type="password" id="pin-input" class="w-full text-center p-2 bg-slate-50 border border-slate-200 rounded-lg font-black text-xl mb-4 outline-none" placeholder="••••">
+            <div class="flex flex-col gap-2">
+                <button onclick="processPinAction()" class="w-full py-2 bg-slate-900 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider">Konfirmasi</button>
+                <button onclick="closePinModal()" class="text-[9px] font-bold text-slate-400 uppercase">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Modal -->
+    <div id="modal-print" class="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-sm"><i data-lucide="printer" class="w-4 h-4"></i></div>
+                    <h2 class="text-[10px] font-black uppercase tracking-wider text-indigo-900">Konfirmasi Cetak</h2>
+                </div>
+                <button onclick="closePrintModal()" class="h-8 w-8 flex items-center justify-center bg-white border border-indigo-200 rounded-full text-indigo-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase mb-1.5 block">Tanggal Cetak</label>
+                    <input type="date" id="print-date" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-[11px] outline-none">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase mb-1.5 block">Nama Penandatangan</label>
+                    <input type="text" id="print-signer" placeholder="Contoh: Budi Santoso, S.Sos" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-[11px] outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closePrintModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-[9px] uppercase tracking-widest">Batal</button>
+                    <button onclick="generatePDF()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg">Cetak PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-emerald-600 border-b border-emerald-700 sticky top-0 z-50 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-2 rounded-lg shadow-sm">
+                    <i data-lucide="wrench" class="text-emerald-600 w-[18px] h-[18px]"></i>
+                </div>
+                <div>
+                    <h1 class="text-[11px] font-black text-white tracking-tight leading-none uppercase text-shadow-sm">DOKUMENTASI BELANJA JASA</h1>
+                    <p class="text-[8px] font-bold text-emerald-100 mt-1 uppercase tracking-widest opacity-90">Arsip Pemeliharaan & Pekerjaan Jasa</p>
+                </div>
+            </div>
+            <nav class="flex bg-white/20 p-0.5 rounded-lg border border-white/20 backdrop-blur-sm">
+                <button onclick="switchTab('input')" id="tab-input-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white">
+                    <i data-lucide="plus" class="w-3 h-3"></i> Input
+                </button>
+                <button onclick="switchTab('history')" id="tab-history-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab">
+                    <i data-lucide="layout-grid" class="w-3 h-3"></i> Riwayat
+                </button>
+                <button onclick="switchTab('database')" id="tab-database-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white">
+                    <i data-lucide="database" class="w-3 h-3"></i> Database
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-4">
+        <!-- Input Tab -->
+        <div id="tab-input" class="max-w-2xl mx-auto hidden space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5">
+                    <h2 id="form-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><i data-lucide="file-plus" class="w-4 h-4"></i></div>
+                        Input Belanja Jasa Baru
+                    </h2>
+                    <form id="form-jasa" class="space-y-6">
+                        <input type="hidden" id="edit-id">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Pelayanan</label>
+                                <select id="unit_pelayanan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" required>
+                                    <option value="">Pilih Unit...</option>
+                                    <option value="PPSDI Raharjo Sragen">PPSDI Raharjo Sragen</option>
+                                    <option value="RPSLU Mojomulyo Sragen">RPSLU Mojomulyo Sragen</option>
+                                    <option value="RPSA Pamardi Siwi Sragen">RPSA Pamardi Siwi Sragen</option>
+                                    <option value="RPS PMKS Gondang Sragen">RPS PMKS Gondang Sragen</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
+                                <input type="text" id="nomor_bp" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" placeholder="BP-001">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Jenis Jasa</label>
+                                <select id="jenis_jasa" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" required>
+                                    <option value="">Pilih Jenis...</option>
+                                    <option value="Pemeliharaan Kendaraan">Pemeliharaan Kendaraan</option>
+                                    <option value="Pemeliharaan Peralatan dan Mesin">Pemeliharaan Peralatan dan Mesin</option>
+                                    <option value="Pemeliharaan Gedung Bangunan Kantor">Pemeliharaan Gedung Bangunan Kantor</option>
+                                    <option value="Pemeliharaan Gedung Bangunan Asrama">Pemeliharaan Gedung Bangunan Asrama</option>
+                                    <option value="Pemeliharaan Sarana dan Prasarana Gedung Kantor">Pemeliharaan Sarana dan Prasarana Gedung Kantor</option>
+                                    <option value="Jasa Lainnya">Jasa Lainnya</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama / Paket Pekerjaan</label>
+                            <input type="text" id="nama_pekerjaan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" placeholder="Contoh: Perbaikan Atap Kantor Utama" required>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal Pekerjaan</label>
+                                <input type="date" id="tanggal_pekerjaan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none" required>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Penyedia / Rekanan</label>
+                                <input type="text" id="nama_rekanan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none" placeholder="CV. Maju Jaya" required>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nominal Biaya (Rp)</label>
+                            <input type="text" id="nominal" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-black text-emerald-600 outline-none" placeholder="0" required>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Dokumen SPK/SP (PDF)</label>
+                                <label class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
+                                    <i data-lucide="file-up" class="text-slate-300 w-4 h-4"></i>
+                                    <span id="spk-label" class="text-[8px] font-bold uppercase text-slate-400 mt-1 max-w-[120px] truncate">Pilih PDF</span>
+                                    <input type="file" id="file_spk" accept="application/pdf" class="hidden">
+                                </label>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Bukti Pembayaran (PDF)</label>
+                                <label class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
+                                    <i data-lucide="file-up" class="text-slate-300 w-4 h-4"></i>
+                                    <span id="bayar-label" class="text-[8px] font-bold uppercase text-slate-400 mt-1 max-w-[120px] truncate">Pilih PDF</span>
+                                    <input type="file" id="file_bayar" accept="application/pdf" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 pt-2">
+                            <div class="flex justify-between items-center px-1">
+                                <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Dokumentasi Visual (0%, 50%, 100%)</span>
+                                <button type="button" onclick="addDocPoint()" class="bg-indigo-600 text-white px-3 py-1 rounded-md text-[9px] font-bold uppercase hover:bg-indigo-700 transition-all">+ Tambah Titik</button>
+                            </div>
+                            <div id="doc-points-container" class="space-y-3">
+                                <!-- Points will be added here -->
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 pt-4 border-t border-slate-100">
+                            <button type="button" onclick="resetForm()" class="px-6 py-2 bg-slate-100 text-slate-500 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">Reset</button>
+                            <button type="submit" id="submit-btn" class="flex-1 h-12 bg-emerald-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-4 h-4"></i>
+                                <span id="btn-text">Simpan Laporan</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="tab-history" class="space-y-3 animate-in fade-in duration-300">
+            <div class="bg-white p-2 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-1 bg-emerald-50 px-2 py-1.5 rounded-lg">
+                    <i data-lucide="info" class="text-emerald-600 w-3 h-3"></i>
+                    <span class="text-[8px] font-bold text-emerald-700 uppercase">Filter:</span>
+                </div>
+                <input type="text" id="search-box" placeholder="Cari pekerjaan / rekanan..." class="h-8 px-3 flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded text-[10px] font-bold outline-none focus:ring-1 focus:ring-emerald-400">
+                <select id="filterUnit" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-emerald-400">
+                    <option value="Semua">Semua Unit</option>
+                    <option value="PPSDI Raharjo Sragen">PPSDI Raharjo Sragen</option>
+                    <option value="RPSLU Mojomulyo Sragen">RPSLU Mojomulyo Sragen</option>
+                    <option value="RPSA Pamardi Siwi Sragen">RPSA Pamardi Siwi Sragen</option>
+                    <option value="RPS PMKS Gondang Sragen">RPS PMKS Gondang Sragen</option>
+                </select>
+                <select id="filterJasa" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-emerald-400">
+                    <option value="Semua">Semua Jenis Jasa</option>
+                    <option value="Pemeliharaan Kendaraan">Pemeliharaan Kendaraan</option>
+                    <option value="Pemeliharaan Peralatan dan Mesin">Pemeliharaan Peralatan dan Mesin</option>
+                    <option value="Pemeliharaan Gedung Bangunan Kantor">Pemeliharaan Gedung Bangunan Kantor</option>
+                    <option value="Pemeliharaan Gedung Bangunan Asrama">Pemeliharaan Gedung Bangunan Asrama</option>
+                    <option value="Pemeliharaan Sarana dan Prasarana Gedung Kantor">Sarana/Prasarana Gedung</option>
+                    <option value="Jasa Lainnya">Jasa Lainnya</option>
+                </select>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="px-3 py-4 text-center">Tgl Kerja</th>
+                                <th class="px-3 py-4">Nomor BP</th>
+                                <th class="px-3 py-4">Pekerjaan</th>
+                                <th class="px-3 py-4">Penyedia</th>
+                                <th class="px-3 py-4">Unit</th>
+                                <th class="px-3 py-4 text-center">Dokumen</th>
+                                <th class="px-3 py-4 text-right">Nominal</th>
+                                <th class="px-3 py-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-100">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="loading-state" class="p-10 text-center text-slate-400 hidden">
+                    <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600"></i>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Memuat Data...</p>
+                </div>
+                <div id="empty-state" class="p-10 text-center text-slate-400 hidden">
+                    <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 opacity-20"></i>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Tidak ada data ditemukan</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Tab -->
+        <div id="tab-database" class="max-w-xl mx-auto hidden space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <div class="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl">
+                <h2 class="text-sm font-black uppercase mb-8 flex items-center gap-4">
+                    <div class="p-3 bg-emerald-600 rounded-2xl"><i data-lucide="database" class="w-5 h-5 text-white"></i></div>
+                    Manajemen Database
+                </h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="backupData()" class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group transition-all">
+                        <div class="text-left">
+                            <span class="block font-black uppercase text-[10px] group-hover:text-emerald-400">Unduh Backup (JSON)</span>
+                            <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Ekspor semua arsip belanja jasa</span>
+                        </div>
+                        <i data-lucide="download" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                    
+                    <label class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group cursor-pointer transition-all">
+                        <div class="text-left">
+                            <span class="block font-black uppercase text-[10px] group-hover:text-amber-400">Pulihkan Data (JSON)</span>
+                            <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Import data dari file backup</span>
+                        </div>
+                        <i data-lucide="upload" class="w-5 h-5 text-slate-400"></i>
+                        <input type="file" id="restore-input" class="hidden" accept=".json" onchange="handleRestoreFile(event)" />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration
+        const TABLE_NAME = 'belanja_jasa';
+        const CLOUDINARY_CLOUD_NAME = "dkxehjgu0";
+        const CLOUDINARY_UPLOAD_PRESET = "belanja_pakaian"; // Using same preset for simplicity
+        const PIN_ADMIN = "888";
+
+        let supabaseClient = null;
+        let listJasa = [];
+        let activeTab = 'history';
+        let targetItem = null;
+        let pinAction = null;
+        let docPoints = [];
+
+        // Initialize Supabase
+        function initSupabase() {
+            // Langsung menggunakan kredensial agar aman dari SecurityError (Cross-Origin)
+            const url = 'https://yewkffbatvrbtfliikia.supabase.co';
+            const key = 'sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg';
+            supabaseClient = supabase.createClient(url, key);
+        }
+
+        // --- Core Functions ---
+
+        async function syncData() {
+            if (!supabaseClient) return;
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('table-body').innerHTML = '';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('*');
+
+                if (error) throw error;
+                listJasa = data || [];
+                renderTable();
+            } catch (err) {
+                console.error(err);
+                showNotif("Gagal sinkronisasi data", "error");
+            } finally {
+                document.getElementById('loading-state').classList.add('hidden');
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            const search = document.getElementById('search-box').value.toLowerCase();
+            const unit = document.getElementById('filterUnit').value;
+            const jasa = document.getElementById('filterJasa').value;
+
+            let filtered = listJasa.filter(item => {
+                const matchSearch = item.nama_pekerjaan.toLowerCase().includes(search) || item.nama_rekanan.toLowerCase().includes(search);
+                const matchUnit = unit === 'Semua' || item.unit_pelayanan === unit;
+                const matchJasa = jasa === 'Semua' || item.jenis_jasa === jasa;
+                return matchSearch && matchUnit && matchJasa;
+            });
+
+            // Client-side sorting by nomor_bp descending, fallback to tanggal_pekerjaan
+            filtered.sort((a, b) => {
+                const nomorA = a.nomor_bp || '';
+                const nomorB = b.nomor_bp || '';
+                if (nomorA && nomorB) {
+                    return nomorB.localeCompare(nomorA);
+                }
+                if (nomorA) return -1;
+                if (nomorB) return 1;
+                // Fallback: jika tidak ada nomor_bp, urutkan tanggal_pekerjaan descending
+                return (b.tanggal_pekerjaan || '').localeCompare(a.tanggal_pekerjaan || '');
+            });
+
+            tbody.innerHTML = '';
+            document.getElementById('empty-state').classList.toggle('hidden', filtered.length > 0);
+
+            filtered.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = `hover:bg-slate-50 transition-colors group ${item.is_locked ? 'bg-slate-50/50 opacity-80' : ''}`;
+                
+                row.innerHTML = `
+                    <td class="px-3 py-4 text-center font-bold text-slate-500 whitespace-nowrap">${item.tanggal_pekerjaan.split('-').reverse().join('/')}</td>
+                    <td class="px-3 py-4 text-[10px] font-black text-slate-700">${item.nomor_bp || '-'}</td>
+                    <td class="px-3 py-4">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black text-slate-900 leading-tight uppercase flex items-center gap-1">
+                                ${item.nama_pekerjaan}
+                                ${item.is_locked ? '<i data-lucide="lock" class="w-2 h-2 text-amber-500"></i>' : ''}
+                            </span>
+                            <span class="text-[8px] text-emerald-600 font-bold uppercase mt-0.5">${item.jenis_jasa}</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-4 text-slate-600 font-medium">${item.nama_rekanan || '-'}</td>
+                    <td class="px-3 py-4 uppercase font-bold text-[8px] text-indigo-600">${item.unit_pelayanan.split(' ')[0]}</td>
+                    <td class="px-3 py-4">
+                        <div class="flex flex-col gap-1 items-center">
+                            ${item.url_spk ? `<a href="${item.url_spk}" target="_blank" class="w-16 py-1 text-center bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[7px] font-black uppercase hover:bg-emerald-600 hover:text-white">Lihat SPK</a>` : '<span class="w-16 py-1 text-center bg-slate-50 text-slate-300 border border-slate-100 rounded text-[7px] font-black uppercase">No SPK</span>'}
+                            ${item.url_bayar ? `<a href="${item.url_bayar}" target="_blank" class="w-16 py-1 text-center bg-blue-50 text-blue-700 border border-blue-100 rounded text-[7px] font-black uppercase hover:bg-blue-600 hover:text-white">Bayar</a>` : '<span class="w-16 py-1 text-center bg-slate-50 text-slate-300 border border-slate-100 rounded text-[7px] font-black uppercase">No Bayar</span>'}
+                        </div>
+                    </td>
+                    <td class="px-3 py-4 text-right font-black text-slate-900 whitespace-nowrap tabular-nums">Rp${item.nominal.toLocaleString('id-ID')}</td>
+                    <td class="px-3 py-4">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="openPrintModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Cetak"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="askPin('toggleLock', '${item.id}')" class="p-1.5 transition-colors ${item.is_locked ? 'text-amber-600' : 'text-slate-300 hover:text-amber-500'}"><i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="${item.is_locked ? '' : `editItem('${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-emerald-600'} transition-colors"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="${item.is_locked ? '' : `askPin('delete', '${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-rose-600'} transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        // --- Form Logic ---
+
+        function addDocPoint(data = null) {
+            const id = Date.now() + Math.random();
+            const point = {
+                id,
+                keterangan: data ? data.keterangan : '',
+                semula: null, semulaUrl: data ? data.semula : null,
+                proses: null, prosesUrl: data ? data.proses : null,
+                menjadi: null, menjadiUrl: data ? data.menjadi : null
+            };
+            docPoints.push(point);
+            renderDocPoints();
+        }
+
+        function removeDocPoint(id) {
+            docPoints = docPoints.filter(p => p.id !== id);
+            renderDocPoints();
+        }
+
+        function renderDocPoints() {
+            const container = document.getElementById('doc-points-container');
+            container.innerHTML = '';
+            
+            docPoints.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3";
+                div.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <span class="bg-slate-800 text-white w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-bold">${index + 1}</span>
+                        <input type="text" placeholder="Keterangan titik (misal: Sisi Utara)" value="${p.keterangan}" onchange="updatePointKeterangan('${p.id}', this.value)" class="flex-1 text-[11px] font-bold outline-none border-b border-transparent focus:border-indigo-600 bg-transparent py-1 transition-all">
+                        <button type="button" onclick="removeDocPoint('${p.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        ${renderImgLabel(p, 'semula', '0%')}
+                        ${renderImgLabel(p, 'proses', '50%')}
+                        ${renderImgLabel(p, 'menjadi', '100%')}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function renderImgLabel(p, key, label) {
+            const hasFile = p[key];
+            const hasUrl = p[`${key}Url`];
+            const imgSrc = hasFile ? URL.createObjectURL(hasFile) : (hasUrl ? hasUrl : null);
+            
+            return `
+                <label class="aspect-square bg-white border border-slate-200 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden cursor-pointer relative group hover:bg-indigo-50 transition-all">
+                    <input type="file" accept="image/*" class="hidden" onchange="updatePointFile('${p.id}', '${key}', this.files[0])">
+                    ${imgSrc ? `<img src="${imgSrc}" class="w-full h-full object-cover">` : `<i data-lucide="plus" class="text-slate-300 w-4 h-4"></i>`}
+                    <div class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold py-1 uppercase text-center backdrop-blur-sm">${label}</div>
+                </label>
+            `;
+        }
+
+        function updatePointKeterangan(id, val) {
+            const p = docPoints.find(x => x.id === id);
+            if (p) p.keterangan = val;
+        }
+
+        function updatePointFile(id, key, file) {
+            const p = docPoints.find(x => x.id === id);
+            if (p) {
+                p[key] = file;
+                renderDocPoints();
+            }
+        }
+
+        async function uploadToCloudinary(file) {
+            if (!file) return null;
+            const data = new FormData();
+            data.append("file", file);
+            data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            // Tambahkan resource_type auto agar bisa menerima PDF
+            data.append("resource_type", "auto"); 
+            
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: "POST", body: data });
+                const json = await res.json();
+                
+                if (json.secure_url) {
+                    return json.secure_url;
+                } else {
+                    console.error("Cloudinary Upload Failed:", json);
+                    return null;
+                }
+            } catch (err) {
+                console.error("Cloudinary Network Error:", err);
+                return null;
+            }
+        }
+
+        // --- UI Events ---
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.getElementById('tab-input').classList.toggle('hidden', tab !== 'input');
+            document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history');
+            document.getElementById('tab-database').classList.toggle('hidden', tab !== 'database');
+            
+            document.getElementById('tab-input-btn').className = tab === 'input' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
+            document.getElementById('tab-history-btn').className = tab === 'history' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
+            document.getElementById('tab-database-btn').className = tab === 'database' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
+
+            if (tab === 'history') syncData();
+        }
+
+        function showNotif(message, type = 'success') {
+            const el = document.getElementById('notification');
+            const msgEl = document.getElementById('notification-message');
+            msgEl.innerText = message;
+            el.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 transition-opacity duration-300 ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'} opacity-100`;
+            setTimeout(() => { el.style.opacity = '0'; }, 3000);
+        }
+
+        function askPin(action, id) {
+            pinAction = action;
+            targetItem = listJasa.find(x => x.id === id);
+            document.getElementById('modal-pin').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('modal-pin').classList.add('hidden');
+        }
+
+        async function processPinAction() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin !== PIN_ADMIN) {
+                showNotif("PIN Admin Salah!", "error");
+                return;
+            }
+
+            try {
+                if (pinAction === 'delete') {
+                    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif("Laporan Berhasil Dihapus");
+                } else if (pinAction === 'toggleLock') {
+                    const newState = !targetItem.is_locked;
+                    const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: newState }).eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif(newState ? "Data Terkunci" : "Data Terbuka");
+                } else if (pinAction === 'restore') {
+                    await performRestore(targetItem);
+                }
+                syncData();
+                closePinModal();
+            } catch (err) {
+                showNotif("Aksi Gagal", "error");
+            }
+        }
+
+        function resetForm() {
+            const form = document.getElementById('form-jasa');
+            if (form) form.reset();
+            
+            const editId = document.getElementById('edit-id');
+            if (editId) editId.value = '';
+            
+            const titleEl = document.getElementById('form-title');
+            if (titleEl) {
+                titleEl.innerHTML = `<div class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><i data-lucide="file-plus" class="w-4 h-4"></i></div> Input Belanja Jasa Baru`;
+            }
+            
+            const btnText = document.getElementById('btn-text');
+            if (btnText) btnText.innerText = "Simpan Laporan";
+            
+            const spkLabel = document.getElementById('spk-label');
+            if (spkLabel) spkLabel.innerText = "Pilih PDF";
+            
+            const bayarLabel = document.getElementById('bayar-label');
+            if (bayarLabel) bayarLabel.innerText = "Pilih PDF";
+            
+            docPoints = [];
+            addDocPoint();
+            lucide.createIcons();
+        }
+
+        function editItem(id) {
+            const item = listJasa.find(x => x.id === id);
+            if (!item) return;
+
+            console.log("Editing item:", item);
+
+            // Pindah ke tab input
+            switchTab('input');
+            
+            // Isi field utama
+            document.getElementById('edit-id').value = item.id;
+            
+            // Set value untuk select (Unit & Jenis Jasa)
+            const unitSelect = document.getElementById('unit_pelayanan');
+            const jenisSelect = document.getElementById('jenis_jasa');
+            
+            unitSelect.value = item.unit_pelayanan || "";
+            jenisSelect.value = item.jenis_jasa || "";
+            
+            document.getElementById('nomor_bp').value = item.nomor_bp || "";
+            document.getElementById('nama_pekerjaan').value = item.nama_pekerjaan || "";
+            document.getElementById('tanggal_pekerjaan').value = item.tanggal_pekerjaan || "";
+            document.getElementById('nama_rekanan').value = item.nama_rekanan || "";
+            
+            const nominalVal = item.nominal || 0;
+            document.getElementById('nominal').value = nominalVal.toLocaleString('id-ID');
+            
+            // Update label file
+            document.getElementById('spk-label').innerText = item.url_spk ? "📄 File SPK Tersedia" : "Pilih PDF";
+            document.getElementById('bayar-label').innerText = item.url_bayar ? "📄 File Bayar Tersedia" : "Pilih PDF";
+
+            // Muat ulang dokumentasi visual
+            docPoints = [];
+            const container = document.getElementById('doc-points-container');
+            container.innerHTML = ''; // Bersihkan kontainer sebelum memuat
+
+            if (item.dokumentasi && Array.isArray(item.dokumentasi) && item.dokumentasi.length > 0) {
+                item.dokumentasi.forEach(d => addDocPoint(d));
+            } else {
+                addDocPoint();
+            }
+
+            document.getElementById('form-title').innerHTML = `<div class="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></div> Edit Laporan #${item.id.split('-').pop()}`;
+            document.getElementById('btn-text').innerText = "Update Laporan";
+            
+            // Gulung halaman ke atas agar form terlihat
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        // --- Form Submit ---
+
+        document.getElementById('form-jasa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const editId = document.getElementById('edit-id').value;
+            
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Memproses...`;
+            lucide.createIcons();
+
+            try {
+                const spkFile = document.getElementById('file_spk').files[0];
+                const bayarFile = document.getElementById('file_bayar').files[0];
+
+                const [urlSPK, urlBayar] = await Promise.all([
+                    uploadToCloudinary(spkFile),
+                    uploadToCloudinary(bayarFile)
+                ]);
+
+                // Validasi: Jika file dipilih tapi gagal upload (CORS/Network error)
+                if ((spkFile && !urlSPK) || (bayarFile && !urlBayar)) {
+                    const proceed = confirm("Gagal mengunggah file PDF ke server Cloudinary. Simpan data tanpa dokumen?");
+                    if (!proceed) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-text">${editId ? 'Update Laporan' : 'Simpan Laporan'}</span>`;
+                        lucide.createIcons();
+                        return;
+                    }
+                }
+
+                const finalDocs = [];
+                for (const p of docPoints) {
+                    const [semula, proses, menjadi] = await Promise.all([
+                        p.semula ? uploadToCloudinary(p.semula) : Promise.resolve(p.semulaUrl),
+                        p.proses ? uploadToCloudinary(p.proses) : Promise.resolve(p.prosesUrl),
+                        p.menjadi ? uploadToCloudinary(p.menjadi) : Promise.resolve(p.menjadiUrl)
+                    ]);
+                    finalDocs.push({ keterangan: p.keterangan, semula, proses, menjadi });
+                }
+
+                const payload = {
+                    unit_pelayanan: document.getElementById('unit_pelayanan').value,
+                    jenis_jasa: document.getElementById('jenis_jasa').value,
+                    nomor_bp: document.getElementById('nomor_bp').value,
+                    nama_pekerjaan: document.getElementById('nama_pekerjaan').value,
+                    tanggal_pekerjaan: document.getElementById('tanggal_pekerjaan').value,
+                    nama_rekanan: document.getElementById('nama_rekanan').value,
+                    nominal: parseInt(document.getElementById('nominal').value.replace(/\D/g, '') || 0),
+                    url_spk: urlSPK || (editId ? listJasa.find(x => x.id === editId).url_spk : null),
+                    url_bayar: urlBayar || (editId ? listJasa.find(x => x.id === editId).url_bayar : null),
+                    dokumentasi: finalDocs,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (editId) {
+                    const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', editId);
+                    if (error) throw error;
+                    showNotif("Laporan Berhasil Diperbarui");
+                } else {
+                    const { error } = await supabaseClient.from(TABLE_NAME).insert({
+                        ...payload,
+                        id: 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                        is_locked: false,
+                        created_at: new Date().toISOString()
+                    });
+                    if (error) throw error;
+                    showNotif("Laporan Berhasil Disimpan");
+                }
+
+                resetForm();
+                switchTab('history');
+            } catch (err) {
+                console.error(err);
+                showNotif("Gagal menyimpan laporan", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-text">${editId ? 'Update Laporan' : 'Simpan Laporan'}</span>`;
+                lucide.createIcons();
+            }
+        });
+
+        // Nominal Formatting
+        document.getElementById('nominal').addEventListener('input', function(e) {
+            let val = e.target.value.replace(/\D/g, '');
+            e.target.value = val ? parseInt(val).toLocaleString('id-ID') : '';
+        });
+
+        // --- Print Logic ---
+
+        function openPrintModal(id) {
+            targetItem = listJasa.find(x => x.id === id);
+            document.getElementById('modal-print').classList.remove('hidden');
+            document.getElementById('print-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function closePrintModal() {
+            document.getElementById('modal-print').classList.add('hidden');
+        }
+
+        function generatePDF() {
+            const report = targetItem;
+            const dateStr = document.getElementById('print-date').value;
+            const signer = document.getElementById('print-signer').value || '____________________';
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                showNotif("Pop-up diblokir browser!", "error");
+                return;
+            }
+
+            const tglFormatted = new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Laporan - ${report.nama_pekerjaan}</title>
+                    <style>
+                        @page { size: A4; margin: 0; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #333; line-height: 1.3; font-size: 12px; }
+                        .page-container { padding: 1.5cm 2cm; }
+                        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; }
+                        .header h1 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
+                        .header p { margin: 5px 0; font-size: 13px; font-weight: bold; color: #444; }
+                        .meta-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+                        .meta-table td { padding: 4px 0; vertical-align: top; font-size: 12px; }
+                        .label { width: 150px; font-weight: bold; color: #000; }
+                        .section-title { background: #f1f5f9; padding: 8px 12px; font-weight: 800; text-transform: uppercase; margin: 20px 0 15px; border-left: 5px solid #1e293b; font-size: 11px; color: #1e293b; }
+                        .doc-item { margin-bottom: 30px; page-break-inside: avoid; }
+                        .doc-keterangan { font-weight: 800; margin-bottom: 10px; font-size: 13px; color: #000; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+                        .image-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+                        .image-box { border: 1px solid #e2e8f0; overflow: hidden; border-radius: 4px; background: #fff; }
+                        .image-box img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #f8fafc; }
+                        .image-label { text-align: center; background: #1e293b; color: #fff; padding: 5px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+                        .footer { margin-top: 40px; display: flex; justify-content: flex-end; page-break-inside: avoid; }
+                        .sign-box { text-align: center; width: 250px; }
+                        .sign-space { height: 60px; }
+                        .sign-name { font-weight: 800; text-decoration: underline; font-size: 13px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="page-container">
+                        <div class="header">
+                            <h1>LAPORAN DOKUMENTASI PEKERJAAN JASA</h1>
+                            <p>${report.unit_pelayanan.toUpperCase()}</p>
+                        </div>
+                        <table class="meta-table">
+                            <tr><td class="label">Nomor BP</td><td style="width:15px">:</td><td><strong>${report.nomor_bp || '-'}</strong></td></tr>
+                            <tr><td class="label">Pekerjaan</td><td>:</td><td><strong>${report.nama_pekerjaan}</strong></td></tr>
+                            <tr><td class="label">Jenis Jasa</td><td>:</td><td>${report.jenis_jasa}</td></tr>
+                            <tr><td class="label">Rekanan/Penyedia</td><td>:</td><td>${report.nama_rekanan || '-'}</td></tr>
+                            <tr><td class="label">Pelaksanaan</td><td>:</td><td>${report.tanggal_pekerjaan.split('-').reverse().join('/')}</td></tr>
+                            <tr><td class="label">Nilai Pekerjaan</td><td>:</td><td><strong>Rp ${report.nominal.toLocaleString('id-ID')}</strong></td></tr>
+                        </table>
+                        <div class="section-title">Visualisasi Progres Proyek</div>
+                        ${(report.dokumentasi || []).map((d, i) => `
+                            <div class="doc-item">
+                                <div class="doc-keterangan">${i + 1}. ${d.keterangan || 'Titik Progres'}</div>
+                                <div class="image-grid">
+                                    <div class="image-box">
+                                        <img src="${d.semula || 'https://placehold.co/400x300?text=0%'}" />
+                                        <div class="image-label">0% (Semula)</div>
+                                    </div>
+                                    <div class="image-box">
+                                        <img src="${d.proses || 'https://placehold.co/400x300?text=50%'}" />
+                                        <div class="image-label">50% (Proses)</div>
+                                    </div>
+                                    <div class="image-box">
+                                        <img src="${d.menjadi || 'https://placehold.co/400x300?text=100%'}" />
+                                        <div class="image-label">100% (Selesai)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="footer">
+                            <div class="sign-box">
+                                <p>Sragen, ${tglFormatted}</p>
+                                <p>Pejabat Pelaksana Teknis Kegiatan (PPTK),</p>
+                                <div class="sign-space"></div>
+                                <p class="sign-name">${signer}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 500);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            printWindow.document.write(html);
+            printWindow.document.close();
+            closePrintModal();
+        }
+
+        // --- Backup & Restore ---
+
+        function backupData() {
+            if (listJasa.length === 0) {
+                showNotif("Tidak ada data untuk backup", "error");
+                return;
+            }
+            const data = {
+                reports: listJasa.map(({ id, created_at, updated_at, ...r }) => r),
+                timestamp: new Date().toISOString(),
+                app: "SIPANDU - Belanja Jasa"
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `BACKUP_BELANJA_JASA_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            showNotif("Backup berhasil diunduh");
+        }
+
+        function handleRestoreFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    let dataToRestore = null;
+                    
+                    if (json.reports && Array.isArray(json.reports)) {
+                        dataToRestore = json.reports;
+                    } else if (Array.isArray(json)) {
+                        dataToRestore = json;
+                    }
+
+                    if (!dataToRestore) throw new Error("Format file tidak valid (Data tidak ditemukan)");
+                    
+                    pinAction = 'restore';
+                    targetItem = dataToRestore; 
+                    document.getElementById('modal-pin').classList.remove('hidden');
+                    document.getElementById('pin-input').value = '';
+                    document.getElementById('pin-input').focus();
+                } catch (err) {
+                    showNotif("Gagal membaca file backup", "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        async function performRestore(data) {
+            if (!Array.isArray(data)) {
+                showNotif("Format data tidak valid (bukan array)", "error");
+                return;
+            }
+
+            try {
+                console.log("Data yang diterima untuk restore:", data);
+                if (data.length > 0) console.log("Contoh item pertama:", data[0]);
+
+                showNotif("Memproses " + data.length + " data...", "info");
+                
+                // Hapus filter ketat agar data apa pun bisa dicoba masuk
+                const validData = data; 
+                
+                if (validData.length === 0) {
+                    showNotif("File backup kosong", "error");
+                    return;
+                }
+
+                // Chunking untuk menghindari overload request
+                for (let i = 0; i < validData.length; i += 10) {
+                    const chunk = validData.slice(i, i + 10).map(v => ({
+                        unit_pelayanan: v.unit_pelayanan || v.unitPelayanan || 'PPSDI Raharjo Sragen',
+                        jenis_jasa: v.jenis_jasa || v.jenisJasa || 'Jasa Lainnya',
+                        nomor_bp: v.nomor_bp || v.no_bp || v.nomorBp || '',
+                        nama_pekerjaan: v.nama_pekerjaan || v.namaPemeliharaan || v.nama_barang || v.nama || v.keterangan || 'Data Restored',
+                        tanggal_pekerjaan: v.tanggal_pekerjaan || v.tanggalPekerjaan || v.tanggal || new Date().toISOString().split('T')[0],
+                        nama_rekanan: v.nama_rekanan || v.namaRekanan || '',
+                        nominal: parseInt(v.nominal) || 0,
+                        url_spk: v.url_spk || v.urlSpk || v.spkUrl || null,
+                        url_bayar: v.url_bayar || v.urlBayar || v.bayarUrl || null,
+                        dokumentasi: v.dokumentasi || [],
+                        is_locked: v.is_locked || v.isLocked || false,
+                        id: 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }));
+                    
+                    const { error } = await supabaseClient.from(TABLE_NAME).insert(chunk);
+                    if (error) throw error;
+                }
+                
+                showNotif("Berhasil memulihkan " + validData.length + " data");
+                syncData();
+                switchTab('history');
+            } catch (err) {
+                console.error("Restore Error:", err);
+                showNotif("Gagal: " + (err.message || "Kesalahan Database"), "error");
+            }
+        }
+
+        // Init
+        initSupabase();
+        syncData();
+        addDocPoint();
+
+        // Search listeners
+        document.getElementById('search-box').addEventListener('input', renderTable);
+        document.getElementById('filterUnit').addEventListener('change', renderTable);
+        document.getElementById('filterJasa').addEventListener('change', renderTable);
+        
+        // File Labels
+        document.getElementById('file_spk').addEventListener('change', e => {
+            document.getElementById('spk-label').innerText = e.target.files[0] ? e.target.files[0].name : "Pilih PDF";
+        });
+        document.getElementById('file_bayar').addEventListener('change', e => {
+            document.getElementById('bayar-label').innerText = e.target.files[0] ? e.target.files[0].name : "Pilih PDF";
+        });
+
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+
+    </script>
+</body>
+</html>
+

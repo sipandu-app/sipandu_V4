@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Koneksi Supabase Belanja SOSH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-2xl font-black text-slate-800 mb-6">Test Koneksi Supabase & Belanja SOSH</h1>
+        
+        <div class="space-y-4">
+            <div class="p-4 bg-slate-50 rounded-lg">
+                <h2 class="font-bold text-slate-700 mb-2">Status Koneksi</h2>
+                <div id="status" class="text-slate-600">Memeriksa...</div>
+            </div>
+            
+            <div class="p-4 bg-slate-50 rounded-lg">
+                <h2 class="font-bold text-slate-700 mb-2">Data belanja_sosh</h2>
+                <div id="data" class="text-slate-600">Loading...</div>
+            </div>
+            
+            <div class="p-4 bg-slate-50 rounded-lg">
+                <h2 class="font-bold text-slate-700 mb-2">Tambah Data Test</h2>
+                <button id="addTestData" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">
+                    Tambah Data Test
+                </button>
+                <div id="addResult" class="mt-2 text-slate-600"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const statusEl = document.getElementById('status');
+        const dataEl = document.getElementById('data');
+        const addBtn = document.getElementById('addTestData');
+        const addResultEl = document.getElementById('addResult');
+
+        // Test connection by fetching something simple
+        async function testConnection() {
+            try {
+                const { data, error } = await supabaseClient.from('belanja_sosh').select('count', { count: 'exact', head: true });
+                if (error) throw error;
+                statusEl.innerHTML = `<span class="text-green-600 font-bold">✅ Koneksi Berhasil! Tabel belanja_sosh ditemukan.</span>`;
+            } catch (err) {
+                statusEl.innerHTML = `<span class="text-red-600 font-bold">❌ Error: ${err.message}</span>`;
+                console.error(err);
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const { data, error } = await supabaseClient.from('belanja_sosh').select('*').limit(5);
+                if (error) throw error;
+                
+                if (data.length === 0) {
+                    dataEl.innerHTML = `<p class="text-amber-600">Tabel kosong, tidak ada data.</p>`;
+                } else {
+                    dataEl.innerHTML = `
+                        <ul class="list-disc pl-5 space-y-1">
+                            ${data.map(item => `<li class="text-sm"><b>${item.unit_pelayanan}</b> - ${item.uraian_belanja} (Rp ${item.nominal})</li>`).join('')}
+                        </ul>
+                    `;
+                }
+            } catch (err) {
+                dataEl.innerHTML = `<span class="text-red-600">Error fetching data: ${err.message}</span>`;
+                console.error(err);
+            }
+        }
+
+        addBtn.addEventListener('click', async () => {
+            addBtn.disabled = true;
+            addBtn.textContent = "Menambahkan...";
+            
+            try {
+                const testData = {
+                    unit_pelayanan: "PPSDI Raharjo",
+                    bulan_tahun: "2025-06",
+                    periode_laporan: "1 (Satu)",
+                    uraian_belanja: "Test Data",
+                    nominal: 100000,
+                    penyedia_toko: "Test Toko"
+                };
+                
+                const { data, error } = await supabaseClient.from('belanja_sosh').insert([testData]).select();
+                
+                if (error) throw error;
+                
+                addResultEl.innerHTML = `<span class="text-green-600 font-bold">✅ Data berhasil ditambahkan!</span>`;
+                fetchData();
+            } catch (err) {
+                addResultEl.innerHTML = `<span class="text-red-600">❌ Error: ${err.message}</span>`;
+                console.error(err);
+            }
+            
+            addBtn.disabled = false;
+            addBtn.textContent = "Tambah Data Test";
+        });
+
+        testConnection();
+        fetchData();
+    </script>
+</body>
+</html>

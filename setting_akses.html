@@ -1,0 +1,394 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting Akses - SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .checkbox-custom {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col min-h-0 p-4 lg:p-6 space-y-4">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">SETTING AKSES</h1>
+                <p class="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-0.5">Manajemen User, Role, dan Hak Akses Halaman</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Search Bar -->
+                <div class="relative w-64">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="search-name" placeholder="Cari nama pegawai..." 
+                        oninput="filterByName()"
+                        class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-sky-500 transition-all shadow-sm">
+                </div>
+                <a href="cetak_kartu.html" class="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-sky-100 flex items-center gap-2">
+                    <i data-lucide="contact-2" class="w-3.5 h-3.5"></i>
+                    Cetak Kartu
+                </a>
+                <button onclick="saveAllSettings()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    Simpan
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Table Card -->
+        <div class="glass-card rounded-[1.5rem] shadow-xl overflow-hidden flex-1 flex flex-col min-h-0">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center text-sky-600">
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    </div>
+                    <h2 class="font-black text-slate-700 uppercase tracking-widest text-[11px]">Konfigurasi Hak Akses</h2>
+                </div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    Halaman: <span id="page-count" class="text-sky-500">0</span> | Pegawai: <span id="user-count" class="text-sky-500">0</span>
+                </div>
+            </div>
+            
+            <div class="overflow-auto flex-1 custom-scrollbar relative">
+                <table class="w-full border-collapse">
+                    <thead class="sticky top-0 z-20">
+                        <tr class="bg-slate-100 border-b border-slate-200">
+                            <th class="p-4 text-left min-w-[220px] bg-slate-100">
+                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nama Pegawai & Password</span>
+                            </th>
+                            <th class="p-4 text-left min-w-[180px] bg-slate-100">
+                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Role</span>
+                            </th>
+                            <!-- Halaman columns header injected here -->
+                            <th id="page-columns-header" class="p-0"></th>
+                            <th class="p-4 text-center w-16 bg-slate-100">
+                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Info</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="access-table-body" class="divide-y divide-slate-50 bg-white">
+                        <!-- Rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+        <!-- Legend / Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
+                    <i data-lucide="info" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-700 text-xs uppercase tracking-widest mb-1">Informasi User</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Gunakan NIP 8 digit pertama sebagai Username. Password dapat diatur secara mandiri.</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-500 shrink-0">
+                    <i data-lucide="layout" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-700 text-xs uppercase tracking-widest mb-1">Halaman Dinamis</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Sistem secara otomatis mendeteksi form baru yang ditambahkan ke dalam menu SIPANDU.</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
+                    <i data-lucide="check-circle" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-700 text-xs uppercase tracking-widest mb-1">Penerapan Role</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Pastikan setiap user memiliki role yang sesuai agar menu dan fitur tampil dengan benar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl translate-y-20 opacity-0 transition-all duration-500 z-50 flex items-center gap-3">
+        <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5"></i>
+        <span id="toast-msg" class="font-bold text-xs uppercase tracking-widest">Data Berhasil Disimpan</span>
+    </div>
+
+    <script>
+        // Data Dummy / Initial Data
+        const ROLES = [
+            "Administrator-TU",
+            "Administrator-Penyantunan",
+            "Administrator-Resos",
+            "Administrator-Keuangan",
+            "Approver",
+            "User",
+            "Checker"
+        ];
+
+        // Daftar halaman/form yang ada di menu (diambil dari index.html)
+        const PAGES = [
+            { id: 'pengumuman', name: 'Pengumuman' },
+            { id: 'surat-masuk', name: 'Surat Masuk' },
+            { id: 'surat-keluar', name: 'Surat Keluar' },
+            { id: 'pegawai', name: 'Data Pegawai' },
+            { id: 'kp_kgb', name: 'KP-KGB' },
+             { id: 'data_keluarga', name: 'data_keluarga' },
+            { id: 'absensi-pm', name: 'Absensi PM' },
+            { id: 'monitoring-resos', name: 'Monitoring Resos' },
+            { id: 'kesehatan-pm', name: 'Kesehatan PM' },
+            { id: 'pendidikan', name: 'Pendidikan' },
+            { id: 'sosh', name: 'Belanja SOSH' },
+            { id: 'pakaian', name: 'Belanja Pakaian' },
+            { id: 'belanja_jasa', name: 'Belanja Jasa' },
+            { id: 'belanja_modal', name: 'Belanja Modal' },
+            { id: 'belanja_lain', name: 'Belanja Lain' },
+            { id: 'bend23', name: 'Bend 23' },
+            { id: 'bmd', name: 'Laporan BMD' },
+            { id: 'sppd', name: 'SPPD' },
+            { id: 'bbm', name: 'Voucer BBM' },
+            { id: 'setting-akses', name: 'Setting Akses' },
+            { id: 'statistik-pengunjung', name: 'Statistik' },
+            { id: 'restore-json', name: 'Restore JSON' },
+            { id: 'cetak-kartu', name: 'Cetak Kartu' }
+        ];
+
+        let usersAccess = [];
+        let dataPegawai = [];
+
+        async function init() {
+            await fetchPegawai();
+            await fetchUserAccess();
+            renderHeader();
+            renderTable();
+            document.getElementById('page-count').innerText = PAGES.length;
+            document.getElementById('user-count').innerText = dataPegawai.length;
+            lucide.createIcons();
+        }
+
+        function filterByName() {
+            const searchTerm = document.getElementById('search-name').value.toLowerCase();
+            const filteredPegawai = dataPegawai.filter(p => p.nama.toLowerCase().includes(searchTerm));
+            renderTable(filteredPegawai);
+        }
+
+        async function fetchPegawai() {
+            try {
+                const { data, error } = await supabase.createClient(
+                    "https://yewkffbatvrbtfliikia.supabase.co",
+                    "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg"
+                ).from('data_pegawai').select('nip, nama').order('nama', { ascending: true });
+                if (error) throw error;
+                dataPegawai = data || [];
+            } catch (err) {
+                console.error("Gagal ambil data pegawai:", err);
+                showToast("Gagal memuat data pegawai", "alert-circle", "text-rose-500");
+            }
+        }
+
+        async function fetchUserAccess() {
+            try {
+                const { data, error } = await supabase.createClient(
+                    "https://yewkffbatvrbtfliikia.supabase.co",
+                    "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg"
+                ).from('user_access').select('*');
+                if (error) throw error;
+                usersAccess = data || [];
+            } catch (err) {
+                console.error("Gagal ambil data akses:", err);
+            }
+        }
+
+        function renderHeader() {
+            const headerRow = document.getElementById('page-columns-header');
+            // Clear existing headers if any (except the static ones)
+            const staticHeaders = 2; // User & Role
+            while (headerRow.previousElementSibling && headerRow.previousElementSibling.tagName === 'TH' && headerRow.previousElementSibling.cellIndex >= staticHeaders) {
+                headerRow.previousElementSibling.remove();
+            }
+            
+            PAGES.forEach(page => {
+                const th = document.createElement('th');
+                th.className = 'p-4 text-center border-l border-slate-50 min-w-[110px] bg-slate-100';
+                th.innerHTML = `<span class="text-[8px] font-black text-slate-500 uppercase tracking-tighter block leading-tight">${page.name}</span>`;
+                headerRow.before(th);
+            });
+        }
+
+        function renderTable(displayData = dataPegawai) {
+            const tbody = document.getElementById('access-table-body');
+            tbody.innerHTML = '';
+
+            displayData.forEach((pegawai, idx) => {
+                const accessInfo = usersAccess.find(u => u.nip === pegawai.nip) || {
+                    password: '',
+                    role: 'User',
+                    access: []
+                };
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                
+                // User & Password Column (Compact)
+                let tdUser = `
+                    <td class="p-4">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-800 uppercase leading-tight">${pegawai.nama}</span>
+                            <span class="text-[8px] font-bold text-slate-400">NIP: ${pegawai.nip}</span>
+                            <div class="mt-1.5 flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                                <i data-lucide="key" class="w-2.5 h-2.5 text-slate-400"></i>
+                                <input type="text" value="${accessInfo.password}" 
+                                    onchange="updateUserData('${pegawai.nip}', 'password', this.value)"
+                                    class="bg-transparent border-none outline-none text-[10px] font-bold text-slate-700 w-full" 
+                                    placeholder="Password">
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                // Role Column (Compact)
+                let roleOptions = ROLES.map(r => `<option value="${r}" ${accessInfo.role === r ? 'selected' : ''}>${r}</option>`).join('');
+                let tdRole = `
+                    <td class="p-4">
+                        <select onchange="updateUserData('${pegawai.nip}', 'role', this.value)"
+                            class="w-full bg-sky-50 border border-sky-100 p-2 rounded-lg text-[10px] font-black text-sky-700 outline-none cursor-pointer transition-all">
+                            ${roleOptions}
+                        </select>
+                    </td>
+                `;
+
+                tr.innerHTML = tdUser + tdRole;
+
+                // Access Columns
+                PAGES.forEach(page => {
+                    const hasAccess = accessInfo.access.includes(page.id);
+                    const tdAccess = `
+                        <td class="p-4 text-center border-l border-slate-50">
+                            <input type="checkbox" class="checkbox-custom" ${hasAccess ? 'checked' : ''} 
+                                onchange="updateUserAccess('${pegawai.nip}', '${page.id}', this.checked)">
+                        </td>
+                    `;
+                    tr.innerHTML += tdAccess;
+                });
+
+                tr.innerHTML += `<td class="p-4 text-center text-slate-300 font-bold text-[8px] uppercase">DB</td>`;
+
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function updateUserData(nip, field, value) {
+            let user = usersAccess.find(u => u.nip === nip);
+            if (!user) {
+                user = { nip: nip, password: '', role: 'User', access: [] };
+                usersAccess.push(user);
+            }
+            user[field] = value;
+        }
+
+        function updateUserAccess(nip, pageId, isChecked) {
+            let user = usersAccess.find(u => u.nip === nip);
+            if (!user) {
+                user = { nip: nip, password: '', role: 'User', access: [] };
+                usersAccess.push(user);
+            }
+            if (isChecked) {
+                if (!user.access.includes(pageId)) user.access.push(pageId);
+            } else {
+                user.access = user.access.filter(id => id !== pageId);
+            }
+        }
+
+        async function saveAllSettings() {
+            const client = supabase.createClient(
+                "https://yewkffbatvrbtfliikia.supabase.co",
+                "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg"
+            );
+
+            showToast("Menyimpan perubahan...", "loader-2", "text-sky-500 animate-spin");
+            
+            try {
+                // Filter data: hanya simpan yang memiliki NIP dan ada perubahan data
+                const dataToSave = usersAccess.filter(u => u.nip && (u.password || u.role !== 'User' || (u.access && u.access.length > 0)));
+
+                if (dataToSave.length === 0) {
+                    showToast("Tidak ada perubahan untuk disimpan", "info", "text-amber-500");
+                    return;
+                }
+
+                // Bersihkan data dari kolom yang tidak ada di skema tabel Supabase (seperti 'id' jika string kosong)
+                const cleanedData = dataToSave.map(u => {
+                    const obj = {
+                        nip: String(u.nip),
+                        password: String(u.password || ''),
+                        role: String(u.role || 'User'),
+                        access: Array.isArray(u.access) ? u.access : []
+                    };
+                    return obj;
+                });
+
+                console.log("Data dikirim ke Supabase:", cleanedData);
+
+                // Menggunakan upsert dengan kolom 'nip' sebagai target konflik
+                const { data, error } = await client
+                    .from('user_access')
+                    .upsert(cleanedData, { onConflict: 'nip' });
+
+                if (error) {
+                    console.error("Supabase Error Detail:", error);
+                    throw error;
+                }
+                
+                showToast("Pengaturan akses berhasil disimpan!", "check-circle", "text-emerald-500");
+                await fetchUserAccess();
+                renderTable();
+            } catch (err) {
+                console.error("Gagal simpan:", err);
+                // Tampilkan pesan error yang lebih detail kepada user
+                const errorMsg = err.details || err.message || "Masalah jaringan atau database";
+                showToast(`Gagal: ${errorMsg}`, "alert-triangle", "text-rose-500");
+            }
+        }
+
+        function showToast(msg, icon, iconColor) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastMsg.innerText = msg;
+            toastIcon.setAttribute('data-lucide', icon);
+            toastIcon.className = `w-5 h-5 ${iconColor}`;
+            
+            lucide.createIcons();
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
+

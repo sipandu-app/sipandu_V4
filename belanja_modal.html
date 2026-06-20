@@ -1,0 +1,774 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BELANJA MODAL - SIPANDU</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-black font-sans">
+    <div id="root"></div>
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- KONFIGURASI SUPABASE ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const PIN_AKSES = "888";
+        const CLOUDINARY_CLOUD_NAME = "dkxehjgu0";
+        const CLOUDINARY_UPLOAD_PRESET = "belanja_pakaian"; 
+
+        const tableName = 'modal';
+        // Design Tokens
+        const yellowButton = "bg-yellow-400 text-black hover:bg-yellow-500 shadow-yellow-100 transition-all active:scale-95";
+        const filterInputBase = "w-full px-3 py-2 bg-white/90 border border-black/10 rounded-xl text-[10px] font-black text-black outline-none focus:ring-2 focus:ring-yellow-600/20 transition-all placeholder:text-black/40";
+        const labelClass = "text-[8px] font-black uppercase text-black flex items-center gap-1 opacity-80 mb-0.5";
+        const inputBase = "w-full p-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none";
+
+        // --- MOCK LUCIDE ICONS (SVG) ---
+        const Icon = ({ path, size = 24, className = '', viewBox = "0 0 24 24" }) => (
+            <svg className={className} width={size} height={size} fill="none" viewBox={viewBox} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+
+        const Save = (props) => <Icon {...props} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />;
+        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />;
+        const Tv = (props) => <Icon {...props} path={<><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></>} />;
+        const Edit3 = (props) => <Icon {...props} path={<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>} />;
+        const Loader2 = (props) => <Icon {...props} className={`${props.className} animate-spin`} path={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+        const Lock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+        const Unlock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
+        const PlusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></>} />;
+        const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+        const History = (props) => <Icon {...props} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></>} />;
+        const Settings = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
+        const Database = (props) => <Icon {...props} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></>} />;
+        const UploadCloud = (props) => <Icon {...props} path={<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></>} />;
+        const FileSpreadsheet = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />;
+        const ShieldCheck = (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>} />;
+        const RotateCw = (props) => <Icon {...props} path={<><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></>} />;
+        const Printer = (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />;
+        const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+        const Camera = (props) => <Icon {...props} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
+        const FileText = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>} />;
+        const Star = (props) => <Icon {...props} path={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>} />;
+        const RotateCcw = (props) => <Icon {...props} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></>} />;
+        const Package = (props) => <Icon {...props} path={<><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05"/><path d="M12 22.08V12"/></>} />;
+        const AlertCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+        const XCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>} />;
+        const FileUp = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></>} />;
+        const ExternalLink = (props) => <Icon {...props} path={<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>} />;
+
+        const formatRibuan = (v) => {
+            if (v === undefined || v === null || v === '') return "0";
+            const valueStr = v.toString().replace(/\D/g, "");
+            if (!valueStr) return "0";
+            return new Intl.NumberFormat('id-ID').format(parseInt(valueStr));
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('history'); 
+            const [syncStatus, setSyncStatus] = useState('Menghubungkan...');
+            const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+            const [listData, setListData] = useState([]);
+            const [editId, setEditId] = useState(null);
+            
+            // States untuk Filter
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterUnit, setFilterUnit] = useState('Semua');
+            const [filterMonthStart, setFilterMonthStart] = useState(''); 
+            const [filterMonthEnd, setFilterMonthEnd] = useState('');     
+
+            const [sortConfig] = useState({ key: 'nomor_bp', direction: 'desc' });
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [uploadingIdx, setUploadingIdx] = useState(null);
+            const [uploadingDoc, setUploadingDoc] = useState(false);
+            const [photoRotations, setPhotoRotations] = useState([0, 0, 0, 0]);
+
+            const [showLainnyaPenyedia, setShowLainnyaPenyedia] = useState(false);
+            const [customPenyedia, setCustomPenyedia] = useState('');
+            const [showLainnyaKategori, setShowLainnyaKategori] = useState(false);
+            const [customKategori, setCustomKategori] = useState('');
+            
+            const [showPinModal, setShowPinModal] = useState({ 
+                show: false, 
+                targetId: null, 
+                action: null, 
+                value: '', 
+                currentLockStatus: null 
+            });
+
+            const [printDateModal, setPrintDateModal] = useState({
+                show: false,
+                item: null,
+                date: new Date().toISOString().split('T')[0]
+            });
+            
+            const restoreInputRef = useRef(null);
+
+            const initialForm = {
+                unit_kerja: '', 
+                tanggal_belanja: '', 
+                nomor_bp: '', 
+                jenis_pakaian: '', 
+                uraian: '', 
+                penyedia: '', 
+                penerima_barang: '',
+                volume: '', 
+                satuan: 'Pesanan', 
+                harga_satuan: '', 
+                nominal: 0, 
+                photos: [null, null, null, null],
+                document_url: null,
+                is_locked: false
+            };
+
+            const [form, setForm] = useState(initialForm);
+
+            const unitKerjaOptions = ["PPSDI Raharjo", "RPSLU Mojomulyo", "RPSA Pamardi Siwi", "RPS PMKS Gondang"];
+            
+            const defaultJenisPakaian = [
+                "5.2.2.5.1.5 Belanja Modal Alat Kantor Lainnya",
+                "5.2.2.5.2.4 Belanja Modal Alat Pendingin",
+                "5.2.2.5.2.6 Belanja Modal Alat Rumah Tangga Lainnya (Home Use)",
+                "5.2.2.5.2.5 Belanja Modal Alat Dapur",
+                "5.2.2.5.2.1 Belanja Modal Mebel",
+                "5.2.2.5.2.7 Belanja Modal Alat Pemadam Kebakaran"
+            ];
+
+            const defaultPenyedia = ["CV. Renata Citra Mandiri", "CV. Wibowo"];
+            const satuanOptions = ["Pesanan", "Pcs", "Stel", "Pasang", "Paket", "Unit", "Set", "Kodi"];
+
+            const fetchData = async () => {
+                setSyncStatus('Menghubungkan...');
+                try {
+                    const { data, error } = await supabaseClient
+                        .from(tableName)
+                        .select('*')
+                        .order('nomor_bp', { ascending: false, nullsFirst: false });
+                    
+                    if (error) {
+                        console.error("Supabase Error:", error);
+                        setSyncStatus('Terputus');
+                        showNotif(`Gagal Memuat Data: ${error.message}`, "error");
+                    } else {
+                        setListData(data || []);
+                        setSyncStatus('Terkoneksi');
+                    }
+                } catch (err) {
+                    console.error("Fetch Error:", err);
+                    setSyncStatus('Terputus');
+                    showNotif("Kesalahan Koneksi", "error");
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+                const channel = supabaseClient
+                    .channel('schema-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
+                    .subscribe();
+                
+                return () => supabaseClient.removeChannel(channel);
+            }, []);
+
+            const showNotif = (message, type = 'success') => {
+                setNotification({ show: true, message: String(message), type });
+                setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+            };
+
+            const handleResetFilters = () => {
+                setSearchTerm('');
+                setFilterUnit('Semua');
+                setFilterMonthStart('');
+                setFilterMonthEnd('');
+                showNotif("Filter pencarian telah dikosongkan");
+            };
+
+            const filteredData = useMemo(() => {
+                let result = [...listData].filter(item => {
+                    const matchSearch = (item.uraian?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || 
+                                        (item.penerima_barang?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+                                        (item.penyedia?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+                                        (item.nomor_bp?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+                    
+                    const matchUnit = filterUnit === 'Semua' || item.unit_kerja === filterUnit;
+                    
+                    let matchRange = true;
+                    if (item.tanggal_belanja) {
+                        const itemDateStr = item.tanggal_belanja.substring(0, 7); 
+                        if (filterMonthStart && itemDateStr < filterMonthStart) matchRange = false;
+                        if (filterMonthEnd && itemDateStr > filterMonthEnd) matchRange = false;
+                    }
+
+                    return matchSearch && matchUnit && matchRange;
+                });
+
+                result.sort((a, b) => {
+                    if (sortConfig.key === 'nomor_bp') {
+                        const numA = parseFloat(a.nomor_bp) || 0;
+                        const numB = parseFloat(b.nomor_bp) || 0;
+                        if (numA !== numB) {
+                            return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                        }
+                    }
+                    const valA = a[sortConfig.key] || 0;
+                    const valB = b[sortConfig.key] || 0;
+                    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                return result;
+            }, [listData, searchTerm, filterUnit, filterMonthStart, filterMonthEnd, sortConfig]);
+
+            const totalNilai = useMemo(() => filteredData.reduce((acc, curr) => acc + (parseFloat(curr.nominal) || 0), 0), [filteredData]);
+            const totalItemCount = useMemo(() => filteredData.length, [filteredData]);
+
+            const handleRotate = (idx) => {
+                setPhotoRotations(prev => {
+                    const next = [...prev];
+                    next[idx] = (next[idx] + 90) % 360;
+                    return next;
+                });
+            };
+
+            const handleExportXLSX = () => {
+                if (filteredData.length === 0) {
+                    showNotif("Tidak ada data untuk diekspor", "error");
+                    return;
+                }
+                
+                const excelData = filteredData.map((item, idx) => ({
+                    "No": idx + 1,
+                    "Unit Kerja": item.unit_kerja,
+                    "Tanggal": item.tanggal_belanja,
+                    "Nomor BP": item.nomor_bp,
+                    "Kategori": item.jenis_pakaian,
+                    "Uraian Pekerjaan": item.uraian,
+                    "Penyedia": item.penyedia,
+                    "Volume": item.volume,
+                    "Satuan": item.satuan,
+                    "Harga Satuan": item.harga_satuan,
+                    "Total Nominal": item.nominal,
+                    "Penerima": item.penerima_barang
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Rekap Pengadaan");
+                XLSX.writeFile(wb, `REKAP_PBJ_MODAL_${Date.now()}.xlsx`);
+            };
+
+            const uploadToCloudinary = async (file, index = null) => {
+                if (!file) return;
+                if (index !== null) setUploadingIdx(index);
+                else setUploadingDoc(true);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                
+                try {
+                    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.secure_url) {
+                        if (index !== null) {
+                            setForm(prev => {
+                                const ph = [...prev.photos];
+                                ph[index] = data.secure_url;
+                                return { ...prev, photos: ph };
+                            });
+                            showNotif("Unggah foto berhasil");
+                        } else {
+                            setForm(prev => ({ ...prev, document_url: data.secure_url }));
+                            showNotif("Unggah dokumen PDF berhasil");
+                        }
+                    }
+                } catch (err) {
+                    showNotif("Unggah gagal.", "error");
+                } finally {
+                    setUploadingIdx(null);
+                    setUploadingDoc(false);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (isSubmitting || uploadingIdx !== null || uploadingDoc) return;
+                
+                setIsSubmitting(true);
+                const finalPenyedia = showLainnyaPenyedia ? customPenyedia : form.penyedia;
+                const finalKategori = showLainnyaKategori ? customKategori : form.jenis_pakaian;
+                const hs = parseFloat(form.harga_satuan.toString().replace(/\D/g, "")) || 0;
+                const vol = parseFloat(form.volume) || 0;
+                
+                const cleanPhotos = form.photos.filter(p => p !== null);
+                const { id, created_at, updated_at, ...rest } = form;
+
+                const payload = { 
+                    ...rest, 
+                    penyedia: finalPenyedia || '',
+                    jenis_pakaian: finalKategori || '',
+                    harga_satuan: hs,
+                    nominal: vol * hs,
+                    photos: cleanPhotos,
+                    updated_at: new Date().toISOString()
+                };
+
+                try {
+                    let error;
+                    if (editId) {
+                        ({ error } = await supabaseClient.from(tableName).update(payload).eq('id', editId));
+                    } else {
+                        ({ error } = await supabaseClient.from(tableName).insert([payload]));
+                    }
+                    if (error) throw error;
+                    showNotif("Data Berhasil Disimpan");
+                    setActiveTab('history');
+                    resetForm();
+                    fetchData();
+                } catch (err) { showNotif("Gagal menyimpan data", "error"); }
+                finally { setIsSubmitting(false); }
+            };
+
+            const resetForm = () => {
+                setEditId(null);
+                setForm(initialForm);
+                setShowLainnyaPenyedia(false);
+                setShowLainnyaKategori(false);
+                setCustomPenyedia('');
+                setCustomKategori('');
+                setPhotoRotations([0, 0, 0, 0]);
+            };
+
+            const handleEdit = (item) => {
+                if(item.is_locked) return;
+                setEditId(item.id);
+
+                // Deteksi Penyedia Custom
+                const isCustomPenyedia = !defaultPenyedia.includes(item.penyedia);
+                if (isCustomPenyedia) {
+                    setShowLainnyaPenyedia(true);
+                    setCustomPenyedia(item.penyedia);
+                } else {
+                    setShowLainnyaPenyedia(false);
+                    setCustomPenyedia('');
+                }
+
+                // Deteksi Kategori Custom
+                const isCustomKategori = !defaultJenisPakaian.includes(item.jenis_pakaian);
+                if (isCustomKategori) {
+                    setShowLainnyaKategori(true);
+                    setCustomKategori(item.jenis_pakaian);
+                } else {
+                    setShowLainnyaKategori(false);
+                    setCustomKategori('');
+                }
+
+                const ph = [...(item.photos || [])];
+                while(ph.length < 4) ph.push(null);
+                
+                // Pastikan harga_satuan dikirim sebagai string agar formatRibuan bekerja
+                setForm({ 
+                    ...item, 
+                    photos: ph,
+                    harga_satuan: item.harga_satuan ? item.harga_satuan.toString() : ''
+                });
+                setActiveTab('input');
+            };
+
+            const handleVerifyPin = async () => {
+                if (showPinModal.value !== PIN_AKSES) {
+                    showNotif("PIN Salah!", "error");
+                    return;
+                }
+                const { action, targetId, currentLockStatus } = showPinModal;
+                setShowPinModal({ show: false, targetId: null, action: null, value: '', currentLockStatus: null });
+
+                try {
+                    if (action === 'DELETE') {
+                        await supabaseClient.from(tableName).delete().eq('id', targetId);
+                        showNotif("Data dihapus");
+                    } else if (action === 'TOGGLE_LOCK') {
+                        await supabaseClient.from(tableName).update({
+                            is_locked: !currentLockStatus, updated_at: new Date().toISOString()
+                        }).eq('id', targetId);
+                        showNotif(currentLockStatus ? "Data dibuka" : "Data dikunci");
+                    } else if (action === 'BACKUP') {
+                        const dataStr = JSON.stringify(listData);
+                        const blob = new Blob([dataStr], {type: "application/json"});
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `BACKUP_MODAL_${new Date().getTime()}.json`;
+                        link.click();
+                        showNotif("Backup selesai");
+                    } else if (action === 'RESTORE') {
+                        restoreInputRef.current?.click();
+                    }
+                    fetchData();
+                } catch (err) { showNotif("Gagal melakukan aksi", "error"); }
+            };
+
+            const handleRestore = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target?.result);
+                        if (!Array.isArray(data)) throw new Error("Format file tidak valid (Harus Array)");
+                        
+                        setIsSubmitting(true);
+                        
+                        // Pembersihan data yang lebih kuat sesuai skema tabel 'modal'
+                        const cleanData = data.map(item => {
+                            // Cek berbagai kemungkinan nama field untuk nomor BP
+                            const bp = item.nomor_bp || item.nomor_bukti || item.no_bp || item.no_bukti || "-";
+                            
+                            const { 
+                                unit_kerja, tanggal_belanja,
+                                jenis_pakaian, uraian, penyedia, penerima_barang, 
+                                volume, satuan, harga_satuan, nominal, 
+                                photos, document_url, is_locked 
+                            } = item;
+
+                            return {
+                                unit_kerja: unit_kerja || "Tanpa Unit",
+                                tanggal_belanja: tanggal_belanja || new Date().toISOString().split('T')[0],
+                                nomor_bp: bp,
+                                jenis_pakaian: jenis_pakaian || "Belanja Modal",
+                                uraian: uraian || "-",
+                                penyedia: penyedia || "-",
+                                penerima_barang: penerima_barang || "-",
+                                volume: parseFloat(volume) || 0,
+                                satuan: satuan || "Unit",
+                                harga_satuan: parseFloat(harga_satuan) || 0,
+                                nominal: parseFloat(nominal) || (parseFloat(volume) || 0) * (parseFloat(harga_satuan) || 0),
+                                photos: Array.isArray(photos) ? photos : [],
+                                document_url: document_url || null,
+                                is_locked: !!is_locked,
+                                updated_at: new Date().toISOString()
+                            };
+                        });
+
+                        const { error } = await supabaseClient.from(tableName).insert(cleanData);
+                        
+                        if (error) {
+                            console.error("Supabase Restore Error:", error);
+                            throw new Error(`Gagal Simpan ke Supabase: ${error.message}`);
+                        }
+                        
+                        showNotif(`Berhasil restore ${data.length} data`);
+                        fetchData();
+                    } catch (err) {
+                        console.error("Restore Error:", err);
+                        showNotif("Gagal Restore: " + err.message, "error");
+                    } finally {
+                        setIsSubmitting(false);
+                        e.target.value = "";
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const executePrint = (item, selectedDate) => {
+                const printWindow = window.open('', '_blank');
+                const formattedDate = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                const activePhotos = item.photos || [];
+                let photoGridStyle = "grid-template-columns: repeat(2, 1fr);";
+                if (activePhotos.length === 1) photoGridStyle = "grid-template-columns: 1fr;";
+                
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Cetak Bukti Belanja F4</title>
+                            <style>
+                                @page { size: 215.9mm 330.2mm; margin: 15mm 20mm; }
+                                body { font-family: 'Segoe UI', sans-serif; padding: 0; margin: 0; color: #000; line-height: 1.25; font-size: 11.5px; }
+                                .container { width: 100%; }
+                                .title { font-weight: 900; font-size: 18px; text-transform: uppercase; text-align: center; margin-bottom: 25px; border-bottom: 3px double #000; padding-bottom: 10px; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                                th { text-align: left; width: 170px; padding: 6px 0; font-weight: 800; vertical-align: top; }
+                                td { padding: 6px 0; vertical-align: top; }
+                                .total-box { background: #f1f1f1 !important; padding: 12px 18px; border: 1.5px solid #000; font-weight: 900; font-size: 15px; margin-bottom: 25px; display: inline-block; -webkit-print-color-adjust: exact; }
+                                .photo-grid { display: grid; ${photoGridStyle} gap: 15px; margin-top: 15px; }
+                                .photo-item { width: 100%; height: 240px; object-fit: contain; border: 1px solid #ccc; border-radius: 6px; background: #fafafa; }
+                                .footer { margin-top: 40px; text-align: right; padding-right: 30px; font-size: 13.5px; }
+                                .footer-name { margin-top: 60px; font-weight: 900; text-decoration: underline; font-size: 14px; }
+                                @media print { body { -webkit-print-color-adjust: exact; } }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="title">Dokumentasi Belanja Modal</div>
+                                <table>
+                                    <tr><th>Unit Kerja</th><td>: ${item.unit_kerja}</td></tr>
+                                    <tr><th>Tanggal Belanja</th><td>: ${item.tanggal_belanja}</td></tr>
+                                    <tr><th>Kategori Barang</th><td>: ${item.jenis_pakaian}</td></tr>
+                                    <tr><th>Uraian Detail</th><td>: ${item.uraian}</td></tr>
+                                    <tr><th>Nama Penyedia</th><td>: ${item.penyedia}</td></tr>
+                                    <tr><th>Nomor BP</th><td>: ${item.nomor_bp}</td></tr>
+                                    <tr><th>Volume & Harga</th><td>: ${item.volume} ${item.satuan} x Rp ${formatRibuan(item.harga_satuan)}</td></tr>
+                                </table>
+                                <div class="total-box">TOTAL BELANJA: Rp ${formatRibuan(item.nominal)}</div>
+                                <div class="photo-grid">
+                                    ${activePhotos.map(p => `<img src="${p}" class="photo-item"/>`).join('')}
+                                </div>
+                                <div class="footer">
+                                    Sragen, ${formattedDate}<br/>Penerima Barang,<br/>
+                                    <div class="footer-name">${item.penerima_barang || '................................................'}</div>
+                                </div>
+                            </div>
+                            <script>
+                                window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }
+                            <\/script>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-black pb-10 font-sans">
+                    {/* Header */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-[100] px-6 py-3 flex justify-between items-center shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-yellow-400 p-2 rounded-xl text-black shadow-lg shadow-yellow-100"><Tv size={18} /></div>
+                            <div>
+                                <h1 className="font-black text-[13px] uppercase tracking-tight text-black leading-none">BELANJA <span className="text-yellow-600">MODAL</span></h1>
+                                <p className="text-[7.5px] font-black text-black/60 uppercase tracking-widest mt-1">Pengadaan Sarpras </p>
+                            </div>
+                        </div>
+                        <nav className="flex bg-slate-100 p-1 rounded-xl gap-1 border border-slate-200">
+                            <button onClick={() => { setActiveTab('input'); resetForm(); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase transition-all ${activeTab === 'input' ? 'bg-yellow-400 text-black shadow-md' : 'text-black/60 hover:bg-white'}`}><PlusCircle size={13} /> INPUT</button>
+                            <button onClick={() => setActiveTab('history')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase transition-all ${activeTab === 'history' ? 'bg-yellow-400 text-black shadow-md' : 'text-black/60 hover:bg-white'}`}><History size={13} /> RIWAYAT</button>
+                            <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase transition-all ${activeTab === 'settings' ? 'bg-yellow-400 text-black shadow-md' : 'text-black/60 hover:bg-white'}`}><Settings size={13} />SETTING</button>
+                        </nav>
+                    </header>
+
+                    <main className="p-4 max-w-full mx-auto px-6">
+                        {activeTab === 'input' && (
+                            <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+                                    <div className="bg-yellow-400 p-5 flex justify-between items-center">
+                                        <h2 className="text-xs font-black uppercase text-black flex items-center gap-2"><FileText size={16}/> {editId ? "Ubah Data" : "Input Pengadaan Baru"}</h2>
+                                        <Star size={18} className="text-black opacity-40" />
+                                    </div>
+                                    <div className="p-8 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div><span className={labelClass}>Unit Kerja</span><select required value={form.unit_kerja} onChange={e=>setForm({...form, unit_kerja: e.target.value})} className={inputBase}><option value="">Pilih Unit...</option>{unitKerjaOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                            <div><span className={labelClass}>Tanggal Belanja</span><input required type="date" value={form.tanggal_belanja} onChange={e=>setForm({...form, tanggal_belanja: e.target.value})} className={inputBase} /></div>
+                                            <div><span className={labelClass}>Nomor BP</span><input required value={form.nomor_bp} onChange={e=>setForm({...form, nomor_bp: e.target.value})} placeholder="Contoh: BP-001" className={inputBase} /></div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <div className="flex justify-between items-center mb-0.5"><span className={labelClass}>Penyedia / Toko</span><button type="button" onClick={()=>setShowLainnyaPenyedia(!showLainnyaPenyedia)} className="text-[7.5px] font-black text-yellow-600 hover:underline uppercase">Baru</button></div>
+                                                {showLainnyaPenyedia ? <input placeholder="Nama Toko Baru" value={customPenyedia} onChange={e=>setCustomPenyedia(e.target.value)} className={inputBase} /> : <select required value={form.penyedia} onChange={e=>setForm({...form, penyedia: e.target.value})} className={inputBase}><option value="">Pilih Penyedia...</option>{defaultPenyedia.map(o=><option key={o} value={o}>{o}</option>)}</select>}
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-0.5"><span className={labelClass}>Kategori Belanja</span><button type="button" onClick={()=>setShowLainnyaKategori(!showLainnyaKategori)} className="text-[7.5px] font-black text-yellow-600 hover:underline uppercase">Baru</button></div>
+                                                {showLainnyaKategori ? <input placeholder="Kategori Baru" value={customKategori} onChange={e=>setCustomKategori(e.target.value)} className={inputBase} /> : <select required value={form.jenis_pakaian} onChange={e=>setForm({...form, jenis_pakaian: e.target.value})} className={inputBase}><option value="">Pilih Kategori...</option>{defaultJenisPakaian.map(o=><option key={o} value={o}>{o}</option>)}</select>}
+                                            </div>
+                                        </div>
+                                        <div><span className={labelClass}>Uraian Pekerjaan / Barang</span><textarea required rows={2} placeholder="Uraian Belanja Sesuai Bukti Pembayaran..." value={form.uraian} onChange={e=>setForm({...form, uraian: e.target.value})} className={`${inputBase} resize-none`} /></div>
+                                        <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-200 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                            <div><span className="text-[8px] font-black uppercase text-black/60 flex items-center gap-1 mb-0.5">Volume</span><input required type="number" step="any" value={form.volume} onChange={e=>setForm({...form, volume: e.target.value})} className="w-full p-2 bg-white border border-yellow-200 focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none" /></div>
+                                            <div><span className="text-[8px] font-black uppercase text-black/60 flex items-center gap-1 mb-0.5">Satuan</span><select value={form.satuan} onChange={e=>setForm({...form, satuan: e.target.value})} className="w-full p-2 bg-white border border-yellow-200 focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none">{satuanOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                            <div><span className="text-[8px] font-black uppercase text-black/60 flex items-center gap-1 mb-0.5">Harga Satuan (Rp)</span><input required value={formatRibuan(form.harga_satuan)} onChange={e=>setForm({...form, harga_satuan: e.target.value.replace(/\D/g, "")})} className="w-full p-2 bg-white border border-yellow-200 focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none" /></div>
+                                            <div className="text-right"><p className="text-[8px] font-black text-yellow-700 uppercase">Total</p><p className="text-base font-black text-black leading-tight">Rp {formatRibuan((parseFloat(form.volume)||0)*(parseFloat(form.harga_satuan)||0))}</p></div>
+                                        </div>
+                                        <div><span className={labelClass}>Nama Penerima Barang</span><input required value={form.penerima_barang} onChange={e=>setForm({...form, penerima_barang: e.target.value})} placeholder="" className={inputBase} /></div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <span className={labelClass}>Dokumentasi Foto</span>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-1.5">
+                                                    {form.photos.map((p, idx)=>(
+                                                        <div key={idx} className="aspect-square bg-slate-50 rounded-xl border-2 border-dashed border-black/10 flex items-center justify-center relative overflow-hidden group">
+                                                            {p ? (
+                                                                <>
+                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-100"><img src={p} alt="Doc" style={{ transform: `rotate(${photoRotations[idx]}deg)` }} className="max-w-full max-h-full object-contain transition-transform duration-300" /></div>
+                                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                                                                        <button type="button" onClick={()=>handleRotate(idx)} className="bg-yellow-400 text-black p-2 rounded-lg shadow-xl" title="Putar"><RotateCw size={12}/></button>
+                                                                        <button type="button" onClick={()=>setForm(prev=>{const ph=[...prev.photos]; ph[idx]=null; return {...prev, photos:ph}})} className="bg-rose-500 text-white p-2 rounded-lg shadow-xl" title="Hapus"><Trash2 size={12}/></button>
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-black/30 hover:text-yellow-600 transition-colors">
+                                                                    {uploadingIdx===idx ? <Loader2 className="animate-spin text-yellow-500" size={16}/> : <><Camera size={20} strokeWidth={2}/><span className="text-[7.5px] font-black mt-1 uppercase">Upload</span></>}
+                                                                    <input type="file" accept="image/*" hidden onChange={e=>uploadToCloudinary(e.target.files[0], idx)}/>
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className={labelClass}>Dokumen Belanja Modal (PDF / Berkas)</span>
+                                                <div className="mt-1.5">
+                                                    {form.document_url ? (
+                                                        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                                            <div className="p-2 bg-emerald-600 text-white rounded-lg"><FileText size={18} /></div>
+                                                            <div className="flex-1 min-w-0"><p className="text-[10px] font-black text-emerald-900 uppercase truncate">Dokumen Modal Terupload</p><a href={form.document_url} target="_blank" rel="noopener noreferrer" className="text-[8px] font-black text-emerald-600 flex items-center gap-1 hover:underline">BUKA PDF <ExternalLink size={10}/></a></div>
+                                                            <button type="button" onClick={()=>setForm(prev=>({...prev, document_url: null}))} className="p-2 text-emerald-900/30 hover:text-rose-600 transition-colors"><XCircle size={18}/></button>
+                                                        </div>
+                                                    ) : (
+                                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-black/10 rounded-xl bg-slate-50 hover:bg-white hover:border-yellow-400 cursor-pointer transition-all">
+                                                            {uploadingDoc ? <div className="flex flex-col items-center gap-2"><Loader2 className="animate-spin text-yellow-500" size={24}/><span className="text-[8px] font-black text-black/40 uppercase">Mengunggah PDF </span></div> : <><FileUp size={24} className="text-black/20" /><span className="text-[9px] font-black text-black/40 mt-2 uppercase text-center px-4">Klik untuk Upload PDF Belanja Modal</span><span className="text-[7px] text-black/20 uppercase mt-1">Diterima: PDF, Gambar Scan</span></>}
+                                                            <input type="file" accept=".pdf,image/*" hidden onChange={e=>uploadToCloudinary(e.target.files[0])}/>
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 pt-4 border-t border-slate-200">
+                                            <button type="button" onClick={() => setActiveTab('history')} className="flex-1 py-3 bg-slate-100 text-black/50 font-black text-[10px] uppercase rounded-xl">Batal</button>
+                                            <button type="submit" disabled={isSubmitting} className={`flex-1 py-3 ${yellowButton} font-black text-[10px] uppercase rounded-xl shadow-lg`}>{isSubmitting ? <Loader2 className="animate-spin mx-auto" size={16}/> : (editId ? "Update Data" : "Simpan Data")}</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <div className="space-y-4 animate-in fade-in duration-500">
+                                <div className="bg-yellow-400 p-3 rounded-2xl shadow-lg shadow-yellow-100 flex flex-wrap md:flex-nowrap items-center gap-3 border border-yellow-500/20 overflow-x-auto no-scrollbar">
+                                    <div className="flex-[3] min-w-[200px] relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/60"/><input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className={`${filterInputBase} pl-9`} placeholder="Cari uraian, toko, atau nomor..."/></div>
+                                    <div className="flex-1 min-w-[140px]"><select value={filterUnit} onChange={e=>setFilterUnit(e.target.value)} className={filterInputBase}><option value="Semua">Semua Unit</option>{unitKerjaOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                    <div className="flex items-center gap-2 bg-white/40 px-3 py-1.5 rounded-xl border border-black/10 shrink-0"><input type="month" value={filterMonthStart} onChange={e=>setFilterMonthStart(e.target.value)} className="bg-transparent text-[10px] font-black outline-none text-black" /><span className="text-black/40 font-black text-[10px]">s/d</span><input type="month" value={filterMonthEnd} onChange={e=>setFilterMonthEnd(e.target.value)} className="bg-transparent text-[10px] font-black outline-none text-black" /></div>
+                                    <div className="flex items-center gap-2 shrink-0 ml-auto md:ml-0"><button onClick={handleResetFilters} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/30 text-black border border-black/5 hover:bg-white/60 transition-all active:scale-95 shadow-sm" title="Reset Semua Filter"><RotateCcw size={14}/><span className="text-[9px] font-black uppercase">Reset</span></button><div className="h-6 w-[1px] bg-black/10 mx-1"></div><button onClick={handleExportXLSX} className="bg-black text-yellow-400 px-4 py-2 rounded-xl shadow-lg hover:bg-slate-900 transition-all flex items-center gap-2"><FileSpreadsheet size={15}/><span className="text-[9px] font-black uppercase">Export</span></button></div>
+                                </div>
+                                <div className="flex justify-end gap-6 px-4 py-1">
+                                    <div className="flex items-center gap-2"><div className="p-2 bg-slate-200 rounded-lg text-black"><Package size={14}/></div><div><p className="text-[7.5px] font-black text-black/60 uppercase leading-none mb-0.5">Baris</p><p className="text-[13px] font-black text-black leading-none">{totalItemCount}</p></div></div>
+                                    <div className="flex items-center gap-2"><div className="p-2 bg-yellow-100 rounded-lg text-yellow-700"><Database size={14}/></div><div><p className="text-[7.5px] font-black text-black/60 uppercase leading-none mb-0.5">Total</p><p className="text-[13px] font-black text-black leading-none">Rp {formatRibuan(totalNilai)}</p></div></div>
+                                </div>
+                                <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-yellow-400 text-black font-black text-[9px] uppercase tracking-wider">
+                                                <tr><th className="px-5 py-4 w-12 text-center">No</th><th className="px-5 py-4">Unit & Tanggal</th><th className="px-5 py-4">Nomor BP</th><th className="px-5 py-4">Uraian & Penyedia</th><th className="px-5 py-4 text-center">Volume</th><th className="px-5 py-4 text-right">Nominal</th><th className="px-5 py-4 text-center">Aksi</th></tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200">
+                                                {filteredData.length > 0 ? filteredData.map((item, index) => (
+                                                    <tr key={item.id} className="hover:bg-yellow-50/70 group transition-colors">
+                                                        <td className="px-5 py-4 text-center"><span className="text-[10px] font-black text-black/30">{index + 1}</span></td>
+                                                        <td className="px-5 py-4"><div className="flex flex-col"><span className="text-[9px] font-black text-yellow-700 uppercase mb-0.5">{item.unit_kerja}</span><span className="text-[10px] font-black text-black flex items-center gap-1"><History size={9} className="text-black/40"/> {item.tanggal_belanja}</span></div></td>
+                                                        <td className="px-5 py-4 text-[10.5px] font-black text-slate-700">{item.nomor_bp || '-'}</td>
+                                                        <td className="px-5 py-4"><div className="flex flex-col"><span className="text-[10px] font-black text-black uppercase leading-tight flex items-center gap-2">{item.uraian}{item.document_url && <span className="bg-emerald-100 text-emerald-600 p-1 rounded-md" title="Dokumen Belanja Modal Tersedia"><FileText size={10}/></span>}</span><div className="flex items-center gap-2 mt-0.5"><span className="text-[8.5px] font-black text-black/50 flex items-center gap-1"><Tv size={9} className="text-yellow-600"/> {item.penyedia}</span></div></div></td>
+                                                        <td className="px-5 py-4 text-center"><span className="inline-block px-2 py-0.5 bg-slate-100 border border-black/5 rounded-full text-[9px] font-black text-black/60 uppercase">{item.volume} {item.satuan}</span></td>
+                                                        <td className="px-5 py-4 text-right"><span className="text-[11.5px] font-black text-black">Rp {formatRibuan(item.nominal)}</span></td>
+                                                        <td className="px-5 py-4"><div className="flex justify-center gap-1.5"><button onClick={()=>setPrintDateModal({show:true, item, date: new Date().toISOString().split('T')[0]})} className="p-2 bg-slate-100 text-black/40 rounded-lg hover:bg-yellow-400 hover:text-black shadow-sm" title="Cetak Dokumentasi F4"><Printer size={13}/></button>{item.document_url && <a href={item.document_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white shadow-sm transition-colors" title="Download Dokumen Modal"><Download size={13}/></a>}{!item.is_locked && <button onClick={()=>handleEdit(item)} className="p-2 bg-slate-100 text-black/40 rounded-lg hover:bg-emerald-600 hover:text-white shadow-sm"><Edit3 size={13}/></button>}<button onClick={()=>setShowPinModal({show:true, action:'TOGGLE_LOCK', targetId:item.id, currentLockStatus:item.is_locked, value:''})} className={`p-2 rounded-lg shadow-sm ${item.is_locked ? 'bg-black text-yellow-400' : 'bg-slate-100 text-black/40 hover:bg-slate-200'}`}>{item.is_locked ? <Lock size={13}/> : <Unlock size={13}/>}</button>{!item.is_locked && <button onClick={()=>setShowPinModal({show:true, action:'DELETE', targetId:item.id, value:''})} className="p-2 bg-slate-100 text-black/40 rounded-lg hover:bg-rose-600 hover:text-white shadow-sm"><Trash2 size={13}/></button>}</div></td>
+                                                    </tr>
+                                                )) : (<tr><td colSpan={7} className="px-5 py-12 text-center text-black/20 font-black uppercase text-[9px]">Data tidak ditemukan dengan kriteria filter tersebut</td></tr>)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="max-w-xl mx-auto py-12 text-center animate-in zoom-in duration-300">
+                                <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-200">
+                                    <div className="w-20 h-20 bg-yellow-50 text-yellow-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><Database size={36}/></div>
+                                    <h3 className="text-lg font-black text-black uppercase mb-1">Manajemen Database</h3>
+                                    <p className="text-black/40 text-[10px] font-black max-w-xs mx-auto mb-8 uppercase tracking-wider">Download atau restore data sistem pengadaan</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button onClick={() => setShowPinModal({show:true, action:'BACKUP', targetId:null, value:''})} className="flex flex-col items-center gap-2 p-5 bg-slate-50 rounded-3xl border border-black/5 hover:bg-yellow-400 hover:text-black transition-all group"><Download size={20} className="text-yellow-600 group-hover:text-black"/><span className="font-black text-[9px] uppercase">Download JSON</span></button>
+                                        <button onClick={() => setShowPinModal({show:true, action:'RESTORE', targetId:null, value:''})} className="flex flex-col items-center gap-2 p-5 bg-slate-50 rounded-3xl border border-black/5 hover:bg-emerald-600 hover:text-white transition-all group"><UploadCloud size={20} className="text-emerald-600 group-hover:text-white"/><span className="font-black text-[9px] uppercase">Restore Data</span></button>
+                                    </div>
+                                    <input type="file" hidden ref={restoreInputRef} accept=".json" onChange={handleRestore}/>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Modals */}
+                    {showPinModal.show && (
+                        <div className="fixed inset-0 z-[1001] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-[280px] rounded-[2.5rem] p-8 shadow-2xl text-center animate-in zoom-in duration-200 border border-slate-200">
+                                <div className="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-inner"><ShieldCheck size={28} className="text-yellow-600"/></div>
+                                <h4 className="font-black text-yellow-700 uppercase text-[9px] mb-1 tracking-widest">Otoritas</h4>
+                                <p className="text-[8px] text-black/40 font-black uppercase mb-6">Input PIN Akses</p>
+                                <input type="password" autoFocus maxLength={3} value={showPinModal.value} onChange={e=>setShowPinModal(p=>({...p, value:e.target.value}))} onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyPin(); }} className="w-full text-center text-4xl tracking-[0.4em] font-black py-3 bg-slate-50 rounded-xl outline-none mb-6 border border-black/5 focus:border-yellow-400 text-black" />
+                                <div className="flex flex-col gap-2">
+                                    <button onClick={handleVerifyPin} className={`w-full py-3.5 ${yellowButton} rounded-xl text-[9px] font-black uppercase shadow-lg`}>Konfirmasi</button>
+                                    <button onClick={()=>setShowPinModal({show:false, targetId:null, action:null, value:'', currentLockStatus:null})} className="w-full py-2 text-[9px] font-black uppercase text-black/30">Batal</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {printDateModal.show && (
+                        <div className="fixed inset-0 z-[1002] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-[300px] rounded-[2rem] p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300 border border-slate-200">
+                                <h4 className="font-black text-yellow-700 uppercase text-[10px] mb-2 flex items-center gap-2"><Printer size={16}/> Cetak Dokumen F4</h4>
+                                <p className="text-[8px] font-black text-black/40 uppercase mb-5 tracking-widest">Pilih Tanggal TTD</p>
+                                <input type="date" value={printDateModal.date} onChange={e=>setPrintDateModal(p=>({...p, date:e.target.value}))} className="w-full p-2 bg-slate-50 border border-black/10 focus:bg-white focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none"/>
+                                <div className="grid grid-cols-2 gap-2 mt-6">
+                                    <button onClick={()=>setPrintDateModal({show:false, item:null, date:''})} className="py-2.5 bg-slate-100 text-black/40 rounded-lg text-[9px] font-black uppercase">Tutup</button>
+                                    <button onClick={()=>{executePrint(printDateModal.item, printDateModal.date); setPrintDateModal({show:false, item:null, date:''});}} className={`py-2.5 ${yellowButton} rounded-lg text-[9px] font-black uppercase shadow-lg`}>Cetak F4</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {notification.show && (
+                        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] px-6 py-3 rounded-full shadow-2xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300 ${notification.type==='success'?'bg-black text-yellow-400':'bg-rose-600 text-white'}`}>
+                            {notification.type === 'success' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+                            {notification.message}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>
+

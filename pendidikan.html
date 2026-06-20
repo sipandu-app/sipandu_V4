@@ -1,0 +1,901 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Transportasi & Pendidikan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7280;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .data-table th {
+            background: #1f2937;
+            color: white;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.05em;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1.5px solid #000;
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        .wrap-text {
+            word-break: break-word;
+            min-width: 150px;
+            max-width: 250px;
+        }
+
+        .subtotal-label {
+            font-size: 10px;
+            font-weight: 800;
+            padding-top: 4px;
+            border-top: 1px dashed #e5e7eb;
+            margin-top: 4px;
+        }
+
+        #modalRealisasi, #modalPIN, #loadingOverlay {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+        }
+        
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .row-locked {
+            background-color: #f9fafb;
+        }
+        
+        .btn-disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center text-white">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p id="loading-text" class="text-xs font-bold uppercase tracking-widest">Menyinkronkan Data...</p>
+    </div>
+
+    <!-- MODAL PIN -->
+    <div id="modalPIN" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs overflow-hidden">
+            <div class="p-6 text-center space-y-4">
+                <div id="pin-icon" class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">🔒</div>
+                <h4 id="pin-title" class="font-bold text-gray-800">Verifikasi PIN</h4>
+                <p id="pin-desc" class="text-[10px] text-gray-400">Masukkan PIN untuk melanjutkan</p>
+                <input type="password" id="input-pin" class="w-full border-2 border-gray-200 p-3 rounded-lg text-center text-2xl tracking-[1em] outline-none focus:border-blue-500" maxlength="3">
+                <div class="flex gap-2">
+                    <button onclick="closePinModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-2 rounded text-[10px] uppercase">Batal</button>
+                    <button onclick="handlePinSuccess()" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded text-[10px] uppercase">Verifikasi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENGISIAN REALISASI -->
+    <div id="modalRealisasi" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="bg-gray-800 p-4 text-white flex justify-between items-center">
+                <h4 class="font-bold text-sm uppercase">Form Realisasi & Bukti</h4>
+                <button onclick="closeModal()" class="text-white opacity-50 hover:opacity-100 text-xl">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                        <p class="text-[9px] text-blue-400 font-bold uppercase">Estimasi Awal (Total)</p>
+                        <p id="modal-estimasi" class="text-sm font-black text-blue-700">Rp 0</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <p class="text-[9px] text-gray-400 font-bold uppercase">Status Kecocokan</p>
+                        <select id="realisasi-status" class="w-full text-xs font-bold bg-transparent outline-none">
+                            <option value="Sesuai">✅ SESUAI</option>
+                            <option value="Tidak Sesuai">⚠️ TIDAK SESUAI</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Realisasi Transport (Rp)</label>
+                        <input type="text" id="input-realisasi-trans-display" class="w-full border-2 border-gray-200 p-2 rounded text-base font-bold outline-none focus:border-blue-500" placeholder="0" oninput="formatInputCurrency(this, 'input-realisasi-trans-val')">
+                        <input type="hidden" id="input-realisasi-trans-val">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Realisasi Pendidikan (Rp)</label>
+                        <input type="text" id="input-realisasi-edu-display" class="w-full border-2 border-gray-200 p-2 rounded text-base font-bold outline-none focus:border-blue-500" placeholder="0" oninput="formatInputCurrency(this, 'input-realisasi-edu-val')">
+                        <input type="hidden" id="input-realisasi-edu-val">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Keterangan Tambahan</label>
+                    <textarea id="realisasi-ket" class="w-full border p-2 rounded text-xs outline-none focus:border-blue-500" rows="2" placeholder="Catatan realisasi..."></textarea>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Lampiran Bukti Tanda Terima (PDF)</label>
+                    <div class="flex gap-2">
+                        <input type="file" id="realisasi-file" accept="application/pdf" class="flex-1 text-xs border p-2 rounded bg-gray-50">
+                        <button id="view-file-btn" onclick="viewCurrentFile()" class="hidden bg-blue-100 text-blue-600 px-3 py-2 rounded text-[10px] font-bold uppercase hover:bg-blue-200 transition">Lihat File</button>
+                    </div>
+                    <p id="file-info" class="text-[9px] text-gray-400 mt-1 italic hidden">✅ File tersimpan di database.</p>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="saveRealisasi()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded text-xs uppercase shadow-lg">Simpan Realisasi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <header class="app-header">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-inner font-black">TR</div>
+                <h1 class="font-bold text-sm tracking-tight text-gray-700 uppercase">Monitoring Uang Transport & Pendidikan</h1>
+            </div>
+
+            <div class="nav-tabs">
+                <button onclick="switchTab('input')" id="tab-input-btn" class="tab-btn">
+                    <span>➕</span> INPUT
+                </button>
+                <button onclick="switchTab('riwayat')" id="tab-riwayat-btn" class="tab-btn active">
+                    <span>🕒</span> RIWAYAT
+                </button>
+            </div>
+        </header>
+
+        <div class="p-0">
+            <!-- TAB RIWAYAT -->
+            <div id="content-riwayat" class="block">
+                <div class="p-4 bg-gray-50/50 flex flex-wrap gap-4 items-center border-b">
+                    <div class="bg-white border p-2 px-4 rounded shadow-sm flex items-center gap-3">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Jumlah Data</span>
+                        <span id="stat-total" class="font-black text-blue-600">0</span>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="exportBackup()" class="bg-white border border-gray-200 text-gray-600 text-[9px] font-bold px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-50 transition uppercase">💾 Backup</button>
+                        <button onclick="preparePin('restore')" class="bg-white border border-gray-200 text-gray-600 text-[9px] font-bold px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-50 transition uppercase">📂 Restore</button>
+                        <input type="file" id="restoreFile" class="hidden" accept=".json,.txt" onchange="handleFileSelect(event)">
+                    </div>
+                    
+                    
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="w-10 text-center">No</th>
+                                <th class="w-24">Tgl / Bulan</th>
+                                <th class="w-28">Pengaju</th>
+                                <th class="bg-blue-900/10 text-center">Transport (Anak/Hari/Nom)</th>
+                                <th class="bg-purple-900/10 text-center">Pendidikan (Ket/Nom)</th>
+                                <th class="bg-gray-200 text-gray-800 text-center">Grand Total</th>
+                                <th class="w-28 text-center">Realisasi</th>
+                                <th class="text-center w-28">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="masterTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB INPUT -->
+            <div id="content-input" class="hidden p-8">
+                <div class="max-w-4xl mx-auto bg-gray-50 p-8 rounded-xl border border-gray-200">
+                    <h3 id="form-title" class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 uppercase">
+                        <span class="text-blue-600">📝</span> Input Pengajuan Baru
+                    </h3>
+                    <form id="formPengajuan" class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Tanggal Laporan</label>
+                                <input type="date" id="p_tgl" class="w-full border p-2.5 rounded text-xs outline-none focus:ring-2 focus:ring-blue-500" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Periode Bulan</label>
+                                <select id="p_bulan" class="w-full border p-2.5 rounded text-xs outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    <option value="">Pilih...</option>
+                                    <option>Januari</option><option>Februari</option><option>Maret</option>
+                                    <option>April</option><option>Mei</option><option>Juni</option>
+                                    <option>Juli</option><option>Agustus</option><option>September</option>
+                                    <option>Oktober</option><option>November</option><option>Desember</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Yang Melaporkan</label>
+                                <input type="text" id="p_nama" class="w-full border p-2.5 rounded text-xs outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nama..." required>
+                            </div>
+                        </div>
+
+                        <!-- SEKSI TRANSPORTASI -->
+                        <div class="grid grid-cols-3 gap-3 pt-4">
+                            <div class="p-3 bg-white border rounded space-y-2">
+                                <p class="text-[9px] font-black text-orange-600 uppercase">SD (Max 10rb)</p>
+                                <input type="number" id="p_sd_jml" placeholder="Anak" class="w-full border-b text-xs p-1 outline-none" oninput="autoNominal('p_sd_jml', 'p_sd_val_display', 'p_sd_val')">
+                                <input type="text" id="p_sd_val_display" placeholder="Rp 0" class="w-full border-b text-xs p-1 outline-none" oninput="formatInputCurrency(this, 'p_sd_val', 10000); hitungTotal()">
+                                <input type="hidden" id="p_sd_val">
+                                <input type="number" id="p_sd_hari" placeholder="Hari" class="w-full border-b text-xs p-1 outline-none bg-orange-50/50" oninput="hitungTotal()">
+                                <div class="subtotal-label text-orange-600" id="sub_sd_display">Rp 0</div>
+                            </div>
+                            <div class="p-3 bg-white border rounded space-y-2">
+                                <p class="text-[9px] font-black text-blue-600 uppercase">SMP (Max 10rb)</p>
+                                <input type="number" id="p_smp_jml" placeholder="Anak" class="w-full border-b text-xs p-1 outline-none" oninput="autoNominal('p_smp_jml', 'p_smp_val_display', 'p_smp_val')">
+                                <input type="text" id="p_smp_val_display" placeholder="Rp 0" class="w-full border-b text-xs p-1 outline-none" oninput="formatInputCurrency(this, 'p_smp_val', 10000); hitungTotal()">
+                                <input type="hidden" id="p_smp_val">
+                                <input type="number" id="p_smp_hari" placeholder="Hari" class="w-full border-b text-xs p-1 outline-none bg-blue-50/50" oninput="hitungTotal()">
+                                <div class="subtotal-label text-blue-600" id="sub_smp_display">Rp 0</div>
+                            </div>
+                            <div class="p-3 bg-white border rounded space-y-2">
+                                <p class="text-[9px] font-black text-gray-500 uppercase">SMU (Max 10rb)</p>
+                                <input type="number" id="p_smu_jml" placeholder="Anak" class="w-full border-b text-xs p-1 outline-none" oninput="autoNominal('p_smu_jml', 'p_smu_val_display', 'p_smu_val')">
+                                <input type="text" id="p_smu_val_display" placeholder="Rp 0" class="w-full border-b text-xs p-1 outline-none" oninput="formatInputCurrency(this, 'p_smu_val', 10000); hitungTotal()">
+                                <input type="hidden" id="p_smu_val">
+                                <input type="number" id="p_smu_hari" placeholder="Hari" class="w-full border-b text-xs p-1 outline-none bg-gray-50/50" oninput="hitungTotal()">
+                                <div class="subtotal-label text-gray-500" id="sub_smu_display">Rp 0</div>
+                            </div>
+                        </div>
+
+                        <!-- SEKSI PENDIDIKAN -->
+                        <div class="p-4 bg-purple-50 border border-purple-100 rounded-lg space-y-3">
+                            <label class="text-[10px] font-bold text-purple-700 uppercase flex items-center gap-2">
+                                🎓 Pengajuan Biaya Pendidikan
+                            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <p class="text-[9px] font-bold text-gray-500 uppercase">Nominal Pengajuan (Rp)</p>
+                                    <input type="text" id="p_edu_val_display" class="w-full border bg-white p-2.5 rounded text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500" placeholder="Rp 0" oninput="formatInputCurrency(this, 'p_edu_val'); hitungTotal()">
+                                    <input type="hidden" id="p_edu_val">
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-[9px] font-bold text-gray-500 uppercase">Keterangan Biaya Pendidikan</p>
+                                    <input type="text" id="p_edu_ket" class="w-full border bg-white p-2.5 rounded text-sm outline-none focus:ring-2 focus:ring-purple-500" placeholder="Misal: SPP, Buku, dll">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Keterangan Awal Umum</label>
+                            <textarea id="p_ket" class="w-full border p-2.5 rounded text-xs outline-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="Tulis catatan..."></textarea>
+                        </div>
+
+                        <div class="bg-gray-800 text-white p-4 rounded-lg flex justify-between items-center mt-4 shadow-xl">
+                            <div>
+                                <p class="text-[9px] opacity-50 uppercase font-bold tracking-wider">Grand Total Estimasi</p>
+                                <p id="total_display" class="text-2xl font-black text-blue-400">Rp 0</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="cancelEdit()" id="btn-cancel-edit" class="hidden bg-gray-600 hover:bg-gray-500 px-6 py-3 rounded font-bold text-xs uppercase transition-all">Batal</button>
+                                <button type="submit" id="btn-submit" class="bg-blue-600 hover:bg-blue-500 px-10 py-3 rounded font-bold text-xs transition-all uppercase shadow-lg">Simpan Pengajuan</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPABASE SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // CONFIG CLOUDINARY
+        const CLOUDINARY_CLOUD_NAME = "dkxehjgu0";
+        const CLOUDINARY_UPLOAD_PRESET = "belanja_pakaian";
+
+        // CONFIG SUPABASE
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const TABLE_NAME = "pendidikan";
+        
+        let supabaseClient;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Gagal inisialisasi Supabase Client:", e);
+        }
+        
+        let dataStore = [];
+        let activeRealisasiIndex = null;
+        let activeEditIdx = null; 
+        let pendingPinAction = null; 
+        let pendingIndex = null;
+
+        const NOMINAL_DEFAULT = 10000;
+        const MASTER_PIN = "888";
+
+        // Helper: Toggle Loading
+        function showLoading(show, text = "Menyinkronkan Data...") {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                document.getElementById('loading-text').innerText = text;
+                overlay.classList.toggle('hidden', !show);
+            }
+        }
+
+        // --- CLOUDINARY UPLOAD ---
+        async function uploadToCloudinary(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            
+            try {
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error("Gagal upload ke Cloudinary");
+                
+                const data = await response.json();
+                return data.secure_url;
+            } catch (error) {
+                console.error("Cloudinary Error:", error);
+                throw error;
+            }
+        }
+
+        // --- SUPABASE OPERATIONS ---
+        const fetchData = async () => {
+            if (!supabaseClient) return;
+            showLoading(true);
+            try {
+                const { data, error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error("Fetch error:", error);
+                    if (error.code === '42P01') alert("Tabel 'pendidikan' belum dibuat di Supabase.");
+                    throw error;
+                }
+                dataStore = data || [];
+                renderTable();
+            } catch (error) {
+                console.error("Fetch error:", error);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        const saveData = async (payload) => {
+            showLoading(true, "Menyimpan Data...");
+            try {
+                let result;
+                if (activeEditIdx !== null) {
+                    const id = dataStore[activeEditIdx].id;
+                    result = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', id);
+                } else {
+                    result = await supabaseClient.from(TABLE_NAME).insert([payload]);
+                }
+
+                if (result.error) throw result.error;
+                await fetchData();
+            } catch (error) {
+                console.error("Save error:", error);
+                alert("Gagal menyimpan data: " + (error.message || "Periksa koneksi database"));
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        const deleteData = async (index) => {
+            showLoading(true, "Menghapus Data...");
+            try {
+                const id = dataStore[index].id;
+                const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
+                if (error) throw error;
+                await fetchData();
+            } catch (error) {
+                console.error("Delete error:", error);
+                alert("Gagal menghapus data");
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        const updateStatusKunci = async (index, locked) => {
+            showLoading(true, locked ? "Mengunci Data..." : "Membuka Kunci...");
+            try {
+                const id = dataStore[index].id;
+                const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: locked }).eq('id', id);
+                if (error) throw error;
+                await fetchData();
+            } catch (error) {
+                console.error("Lock error:", error);
+                alert("Gagal mengubah status kunci");
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+        });
+
+        // --- FORMATTING & UTILS ---
+        const formatIDR = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num || 0);
+
+        window.formatInputCurrency = (input, targetId, maxVal = null) => {
+            let value = input.value.replace(/[^0-9]/g, "");
+            if (maxVal && parseInt(value) > maxVal) value = maxVal.toString();
+            document.getElementById(targetId).value = value;
+            input.value = value ? new Intl.NumberFormat('id-ID').format(value) : "";
+        };
+
+        window.autoNominal = (jmlId, displayId, valId) => {
+            const jmlInput = document.getElementById(jmlId);
+            const displayInput = document.getElementById(displayId);
+            const valInput = document.getElementById(valId);
+            if (jmlInput.value > 0 && !valInput.value) {
+                valInput.value = NOMINAL_DEFAULT;
+                displayInput.value = new Intl.NumberFormat('id-ID').format(NOMINAL_DEFAULT);
+            } else if (!jmlInput.value || jmlInput.value == 0) {
+                valInput.value = "";
+                displayInput.value = "";
+            }
+            hitungTotal();
+        };
+
+        window.switchTab = (tab) => {
+            document.getElementById('content-input').classList.toggle('hidden', tab !== 'input');
+            document.getElementById('content-riwayat').classList.toggle('hidden', tab !== 'riwayat');
+            document.getElementById('tab-input-btn').classList.toggle('active', tab === 'input');
+            document.getElementById('tab-riwayat-btn').classList.toggle('active', tab === 'riwayat');
+            if(tab === 'riwayat') renderTable();
+        };
+
+        window.hitungTotal = () => {
+            const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+            const getJml = (id) => parseFloat(document.getElementById(id).value) || 0;
+            const sd = getJml('p_sd_jml') * getVal('p_sd_val') * (getJml('p_sd_hari') || 0);
+            const smp = getJml('p_smp_jml') * getVal('p_smp_val') * (getJml('p_smp_hari') || 0);
+            const sma = getJml('p_smu_jml') * getVal('p_smu_val') * (getJml('p_smu_hari') || 0);
+            const edu = getVal('p_edu_val');
+            document.getElementById('sub_sd_display').innerText = formatIDR(sd);
+            document.getElementById('sub_smp_display').innerText = formatIDR(smp);
+            document.getElementById('sub_smu_display').innerText = formatIDR(sma);
+            const total_trans = sd + smp + sma;
+            const grand_total = total_trans + edu;
+            document.getElementById('total_display').innerText = formatIDR(grand_total);
+            return { grand_total, total_trans, edu, sd, smp, sma };
+        };
+
+        // --- PIN MODAL LOGIC ---
+        window.preparePin = (action, index = null) => {
+            pendingPinAction = action;
+            pendingIndex = index;
+            const title = document.getElementById('pin-title');
+            const desc = document.getElementById('pin-desc');
+            const icon = document.getElementById('pin-icon');
+            document.getElementById('input-pin').value = '';
+
+            if (action === 'restore') {
+                title.innerText = "Konfirmasi Restore";
+                desc.innerText = "Masukkan PIN untuk mengunggah backup";
+                icon.innerText = "📂";
+            } else if (action === 'delete') {
+                title.innerText = "Konfirmasi Hapus";
+                desc.innerText = "Masukkan PIN untuk menghapus data";
+                icon.innerText = "🗑️";
+            } else if (action === 'unlock') {
+                title.innerText = "Buka Kunci Baris";
+                desc.innerText = "Masukkan PIN untuk membuka gembok";
+                icon.innerText = "🔓";
+            }
+            document.getElementById('modalPIN').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-pin').focus(), 100);
+        };
+
+        window.closePinModal = () => {
+            document.getElementById('modalPIN').classList.add('hidden');
+            document.getElementById('input-pin').value = '';
+        };
+
+        window.handlePinSuccess = () => {
+            if (document.getElementById('input-pin').value === MASTER_PIN) {
+                if (pendingPinAction === 'restore') {
+                    document.getElementById('restoreFile').click();
+                } else if (pendingPinAction === 'delete') {
+                    deleteData(pendingIndex);
+                } else if (pendingPinAction === 'unlock') {
+                    updateStatusKunci(pendingIndex, false);
+                }
+                closePinModal();
+            } else {
+                alert("PIN Salah!");
+                document.getElementById('input-pin').value = '';
+            }
+        };
+
+        // --- TABLE RENDERING ---
+        window.renderTable = () => {
+            const tbody = document.getElementById('masterTableBody');
+            const statTotal = document.getElementById('stat-total');
+            if (statTotal) statTotal.innerText = dataStore.length;
+            
+            if (!tbody) return;
+            if (dataStore.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-gray-400 italic">Belum ada data.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            dataStore.forEach((item, index) => {
+                let statusUI = '';
+                const isLocked = item.is_locked || false;
+                const hasFile = !!item.file_data;
+
+                if(item.is_realized) {
+                    const color = item.realisasi_status === 'Sesuai' ? 'emerald' : 'orange';
+                    statusUI = `
+                        <div class="flex flex-col gap-1 items-center">
+                            <div class="bg-${color}-100 text-${color}-700 px-2 py-1 rounded text-[8px] font-black uppercase border border-${color}-200">${item.realisasi_status}</div>
+                            <div class="text-[9px] font-bold text-gray-500">${formatIDR(item.realisasi_total)}</div>
+                            ${hasFile ? '<div class="text-[8px] bg-blue-50 text-blue-500 px-1 rounded font-bold">📄 BUKTI OK</div>' : ''}
+                        </div>
+                    `;
+                } else {
+                    statusUI = `<div class="bg-red-100 text-red-700 px-2 py-1 rounded text-[8px] font-black uppercase border border-red-200 mx-auto w-fit">PENDING</div>`;
+                }
+                
+                const row = document.createElement('tr');
+                row.className = isLocked ? "row-locked" : "hover:bg-gray-50";
+                
+                // Details for Transport
+                const transDetails = [];
+                if (item.raw_sd_jml > 0) transDetails.push(`<div class="text-[9px]"><span class="font-black text-orange-600">SD:</span> ${item.raw_sd_jml} PM × ${item.raw_sd_hari} Hari (${formatIDR(item.raw_sd_val)})</div>`);
+                if (item.raw_smp_jml > 0) transDetails.push(`<div class="text-[9px]"><span class="font-black text-blue-600">SMP:</span> ${item.raw_smp_jml} PM × ${item.raw_smp_hari} Hari (${formatIDR(item.raw_smp_val)})</div>`);
+                if (item.raw_smu_jml > 0) transDetails.push(`<div class="text-[9px]"><span class="font-black text-gray-500">SMU:</span> ${item.raw_smu_jml} PM × ${item.raw_smu_hari} Hari (${formatIDR(item.raw_smu_val)})</div>`);
+                
+                const transHTML = transDetails.length > 0 
+                    ? `<div class="space-y-1">${transDetails.join('')}</div><div class="mt-2 pt-1 border-t border-blue-100 font-black text-blue-700 text-right">${formatIDR(item.total_trans)}</div>` 
+                    : '<div class="text-center text-gray-300">-</div>';
+
+                const eduHTML = item.edu > 0
+                    ? `<div class="wrap-text text-[10px] italic text-purple-600 leading-tight mb-1">${item.edu_ket || 'Biaya Pendidikan'}</div><div class="font-black text-purple-700 text-right border-t border-purple-100 pt-1">${formatIDR(item.edu)}</div>`
+                    : '<div class="text-center text-gray-300">-</div>';
+
+                row.innerHTML = `
+                    <td class="p-3 border-r text-center text-gray-400 font-bold">${index + 1}</td>
+                    <td class="p-3"><div class="font-bold">${item.tgl}</div><div class="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded w-fit font-bold uppercase mt-1">${item.bulan}</div></td>
+                    <td class="p-3"><div class="font-bold">${item.nama}</div><div class="text-[9px] text-gray-400 italic truncate max-w-[100px]">${item.ket || '-'}</div></td>
+                    <td class="p-3 bg-blue-50/30">${transHTML}</td>
+                    <td class="p-3 bg-purple-50/30">${eduHTML}</td>
+                    <td class="p-3 bg-gray-50 font-black text-xs text-center">${formatIDR(item.grand_total)}</td>
+                    <td class="p-3 text-center cursor-pointer hover:bg-gray-100 border-l" onclick="openRealisasiModal(${index})">${statusUI}</td>
+                    <td class="p-3">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex gap-1">
+                                <button class="flex-1 bg-blue-50 text-blue-600 rounded border border-blue-100 py-1 text-[10px] font-bold uppercase ${isLocked ? 'btn-disabled' : ''}" onclick="executeEdit(${index})">Edit</button>
+                                <button class="flex-1 bg-red-50 text-red-500 rounded border border-red-100 py-1 text-[10px] font-bold uppercase ${isLocked ? 'btn-disabled' : ''}" onclick="preparePin('delete', ${index})">Hapus</button>
+                            </div>
+                            <button onclick="toggleLock(${index})" class="w-full py-1 rounded text-[10px] font-black uppercase flex items-center justify-center gap-2 border ${isLocked ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'}">
+                                ${isLocked ? '<span>🔒</span> TERKUNCI' : '<span>🔓</span> BUKA'}
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        };
+
+        window.toggleLock = (index) => {
+            const item = dataStore[index];
+            if (item.is_locked) preparePin('unlock', index);
+            else updateStatusKunci(index, true);
+        };
+
+        window.executeEdit = (index) => {
+            const item = dataStore[index];
+            if (item.is_locked) return alert("Data terkunci!");
+            activeEditIdx = index;
+            document.getElementById('p_tgl').value = item.tgl;
+            document.getElementById('p_bulan').value = item.bulan;
+            document.getElementById('p_nama').value = item.nama;
+            document.getElementById('p_ket').value = item.ket;
+            document.getElementById('p_edu_ket').value = item.edu_ket || "";
+            document.getElementById('p_sd_jml').value = item.raw_sd_jml || "";
+            document.getElementById('p_sd_val').value = item.raw_sd_val || "";
+            document.getElementById('p_sd_hari').value = item.raw_sd_hari || "";
+            document.getElementById('p_smp_jml').value = item.raw_smp_jml || "";
+            document.getElementById('p_smp_val').value = item.raw_smp_val || "";
+            document.getElementById('p_smp_hari').value = item.raw_smp_hari || "";
+            document.getElementById('p_smu_jml').value = item.raw_smu_jml || "";
+            document.getElementById('p_smu_val').value = item.raw_smu_val || "";
+            document.getElementById('p_smu_hari').value = item.raw_smu_hari || "";
+            document.getElementById('p_edu_val').value = item.edu || "";
+            
+            ['p_sd_val', 'p_smp_val', 'p_smu_val', 'p_edu_val'].forEach(id => {
+                const el = document.getElementById(id);
+                const disp = document.getElementById(id + '_display');
+                if(el && disp) disp.value = el.value ? new Intl.NumberFormat('id-ID').format(el.value) : "";
+            });
+
+            document.getElementById('form-title').innerText = "📝 Edit Pengajuan";
+            document.getElementById('btn-submit').innerText = "Update Data";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            switchTab('input');
+            hitungTotal();
+        };
+
+        window.cancelEdit = () => {
+            activeEditIdx = null;
+            document.getElementById('formPengajuan').reset();
+            ['p_sd_val', 'p_smp_val', 'p_smu_val', 'p_edu_val'].forEach(id => {
+                document.getElementById(id).value = "";
+                document.getElementById(id + '_display').value = "";
+            });
+            document.getElementById('form-title').innerText = "📝 Input Pengajuan Baru";
+            document.getElementById('btn-submit').innerText = "Simpan Pengajuan";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            hitungTotal();
+        };
+
+        document.getElementById('formPengajuan').onsubmit = async (e) => {
+            e.preventDefault();
+            const calc = hitungTotal();
+            
+            const tgl = document.getElementById('p_tgl').value;
+            const bulan = document.getElementById('p_bulan').value;
+            const nama = document.getElementById('p_nama').value;
+
+            if (!tgl || !bulan || !nama) {
+                alert("Tanggal, Bulan, dan Nama wajib diisi!");
+                return;
+            }
+
+            const payload = {
+                tgl: tgl,
+                bulan: bulan,
+                nama: nama,
+                ket: document.getElementById('p_ket').value,
+                edu_ket: document.getElementById('p_edu_ket').value,
+                raw_sd_jml: parseInt(document.getElementById('p_sd_jml').value) || 0,
+                raw_sd_val: parseInt(document.getElementById('p_sd_val').value) || 0,
+                raw_sd_hari: parseInt(document.getElementById('p_sd_hari').value) || 0,
+                raw_smp_jml: parseInt(document.getElementById('p_smp_jml').value) || 0,
+                raw_smp_val: parseInt(document.getElementById('p_smp_val').value) || 0,
+                raw_smp_hari: parseInt(document.getElementById('p_smp_hari').value) || 0,
+                raw_smu_jml: parseInt(document.getElementById('p_smu_jml').value) || 0,
+                raw_smu_val: parseInt(document.getElementById('p_smu_val').value) || 0,
+                raw_smu_hari: parseInt(document.getElementById('p_smu_hari').value) || 0,
+                total_trans: calc.total_trans,
+                edu: calc.edu,
+                grand_total: calc.grand_total,
+                updated_at: new Date().toISOString()
+            };
+            
+            if (activeEditIdx === null) {
+                payload.is_realized = false;
+                payload.realisasi_trans = 0;
+                payload.realisasi_edu = 0;
+                payload.realisasi_total = 0;
+                payload.realisasi_status = "Sesuai";
+                payload.realisasi_ket = "";
+                payload.is_locked = false;
+                payload.file_data = null;
+            }
+
+            await saveData(payload);
+            cancelEdit();
+            switchTab('riwayat');
+        };
+
+        window.openRealisasiModal = (index) => {
+            const item = dataStore[index];
+            if (item.is_locked) return alert("Data terkunci!");
+            activeRealisasiIndex = index;
+            document.getElementById('modal-estimasi').innerText = formatIDR(item.grand_total);
+            const tVal = item.is_realized ? item.realisasi_trans : item.total_trans;
+            const eVal = item.is_realized ? item.realisasi_edu : item.edu;
+            document.getElementById('input-realisasi-trans-val').value = tVal;
+            document.getElementById('input-realisasi-trans-display').value = new Intl.NumberFormat('id-ID').format(tVal);
+            document.getElementById('input-realisasi-edu-val').value = eVal;
+            document.getElementById('input-realisasi-edu-display').value = new Intl.NumberFormat('id-ID').format(eVal);
+            document.getElementById('realisasi-ket').value = item.realisasi_ket || "";
+            document.getElementById('realisasi-status').value = item.realisasi_status || "Sesuai";
+            
+            const viewBtn = document.getElementById('view-file-btn');
+            const fileInfo = document.getElementById('file-info');
+            if (item.file_data) {
+                viewBtn.classList.remove('hidden');
+                fileInfo.classList.remove('hidden');
+            } else {
+                viewBtn.classList.add('hidden');
+                fileInfo.classList.add('hidden');
+            }
+            
+            document.getElementById('modalRealisasi').classList.remove('hidden');
+        };
+
+        window.closeModal = () => document.getElementById('modalRealisasi').classList.add('hidden');
+
+        window.saveRealisasi = async () => {
+            const tVal = parseFloat(document.getElementById('input-realisasi-trans-val').value) || 0;
+            const eVal = parseFloat(document.getElementById('input-realisasi-edu-val').value) || 0;
+            const fileInput = document.getElementById('realisasi-file');
+            
+            let fileUrl = dataStore[activeRealisasiIndex].file_data || null;
+            
+            if (fileInput.files && fileInput.files[0]) {
+                showLoading(true, "Mengunggah Bukti ke Cloudinary...");
+                try {
+                    fileUrl = await uploadToCloudinary(fileInput.files[0]);
+                } catch (e) {
+                    alert("Gagal mengunggah file. Silakan coba lagi.");
+                    showLoading(false);
+                    return;
+                }
+            }
+
+            const payload = {
+                realisasi_trans: tVal,
+                realisasi_edu: eVal,
+                realisasi_total: tVal + eVal,
+                realisasi_status: document.getElementById('realisasi-status').value,
+                realisasi_ket: document.getElementById('realisasi-ket').value,
+                is_realized: true,
+                file_data: fileUrl,
+                updated_at: new Date().toISOString()
+            };
+            
+            showLoading(true, "Menyimpan Realisasi...");
+            const id = dataStore[activeRealisasiIndex].id;
+            const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', id);
+            if (error) {
+                alert("Gagal simpan realisasi: " + error.message);
+            } else {
+                await fetchData();
+            }
+            showLoading(false);
+            closeModal();
+        };
+
+        window.viewCurrentFile = () => {
+            const url = dataStore[activeRealisasiIndex].file_data;
+            if (url) window.open(url, '_blank');
+        };
+
+        window.exportBackup = () => {
+            const dataStr = JSON.stringify(dataStore, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const link = document.createElement("a");
+            link.download = `backup_pendidikan_${new Date().getTime()}.json`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+        };
+
+        window.handleFileSelect = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        showLoading(true, "Memulihkan Data...");
+                        
+                        // Bersihkan data dari id dan created_at serta kolom lama yang tidak ada di skema baru
+                        const cleanedData = imported.map(item => {
+                            const { id, created_at, file_name, ...rest } = item;
+                            return rest;
+                        });
+
+                        // Gunakan chunking untuk menghindari limit/timeout Supabase
+                        const chunkSize = 20;
+                        let successCount = 0;
+                        let errorMsg = "";
+
+                        for (let i = 0; i < cleanedData.length; i += chunkSize) {
+                            const chunk = cleanedData.slice(i, i + chunkSize);
+                            const { error } = await supabaseClient.from(TABLE_NAME).insert(chunk);
+                            if (error) {
+                                errorMsg = error.message;
+                                break;
+                            }
+                            successCount += chunk.length;
+                        }
+
+                        if (errorMsg) {
+                            alert("Gagal restore sebagian data: " + errorMsg + "\nBerhasil terimpor: " + successCount);
+                        } else {
+                            alert("Berhasil Restore " + successCount + " Data ke Database!");
+                        }
+                        
+                        await fetchData();
+                    } else {
+                        alert("Format file tidak valid! Isi file bukan merupakan data array.");
+                    }
+                } catch (err) { 
+                    console.error("Restore Error:", err);
+                    alert("Gagal membaca file atau format JSON salah: " + err.message); 
+                }
+                showLoading(false);
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        };
+
+        document.getElementById('input-pin').addEventListener('keypress', (e) => { if (e.key === 'Enter') handlePinSuccess(); });
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>

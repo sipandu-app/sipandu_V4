@@ -1,0 +1,1308 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDM RAHARJO - Data Pegawai (Supabase Connection)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <!-- React and ReactDOM (Production Version for Speed) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- KONFIGURASI SUPABASE ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- MOCK LUCIDE ICONS (SVG) ---
+        const Icon = ({ path, size = 24, className = '', viewBox = "0 0 24 24" }) => (
+            <svg className={className} width={size} height={size} fill="none" viewBox={viewBox} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+
+        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />;
+        const Edit3 = (props) => <Icon {...props} path={<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>} />;
+        const Loader2 = (props) => <Icon {...props} className={`${props.className} animate-spin`} path={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />;
+        const ShoppingBag = (props) => <Icon {...props} path={<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></>} />;
+        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+        const Save = (props) => <Icon {...props} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />;
+        const UploadCloud = (props) => <Icon {...props} path={<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></>} />;
+        const DownloadCloud = (props) => <Icon {...props} path={<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></>} />;
+        const Settings = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
+        const GraduationCap = (props) => <Icon {...props} path={<><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></>} />;
+        const MapPin = (props) => <Icon {...props} path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />;
+        const Camera = (props) => <Icon {...props} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="4"/></>} />;
+        const Upload = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} />;
+        const User = (props) => <Icon {...props} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />;
+        const KeyRound = (props) => <Icon {...props} path={<><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5"/></>} />;
+        const AlertCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+        const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+        const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+        const Briefcase = (props) => <Icon {...props} path={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>} />;
+        const BookOpen = (props) => <Icon {...props} path={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+        const Hash = (props) => <Icon {...props} path={<><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></>} />;
+        const Phone = (props) => <Icon {...props} path={<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></>} />;
+        const AlertTriangle = (props) => <Icon {...props} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
+        const Eraser = (props) => <Icon {...props} path={<><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></>} />;
+        const FileUp = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></>} />;
+        const ShieldAlert = (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+        const Lock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+        const Unlock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
+        const FileSpreadsheet = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />;
+        const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+
+        // --- APP CONSTANTS ---
+        const MASTER_PIN = '888';
+        const PENDIDIKAN_OPTIONS = ["SD", "SMP", "SMA/SMK", "DI", "DII", "DIII", "DIV", "S1", "S2", "S3"];
+        const UNIT_KERJA_OPTIONS = ["PPS Raharjo Sragen", "RPS Mojomulyo Sragen", "RPS Pamardi Siwi Sragen", "RPS PMKS Gondang"];
+        const STATUS_OPTIONS = ["PNS", "PPPK", "PPPK-PW"];
+        const AGAMA_OPTIONS = ["Islam", "Kristen", "Katolik", "Hindu", "Budha", "Konghucu"];
+        const PANGKAT_OPTIONS = [
+            "-", "I/a - Juru Muda", "I/b - Juru Muda Tingkat I", "I/c - Juru", "I/d - Juru Tingkat I",
+            "II/a - Pengatur Muda", "II/b - Pengatur Muda Tingkat I", "II/c - Pengatur", "II/d - Pengatur Tingkat I",
+            "III/a - Penata Muda", "III/b - Penata Muda Tingkat I", "III/c - Penata", "III/d - Penata Tingkat I",
+            "IV/a - Pembina", "IV/b - Pembina Tingkat I", "IV/c - Pembina Utama Muda", "IV/d - Pembina Utama Madya", "IV/e - Pembina Utama",
+            "Gol V", "Gol VI", "Gol VII", "Gol IX", "Gol X"
+        ];
+
+        // --- UTILS ---
+        const calculateAge = (birthDate) => {
+            if (!birthDate) return 0;
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            return age;
+        };
+
+        // Convert base64 to File object
+        const base64ToFile = (base64, filename) => {
+            const arr = base64.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        };
+
+        // Upload foto ke Supabase Storage
+        const uploadPhotoToStorage = async (file, fileName) => {
+            try {
+                // Pastikan filename aman (tidak ada spasi atau karakter spesial)
+                const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+                const filePath = `pegawai/${Date.now()}_${safeFileName}`;
+                
+                const { data, error } = await supabaseClient.storage
+                    .from('foto_pegawai')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                
+                if (error) throw error;
+                
+                // Dapatkan public URL
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('foto_pegawai')
+                    .getPublicUrl(filePath);
+                
+                return publicUrl;
+            } catch (err) {
+                console.error("Upload Error:", err);
+                throw err;
+            }
+        };
+
+        // --- MAIN COMPONENT ---
+        function App() {
+            const [activeTab, setActiveTab] = useState('history');
+            const [loading, setLoading] = useState(true);
+            const [listPegawai, setListPegawai] = useState([]);
+            const [editId, setEditId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterUnit, setFilterUnit] = useState('');
+            const [filterStatus, setFilterStatus] = useState('');
+            const [filterPendidikan, setFilterPendidikan] = useState('');
+            const [sortBy, setSortBy] = useState('default');
+            const [filterPurnaTugas, setFilterPurnaTugas] = useState(false);
+            const [showCamera, setShowCamera] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [pinModal, setPinModal] = useState({ show: false, type: '', payload: null });
+            const [pinInput, setPinInput] = useState('');
+            const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [photoFile, setPhotoFile] = useState(null);
+            const [previewPhoto, setPreviewPhoto] = useState('');
+
+            const initialForm = {
+                nama: '', nip: '', nik: '', tempat_lahir: '', tanggal_lahir: '', 
+                usia: 0, jenis_kelamin: '', agama: 'Islam', pangkat: '-', 
+                jabatan: '', status_kepegawaian: STATUS_OPTIONS[0], pendidikan: 'S1', 
+                unit_kerja: UNIT_KERJA_OPTIONS[0], alamat: '', no_hp: '', photo: '', order_index: 0,
+                is_locked: false
+            };
+
+            const [form, setForm] = useState(initialForm);
+            const videoRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const restoreInputRef = useRef(null);
+
+            const showNotif = (message, type = 'success') => {
+                setNotification({ show: true, message, type });
+                setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+            };
+
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('data_pegawai')
+                        .select('id, nama, nip, nik, tempat_lahir, tanggal_lahir, usia, jenis_kelamin, agama, pangkat, jabatan, status_kepegawaian, pendidikan, unit_kerja, alamat, no_hp, photo, order_index, is_locked')
+                        .order('order_index', { ascending: true });
+                    
+                    if (error) throw error;
+                    setListPegawai(data || []);
+                } catch (error) {
+                    showNotif("Gagal Memuat Data: " + error.message, "error");
+                    console.error("Fetch Error:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleExportExcel = () => {
+                if (filteredData.length === 0) {
+                    showNotif("Tidak ada data untuk diekspor", "error");
+                    return;
+                }
+
+                try {
+                    const exportData = filteredData.map((p, i) => ({
+                        'No': i + 1,
+                        'Nama': p.nama,
+                        'NIP': p.nip || '-',
+                        'NIK': p.nik || '-',
+                        'Tempat Lahir': p.tempat_lahir,
+                        'Tanggal Lahir': p.tanggal_lahir,
+                        'Usia': p.usia,
+                        'Jenis Kelamin': p.jenis_kelamin,
+                        'Agama': p.agama,
+                        'Pangkat/Golongan': p.pangkat,
+                        'Jabatan': p.jabatan,
+                        'Status Kepegawaian': p.status_kepegawaian,
+                        'Pendidikan': p.pendidikan,
+                        'Unit Kerja': p.unit_kerja,
+                        'No HP': p.no_hp || '-',
+                        'Alamat': p.alamat
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(exportData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Pegawai");
+
+                    // Set column widths
+                    const wscols = [
+                        {wch: 5}, {wch: 25}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 12}, 
+                        {wch: 5}, {wch: 12}, {wch: 10}, {wch: 25}, {wch: 25}, {wch: 15},
+                        {wch: 10}, {wch: 25}, {wch: 15}, {wch: 40}
+                    ];
+                    worksheet['!cols'] = wscols;
+
+                    XLSX.writeFile(workbook, `DATA_PEGAWAI_${new Date().toISOString().split('T')[0]}.xlsx`);
+                    showNotif("Berhasil mengekspor data ke Excel");
+                } catch (error) {
+                    showNotif("Gagal mengekspor data", "error");
+                    console.error("Export Error:", error);
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+            }, []);
+
+            useEffect(() => {
+                if (form.tanggal_lahir) {
+                    setForm(prev => ({ ...prev, usia: calculateAge(form.tanggal_lahir) }));
+                }
+            }, [form.tanggal_lahir]);
+
+            const startCamera = async () => {
+                setShowCamera(true);
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    if (videoRef.current) videoRef.current.srcObject = stream;
+                } catch (err) {
+                    showNotif("Kamera tidak dapat diakses", "error");
+                    setShowCamera(false);
+                }
+            };
+
+            const takePhoto = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+                const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                stopCamera();
+                
+                // Convert base64 ke File object
+                const file = base64ToFile(base64, `foto_${form.nama || Date.now()}.jpg`);
+                setPhotoFile(file);
+                setPreviewPhoto(base64);
+                showNotif("Foto berhasil diambil");
+            };
+
+            const stopCamera = () => {
+                if (videoRef.current?.srcObject) videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+                setShowCamera(false);
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setPhotoFile(file);
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setPreviewPhoto(reader.result);
+                        showNotif("Foto berhasil diunggah");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                
+                const nipValue = form.nip || '';
+                const statusValue = form.status_kepegawaian || '';
+
+                // Validasi NIP jika bukan PPPK-PW
+                if (statusValue !== "PPPK-PW" && nipValue.length !== 18) {
+                    return showNotif("NIP harus 18 digit", "error");
+                }
+                
+                // Cek apakah data terkunci sebelum update
+                if (editId) {
+                    const currentData = listPegawai.find(p => p.id === editId);
+                    if (currentData && currentData.is_locked) {
+                        return showNotif("Gagal: Data Terkunci!", "error");
+                    }
+                }
+
+                // Siapkan URL foto
+                let finalPhotoUrl = form.photo || '';
+
+                // Jika ada foto baru yang diupload, upload ke Storage terlebih dahulu
+                if (photoFile) {
+                    try {
+                        showNotif("Mengunggah foto...", "info");
+                        finalPhotoUrl = await uploadPhotoToStorage(photoFile, `foto_${form.nama || Date.now()}.jpg`);
+                    } catch (uploadErr) {
+                        console.error("Error upload foto:", uploadErr);
+                        return showNotif("Gagal mengunggah foto, silakan coba lagi", "error");
+                    }
+                }
+
+                // Konstruksi payload - Hindari menyertakan ID, created_at, updated_at dari form
+                const payload = {
+                    nama: form.nama || '',
+                    nip: nipValue,
+                    nik: form.nik || '',
+                    tempat_lahir: form.tempat_lahir || '',
+                    tanggal_lahir: form.tanggal_lahir || null,
+                    usia: parseInt(form.usia) || 0,
+                    jenis_kelamin: form.jenis_kelamin || '',
+                    agama: form.agama || 'Islam',
+                    pangkat: form.pangkat || '-',
+                    jabatan: form.jabatan || '',
+                    status_kepegawaian: statusValue,
+                    pendidikan: form.pendidikan || '',
+                    unit_kerja: form.unit_kerja || '',
+                    alamat: form.alamat || '',
+                    no_hp: form.no_hp || '',
+                    photo: finalPhotoUrl, // Simpan URL, bukan base64
+                    is_locked: form.is_locked || false,
+                    order_index: editId ? (form.order_index || 0) : listPegawai.length,
+                    updated_at: new Date().toISOString()
+                };
+
+                try {
+                    let error;
+                    if (editId) {
+                        const { error: updateError } = await supabaseClient
+                            .from('data_pegawai')
+                            .update(payload)
+                            .eq('id', editId);
+                        error = updateError;
+                    } else {
+                        const { error: insertError } = await supabaseClient
+                            .from('data_pegawai')
+                            .insert([payload]);
+                        error = insertError;
+                    }
+
+                    if (error) throw error;
+
+                    showNotif(editId ? `Data ${form.nama} Berhasil Diperbarui` : `Data ${form.nama} Berhasil Disimpan`);
+                    
+                    // Reset Form dan State
+                    setForm(initialForm); 
+                    setPhotoFile(null);
+                    setPreviewPhoto('');
+                    setEditId(null); 
+                    setActiveTab('history');
+                    fetchData();
+                } catch (e) { 
+                    console.error("Submit Error:", e);
+                    showNotif("Gagal: " + (e.message || "Kesalahan Database"), "error"); 
+                }
+            };
+
+            const handleDelete = async () => {
+                const targetId = pinModal.payload?.id || editId;
+                const targetNama = pinModal.payload?.nama || form.nama;
+                
+                try {
+                    const { error } = await supabaseClient.from('data_pegawai').delete().eq('id', targetId);
+                    if (error) throw error;
+                    
+                    showNotif(`Data ${targetNama} Berhasil Dihapus`);
+                    setForm(initialForm);
+                    setEditId(null);
+                    setPhotoFile(null);
+                    setPreviewPhoto('');
+                    setActiveTab('history');
+                    setPinModal({ show: false, type: '', payload: null });
+                    setPinInput('');
+                    fetchData();
+                } catch (e) {
+                    showNotif("Gagal menghapus: " + e.message, "error");
+                }
+            };
+
+            const handleToggleLock = async () => {
+                const p = pinModal.payload;
+                if (!p) return;
+
+                setIsProcessing(true);
+                try {
+                    const { error } = await supabaseClient
+                        .from('data_pegawai')
+                        .update({ is_locked: !p.is_locked })
+                        .eq('id', p.id);
+                    
+                    if (error) throw error;
+                    
+                    showNotif(`Data ${p.nama} Berhasil ${p.is_locked ? 'Dibuka' : 'Dikunci'}`);
+                    setPinModal({ show: false, type: '', payload: null });
+                    setPinInput('');
+                    fetchData();
+                } catch (e) {
+                    showNotif("Gagal merubah status kunci: " + e.message, "error");
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+
+
+            const handleBackupJson = () => {
+                const dataStr = JSON.stringify(listPegawai, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Backup_Pegawai_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                showNotif("Backup JSON Berhasil Diunduh");
+            };
+
+            const handleRestoreAction = async () => {
+                if (pinInput !== MASTER_PIN) return showNotif("PIN Salah", "error");
+                const payload = pinModal.payload;
+                if (!payload || !Array.isArray(payload)) return showNotif("Data restore tidak valid", "error");
+
+                setIsProcessing(true);
+                try {
+                    // 1. Hapus data lama (menggunakan kriteria yang pasti berhasil di RLS)
+                    showNotif("Membersihkan data lama...", "info");
+                    const { error: deleteError } = await supabaseClient.from('data_pegawai').delete().neq('nama', '___EMPTY_DATABASE___'); 
+                    if (deleteError) throw deleteError;
+
+                    // 2. Insert data baru (Batch per 50)
+                    showNotif(`Memproses ${payload.length} data...`, "info");
+                    
+                    // Pastikan payload bersih dari field yang bisa menyebabkan error UUID/PK
+                    const cleanPayload = payload.map(p => {
+                        const { id, created_at, updated_at, ...rest } = p;
+                        return rest;
+                    });
+
+                    const chunkSize = 50;
+                    for (let i = 0; i < cleanPayload.length; i += chunkSize) {
+                        const chunk = cleanPayload.slice(i, i + chunkSize);
+                        const { error: insertError } = await supabaseClient.from('data_pegawai').insert(chunk);
+                        if (insertError) {
+                            console.error("Gagal insert chunk ke-" + (i/chunkSize + 1), insertError);
+                            throw insertError;
+                        }
+                    }
+
+                    showNotif(`Restore Berhasil! ${payload.length} data dimuat.`);
+                    setPinModal({ show: false, type: '', payload: null });
+                    setPinInput('');
+                    fetchData();
+                } catch (e) {
+                    console.error("Error Detail Restore:", e);
+                    showNotif("Gagal Restore: " + (e.message || "Lihat Console F12"), "error");
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const handleNipLookup = (input) => {
+                if (!input) return;
+                const found = listPegawai.find(p => 
+                    (p.nip && p.nip.includes(input)) || 
+                    (p.nama && p.nama.toLowerCase().includes(input.toLowerCase()))
+                );
+                if (found) {
+                    setForm(found);
+                    setEditId(found.id);
+                    setPreviewPhoto(found.photo || ''); // Set preview dari URL foto lama
+                    setPhotoFile(null);
+                    showNotif(`Data ${found.nama} Ditemukan & Dimuat`);
+                } else {
+                    showNotif("Pegawai tidak ditemukan", "info");
+                }
+            };
+
+            const globalStats = useMemo(() => {
+                return {
+                    total: listPegawai.length,
+                    status: {
+                        pns: listPegawai.filter(p => p.status_kepegawaian === 'PNS').length,
+                        pppk: listPegawai.filter(p => p.status_kepegawaian === 'PPPK').length,
+                        pw: listPegawai.filter(p => p.status_kepegawaian === 'PPPK-PW').length,
+                    },
+                    gender: {
+                        p: listPegawai.filter(p => p.jenis_kelamin === 'Laki-laki').length,
+                        w: listPegawai.filter(p => p.jenis_kelamin === 'Perempuan').length,
+                    },
+                    edu: PENDIDIKAN_OPTIONS.reduce((acc, curr) => {
+                        acc[curr] = listPegawai.filter(p => p.pendidikan === curr).length;
+                        return acc;
+                    }, {})
+                };
+            }, [listPegawai]);
+
+            const unitStats = useMemo(() => UNIT_KERJA_OPTIONS.map((unit, idx) => {
+                const filtered = listPegawai.filter(p => p.unit_kerja === unit);
+                const greenPalette = { 
+                    bg: 'bg-emerald-500', 
+                    light: 'bg-emerald-50', 
+                    text: 'text-emerald-900', 
+                    border: 'border-emerald-200' 
+                };
+                return {
+                    name: unit,
+                    palette: greenPalette,
+                    stats: {
+                        total: filtered.length,
+                        gender: { p: filtered.filter(p => p.jenis_kelamin === 'Laki-laki').length, w: filtered.filter(p => p.jenis_kelamin === 'Perempuan').length },
+                        education: PENDIDIKAN_OPTIONS.reduce((acc, edu) => { acc[edu] = filtered.filter(p => p.pendidikan === edu).length; return acc; }, {}),
+                        status: { pns: filtered.filter(p => p.status_kepegawaian === 'PNS').length, pppk: filtered.filter(p => p.status_kepegawaian === 'PPPK').length, pw: filtered.filter(p => p.status_kepegawaian === 'PPPK-PW').length }
+                    }
+                };
+            }), [listPegawai]);
+
+            const filteredData = useMemo(() => {
+                let data = listPegawai.filter(p => {
+                    const matchSearch = (
+                        p.nama?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        p.nip?.includes(searchTerm) || 
+                        p.nik?.includes(searchTerm) ||
+                        p.unit_kerja?.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                    const matchUnit = filterUnit === '' || p.unit_kerja === filterUnit;
+                    const matchStatus = filterStatus === '' || p.status_kepegawaian === filterStatus;
+                    const matchPendidikan = filterPendidikan === '' || p.pendidikan === filterPendidikan;
+                    
+                    return matchSearch && matchUnit && matchStatus && matchPendidikan;
+                });
+
+                if (filterPurnaTugas) {
+                    data = data.filter(p => {
+                        if (!p.tanggal_lahir) return false;
+                        const birth = new Date(p.tanggal_lahir);
+                        const purnaDate = new Date(birth);
+                        purnaDate.setFullYear(birth.getFullYear() + 58);
+                        
+                        const today = new Date();
+                        const diffTime = purnaDate - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        return diffDays <= 90 && diffDays >= 0;
+                    });
+                }
+
+                if (sortBy === 'purna') {
+                    data.sort((a, b) => {
+                        if (!a.tanggal_lahir) return 1;
+                        if (!b.tanggal_lahir) return -1;
+                        const dateA = new Date(a.tanggal_lahir);
+                        const dateB = new Date(b.tanggal_lahir);
+                        return dateA - dateB;
+                    });
+                } else if (sortBy === 'usia') {
+                    data.sort((a, b) => (b.usia || 0) - (a.usia || 0));
+                }
+
+                return data;
+            }, [listPegawai, searchTerm, filterUnit, filterStatus, filterPendidikan, sortBy, filterPurnaTugas]);
+
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-white gap-4">
+                    <Loader2 className="animate-spin text-slate-900" size={40}/>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Memuat Sistem...</p>
+                </div>
+            );
+
+            return (
+                <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                    {notification.show && (
+                        <div className={`fixed top-6 right-6 z-[999] px-6 py-4 rounded-2xl text-[11px] font-black flex items-center gap-4 shadow-2xl border border-white/10 animate-in ${notification.type === 'error' ? 'bg-rose-600 text-white' : (notification.type === 'info' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white')}`}>
+                            {notification.type === 'error' ? <AlertCircle size={18} className="text-rose-200" /> : (notification.type === 'info' ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} className="text-emerald-400" />)}
+                            <span className="uppercase tracking-widest">{notification.message}</span>
+                        </div>
+                    )}
+
+                    <input type="file" ref={restoreInputRef} className="hidden" accept=".json" onChange={e => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const jsonData = JSON.parse(event.target.result);
+                                const mappedData = jsonData.map(p => {
+                                    // Bersihkan ID lama agar Supabase bisa men-generate UUID baru jika formatnya bukan UUID
+                                    const { id, created_at, updated_at, ...rest } = p;
+                                    
+                                    return {
+                                        nama: rest.nama || p.Nama || '',
+                                        nip: rest.nip || p.NIP || '',
+                                        nik: rest.nik || p.NIK || '',
+                                        tempat_lahir: rest.tempat_lahir || p.tempatLahir || p['Tempat Lahir'] || '',
+                                        tanggal_lahir: rest.tanggal_lahir || p.tanggalLahir || p['Tanggal Lahir'] || null,
+                                        usia: parseInt(rest.usia || p.Usia) || 0,
+                                        jenis_kelamin: rest.jenis_kelamin || p.jenisKelamin || p.Gender || '',
+                                        agama: rest.agama || p.Agama || 'Islam',
+                                        pangkat: rest.pangkat || p.Pangkat || p.Golongan || '-',
+                                        jabatan: rest.jabatan || p.Jabatan || '',
+                                        status_kepegawaian: rest.status_kepegawaian || p.statusKepegayaian || p.Status || '',
+                                        pendidikan: rest.pendidikan || p.Pendidikan || '',
+                                        unit_kerja: rest.unit_kerja || p.unitKerja || p['Unit Kerja'] || '',
+                                        alamat: rest.alamat || p.Alamat || '',
+                                        no_hp: rest.no_hp || p.noHp || p['No HP'] || '',
+                                        photo: rest.photo || p.photoBase64 || '',
+                                        order_index: parseInt(rest.order_index || p.orderIndex) || 0,
+                                        is_locked: rest.is_locked || p.isLocked || false
+                                    };
+                                });
+                                console.log("Data siap restore:", mappedData);
+                                setPinModal({ show: true, type: 'restore', payload: mappedData });
+                                setShowSettings(false); // Tutup modal settings saat pilih file restore
+                            } catch (err) { showNotif("Gagal Membaca File", "error"); }
+                        };
+                        reader.readAsText(file);
+                        e.target.value = '';
+                    }} />
+
+                    {/* Floating Header */}
+                    <header className="h-16 flex-none bg-white border border-slate-200 px-6 flex justify-between items-center rounded-2xl shadow-sm z-20">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><Users size={20} /></div>
+                            <div>
+                                <h1 className="text-[14px] font-black tracking-tight leading-none text-slate-950 uppercase">SDM Raharjo</h1>
+                                <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Sistem Informasi Kepegawaian</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 shadow-inner border border-slate-200">
+                                <button 
+                                    onClick={() => { 
+                                        setActiveTab('input'); 
+                                        setEditId(null); 
+                                        setForm(initialForm); 
+                                        setPhotoFile(null); 
+                                        setPreviewPhoto(''); 
+                                    }} 
+                                    className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all duration-300 ${activeTab === 'input' ? 'bg-emerald-500 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white/50'}`}
+                                >
+                                    Input
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('history')} 
+                                    className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white/50'}`}
+                                >
+                                    Riwayat
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('komposisi')} 
+                                    className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all duration-300 ${activeTab === 'komposisi' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white/50'}`}
+                                >
+                                    Komposisi
+                                </button>
+                            </div>
+                            <button onClick={() => setPinModal({ show: true, type: 'settings', payload: null })} className="p-2.5 text-slate-500 hover:text-slate-950 transition-colors bg-slate-100 rounded-xl border border-slate-200"><Settings size={18} /></button>
+                        </div>
+                    </header>
+
+                    {/* Content Area */}
+                    <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        {activeTab === 'komposisi' ? (
+                            <div className="space-y-8 animate-in">
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                    <div className="md:col-span-4 bg-emerald-600 rounded-[2rem] p-8 text-white relative overflow-hidden flex items-center justify-between shadow-xl">
+                                        <div className="relative z-10">
+                                            <p className="text-5xl font-black">{globalStats.total}</p>
+                                            <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mt-2">Total Seluruh Pegawai</p>
+                                        </div>
+                                        <div className="flex gap-6 border-l border-white/20 pl-6 relative z-10">
+                                            <div className="text-center">
+                                                <p className="text-[18px] font-black text-white">{globalStats.gender.p}</p>
+                                                <p className="text-[9px] font-black uppercase text-emerald-200">Pria</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[18px] font-black text-white">{globalStats.gender.w}</p>
+                                                <p className="text-[9px] font-black uppercase text-emerald-200">Wanita</p>
+                                            </div>
+                                        </div>
+                                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                                    </div>
+                                    
+                                    <div className="md:col-span-3 bg-white border border-emerald-100 rounded-[2rem] p-8 flex items-center justify-around shadow-sm">
+                                        {Object.entries(globalStats.status).map(([k, v]) => (
+                                            <div key={k} className="text-center">
+                                                <p className="text-3xl font-black text-emerald-600">{v}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{k.toUpperCase()}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="md:col-span-5 bg-white border border-emerald-100 rounded-[2rem] p-6 shadow-sm flex flex-col gap-4">
+                                        <div className="flex items-center gap-3 px-2 border-b border-slate-100 pb-3">
+                                            <div className="p-2 bg-emerald-600 rounded-lg text-white"><GraduationCap size={16} /></div>
+                                            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-950">Kualifikasi Pendidikan</h3>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {PENDIDIKAN_OPTIONS.map((edu) => (
+                                                <div key={edu} className={`flex-1 min-w-[50px] p-2 rounded-xl text-center border ${globalStats.edu[edu] > 0 ? 'bg-emerald-50 border-emerald-100' : 'opacity-20 border-transparent'}`}>
+                                                    <p className={`text-[14px] font-black ${globalStats.edu[edu] > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{globalStats.edu[edu] || 0}</p>
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase">{edu}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {unitStats.map((u, i) => (
+                                        <div key={i} className={`bg-white rounded-3xl border ${u.palette.border} p-5 shadow-sm hover:shadow-md transition-all flex flex-col h-full`}>
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`w-10 h-10 ${u.palette.bg} rounded-xl flex items-center justify-center text-white`}><MapPin size={20} /></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="text-[9px] font-black uppercase text-slate-400 truncate mb-0.5">{u.name}</h3>
+                                                    <span className="text-[14px] font-black text-emerald-600">{u.stats.total} Orang</span>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 mb-4">
+                                                <div className="bg-emerald-50/80 rounded-xl p-2 flex items-center justify-center gap-2 border border-emerald-100">
+                                                    <p className="text-[12px] font-black text-emerald-700">{u.stats.gender.p}</p>
+                                                    <p className="text-[8px] font-black uppercase text-emerald-400">Pria</p>
+                                                </div>
+                                                <div className="bg-emerald-50/80 rounded-xl p-2 flex items-center justify-center gap-2 border border-emerald-100">
+                                                    <p className="text-[12px] font-black text-emerald-700">{u.stats.gender.w}</p>
+                                                    <p className="text-[8px] font-black uppercase text-emerald-400">Wanita</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 grid grid-cols-5 gap-1 mb-4">
+                                                {PENDIDIKAN_OPTIONS.map(edu => (
+                                                    <div key={edu} className={`text-center py-1 rounded-lg ${u.stats.education[edu] > 0 ? 'bg-emerald-50 border border-emerald-100' : 'opacity-10'}`}>
+                                                        <p className={`text-[10px] font-black ${u.stats.education[edu] > 0 ? 'text-emerald-700' : ''}`}>{u.stats.education[edu]}</p>
+                                                        <p className="text-[6px] font-black uppercase text-slate-500">{edu}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-1 border-t pt-3 border-slate-100">
+                                                {Object.entries(u.stats.status).map(([k, v]) => (
+                                                    <div key={k} className={`${u.palette.light} rounded-lg py-1.5 text-center border border-emerald-100`}>
+                                                        <p className={`text-[11px] font-black ${u.palette.text}`}>{v}</p>
+                                                        <p className={`text-[7px] font-black uppercase ${u.palette.text}`}>{k.toUpperCase()}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : activeTab === 'history' ? (
+                            <div className="space-y-8 animate-in">
+                                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-4 items-center">
+                                        <div className="relative flex-1 w-full max-w-md">
+                                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input type="text" placeholder="Cari Nama, NIP, atau Unit Kerja..." className="w-full pl-11 pr-5 py-3 bg-white rounded-xl text-[13px] font-medium outline-none border border-slate-200 focus:border-slate-900 transition-all shadow-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} autoComplete="off" />
+                                            {filteredData.length !== listPegawai.length && (
+                                                <div className="absolute -bottom-6 left-0 text-[10px] font-bold text-indigo-600 uppercase">
+                                                    Menampilkan {filteredData.length} dari {listPegawai.length} Pegawai
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                            <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+                                                <select 
+                                                    className="bg-transparent px-3 py-1.5 font-black uppercase text-[9px] outline-none text-slate-600"
+                                                    value={sortBy}
+                                                    onChange={e => setSortBy(e.target.value)}
+                                                >
+                                                    <option value="default">Urutkan: Default</option>
+                                                    <option value="purna">Purna Tugas</option>
+                                                    <option value="usia">Usia Tertinggi</option>
+                                                </select>
+                                                <div className="w-[1px] h-4 bg-slate-200 mx-1"></div>
+                                                <button 
+                                                    onClick={() => setFilterPurnaTugas(!filterPurnaTugas)}
+                                                    className={`px-3 py-1.5 rounded-lg font-black uppercase text-[9px] transition-all ${filterPurnaTugas ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    Purna Tugas
+                                                </button>
+                                            </div>
+                                            {filteredData.length === listPegawai.length && (
+                                                <div className="text-[10px] font-black text-slate-400 uppercase mr-2">
+                                                    Total: {listPegawai.length} Pegawai
+                                                </div>
+                                            )}
+                                            <select 
+                                                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[11px] font-black uppercase outline-none focus:border-slate-900 transition-all"
+                                                value={filterUnit}
+                                                onChange={e => setFilterUnit(e.target.value)}
+                                            >
+                                                <option value="">Semua Unit</option>
+                                                {UNIT_KERJA_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                            </select>
+                                            <select 
+                                                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[11px] font-black uppercase outline-none focus:border-slate-900 transition-all"
+                                                value={filterStatus}
+                                                onChange={e => setFilterStatus(e.target.value)}
+                                            >
+                                                <option value="">Semua Status</option>
+                                                {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                            </select>
+                                            <select 
+                                                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[11px] font-black uppercase outline-none focus:border-slate-900 transition-all"
+                                                value={filterPendidikan}
+                                                onChange={e => setFilterPendidikan(e.target.value)}
+                                            >
+                                                <option value="">Semua Pendidikan</option>
+                                                {PENDIDIKAN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                            </select>
+                                            {(filterUnit || filterStatus || filterPendidikan) && (
+                                                <button 
+                                                    onClick={() => { setFilterUnit(''); setFilterStatus(''); setFilterPendidikan(''); }}
+                                                    className="p-2.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                                    title="Reset Filter"
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            )}
+                                             <button 
+                                                onClick={handleExportExcel}
+                                                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                                                title="Ekspor ke Excel"
+                                             >
+                                                <FileSpreadsheet size={14} /> EXCEL
+                                             </button>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                <tr>
+                                                    <th className="px-6 py-4 w-16 text-center">No</th>
+                                                    <th className="px-4 py-4">Nama & NIK</th>
+                                                    <th className="px-4 py-4">TTL & Alamat</th>
+                                                    <th className="px-4 py-4">Kepegawaian</th>
+                                                    <th className="px-4 py-4">Unit & Jabatan</th>
+                                                    <th className="px-6 py-4 text-right">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {filteredData.map((p, i) => (
+                                                    <tr key={p.id} className={`hover:bg-slate-50 transition-colors group ${p.is_locked ? 'bg-slate-50/50' : ''}`}>
+                                                        <td className="px-6 py-4 text-center font-bold text-slate-400">{i + 1}</td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 relative">
+                                                                {p.photo ? <img src={p.photo} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="" /> : <User size={20} className="m-auto mt-3 text-slate-300" />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="font-black text-slate-900 uppercase leading-none">{p.nama}</p>
+                                                                        {p.is_locked && <Lock size={12} className="text-slate-400" />}
+                                                                    </div>
+                                                                    <p className="text-[10px] font-bold text-blue-600 uppercase mt-1">NIK. {p.nik || '-'}</p>
+                                                                    <p className="text-[9px] font-bold text-blue-500 uppercase">NIP. {p.nip || '-'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <p className="font-bold text-slate-700 uppercase text-[11px]">{p.tempat_lahir || '-'}, {p.tanggal_lahir || '-'}</p>
+                                                            <p className="text-[10px] text-blue-600 font-bold mt-1">{p.alamat || '-'}</p>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className="text-[9px] font-black px-2 py-0.5 bg-slate-900 text-white rounded-md uppercase mb-1 inline-block">{p.status_kepegawaian}</span>
+                                                            <p className="font-bold text-slate-700 uppercase">Gol. {p.pangkat?.split(' - ')[0] || '-'}</p>
+                                                            <div className="flex flex-col gap-1.5 mt-1.5">
+                                                                <div className="flex gap-2">
+                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded uppercase">{p.usia} Th</span>
+                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded uppercase">{p.pendidikan}</span>
+                                                                </div>
+                                                                {p.usia >= 58 && (
+                                                                    <span className="text-[7px] font-black px-2 py-1 bg-orange-500 text-white rounded uppercase w-fit animate-pulse">
+                                                                        Purna tugas fungsional
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <p className="font-black text-slate-900 uppercase leading-tight">{p.jabatan}</p>
+                                                            <p className="text-[10px] font-bold text-indigo-600 uppercase mt-1">{p.unit_kerja}</p>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if (p.is_locked) {
+                                                                            showNotif("Data Terkunci. Buka kunci untuk mengedit.", "error");
+                                                                        } else {
+                                                                            setForm(p); 
+                                                                            setEditId(p.id); 
+                                                                            setActiveTab('input');
+                                                                            setPreviewPhoto(p.photo || '');
+                                                                            setPhotoFile(null);
+                                                                        }
+                                                                    }} 
+                                                                    className={`p-2.5 rounded-xl transition-all shadow-sm ${p.is_locked ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900'}`}
+                                                                >
+                                                                    <Edit3 size={16} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => setPinModal({ show: true, type: 'toggle_lock', payload: p })} 
+                                                                    className={`p-2.5 rounded-xl transition-all shadow-sm ${p.is_locked ? 'bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-600 hover:text-white' : 'bg-white border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900'}`}
+                                                                    title={p.is_locked ? "Buka Kunci" : "Kunci Data"}
+                                                                >
+                                                                    {p.is_locked ? <Lock size={16} /> : <Unlock size={16} />}
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setForm(p);
+                                                                        setEditId(p.id);
+                                                                        setPinModal({ show: true, type: 'delete_row', payload: p });
+                                                                    }} 
+                                                                    className="p-2.5 bg-white border border-slate-200 text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-sm"
+                                                                    title="Hapus Data"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in">
+                                <div className="lg:col-span-4 space-y-6">
+                                    <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm text-center">
+                                        <div className="relative mx-auto w-56 h-56 group mb-6">
+                                            <div className="w-full h-full bg-slate-50 rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-inner flex items-center justify-center">
+                                                {previewPhoto ? <img src={previewPhoto} className="w-full h-full object-cover" alt="" /> : <User size={80} className="text-slate-200" />}
+                                            </div>
+                                            {previewPhoto && (
+                                                <button onClick={() => {
+                                                    setPreviewPhoto('');
+                                                    setPhotoFile(null);
+                                                    if (editId) {
+                                                        // Jika edit, tetap simpan foto lama jika dihapus
+                                                        setForm(prev => ({ ...prev, photo: '' }));
+                                                    }
+                                                }} className="absolute -top-2 -right-2 p-2.5 bg-rose-600 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><X size={16} /></button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button onClick={startCamera} className="flex flex-col items-center gap-2 p-4 bg-slate-900 text-white rounded-2xl hover:bg-indigo-600 transition-all shadow-lg group">
+                                                <Camera size={20} className="group-hover:scale-110 transition-transform" />
+                                                <span className="text-[9px] font-black uppercase">Kamera</span>
+                                            </button>
+                                            <button onClick={() => fileInputRef.current.click()} className="flex flex-col items-center gap-2 p-4 bg-slate-50 text-slate-900 rounded-2xl border border-slate-200 hover:bg-white transition-all">
+                                                <Upload size={20} />
+                                                <span className="text-[9px] font-black uppercase">Upload</span>
+                                            </button>
+                                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                                        </div>
+                                    </div>
+                                    {editId && (
+                                        <div className="space-y-3">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setPinModal({ show: true, type: 'toggle_lock', payload: form })} 
+                                                className={`w-full py-4 rounded-2xl font-black uppercase text-[11px] border transition-all flex items-center justify-center gap-2 ${form.is_locked ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-900 hover:text-white'}`}
+                                            >
+                                                {form.is_locked ? <Unlock size={16} /> : <Lock size={16} />}
+                                                {form.is_locked ? 'Buka Kunci Data' : 'Kunci Data Pegawai'}
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setPinModal({ show: true, type: 'delete_row', payload: form })} 
+                                                className="w-full py-4 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase text-[11px] border border-rose-100 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Trash2 size={16} /> Hapus Data Pegawai
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="lg:col-span-8 bg-white rounded-[2rem] border border-slate-200 p-8 md:p-10 shadow-sm">
+                                    <div className="flex items-center gap-4 border-b border-slate-100 pb-6 mb-8">
+                                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center"><BookOpen size={20}/></div>
+                                        <div>
+                                            <h2 className="text-[18px] font-black uppercase tracking-tight text-slate-900">{editId ? 'Perbarui Data' : 'Tambah Pegawai'}</h2>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lengkapi formulir informasi di bawah ini</p>
+                                        </div>
+                                    </div>
+
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        {/* SECTION 1: PERSONAL DATA */}
+                                        <div className="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 shadow-sm space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="p-1.5 bg-sky-500 text-white rounded-lg"><User size={14}/></div>
+                                                <h3 className="text-[11px] font-black uppercase tracking-widest text-sky-700">Data Personal</h3>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="md:col-span-2 space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Nama Lengkap</label>
+                                                    <input type="text" className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-sky-500 outline-none transition-all shadow-sm text-sm" placeholder="MASUKKAN NAMA LENGKAP" value={form.nama} onChange={e => setForm({...form, nama: e.target.value.toUpperCase()})} required />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">NIK (16 Digit)</label>
+                                                    <input type="text" className="w-full px-4 py-2.5 bg-blue-50/50 rounded-xl font-bold border border-blue-200 text-blue-700 focus:border-blue-500 outline-none transition-all shadow-sm text-sm" maxLength={16} value={form.nik} onChange={e => setForm({...form, nik: e.target.value.replace(/\D/g,'')})} required autoComplete="off" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Jenis Kelamin</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-sky-500 outline-none transition-all shadow-sm text-sm" value={form.jenis_kelamin} onChange={e => setForm({...form, jenis_kelamin: e.target.value})} required>
+                                                        <option value="">Pilih</option>
+                                                        <option value="Laki-laki">Laki-laki</option>
+                                                        <option value="Perempuan">Perempuan</option>
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Tempat Lahir</label>
+                                                    <input type="text" className="w-full px-4 py-2.5 bg-blue-50/50 rounded-xl font-bold border border-blue-200 text-blue-700 focus:border-blue-500 outline-none transition-all shadow-sm text-sm" value={form.tempat_lahir} onChange={e => setForm({...form, tempat_lahir: e.target.value.toUpperCase()})} required />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Tanggal Lahir</label>
+                                                    <input type="date" className="w-full px-4 py-2.5 bg-blue-50/50 rounded-xl font-bold border border-blue-200 text-blue-700 focus:border-blue-500 outline-none transition-all shadow-sm text-sm" value={form.tanggal_lahir} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} required />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Agama</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-sky-500 outline-none transition-all shadow-sm text-sm" value={form.agama} onChange={e => setForm({...form, agama: e.target.value})} required>
+                                                        {AGAMA_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">No HP / WhatsApp</label>
+                                                    <input type="text" className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-sky-500 outline-none transition-all shadow-sm text-sm" placeholder="08XXXXXXXXXX" value={form.no_hp} onChange={e => setForm({...form, no_hp: e.target.value.replace(/\D/g,'')})} />
+                                                </div>
+                                                <div className="md:col-span-2 space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Alamat Domisili Sesuai KTP</label>
+                                                    <textarea className="w-full px-4 py-2.5 bg-blue-50/50 rounded-xl font-bold border border-blue-200 text-blue-700 focus:border-blue-500 outline-none transition-all shadow-sm text-sm min-h-[120px]" value={form.alamat} onChange={e => setForm({...form, alamat: e.target.value.toUpperCase()})} required />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 2: EMPLOYMENT DATA */}
+                                        <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 shadow-sm space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="p-1.5 bg-indigo-500 text-white rounded-lg"><Briefcase size={14}/></div>
+                                                <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Informasi Pekerjaan</h3>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Status Kepegawaian</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-indigo-500 outline-none transition-all shadow-sm text-sm" value={form.status_kepegawaian} onChange={e => setForm({...form, status_kepegawaian: e.target.value})} required>
+                                                        {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">NIP / No Register</label>
+                                                    <div className="relative">
+                                                        <input type="text" className="w-full px-4 py-2.5 bg-blue-50/50 rounded-xl font-bold border border-blue-200 text-blue-700 focus:border-blue-500 outline-none transition-all shadow-sm text-sm" placeholder="18 DIGIT" maxLength={18} list="list-nip-suggest" value={form.nip} onChange={e => {
+                                                            const nip = e.target.value.replace(/\D/g,'');
+                                                            let updates = { nip };
+                                                            if (nip.length >= 8) {
+                                                                const yyyy = nip.substring(0, 4);
+                                                                const mm = nip.substring(4, 6);
+                                                                const dd = nip.substring(6, 8);
+                                                                const birthDate = `${yyyy}-${mm}-${dd}`;
+                                                                const d = new Date(birthDate);
+                                                                if (!isNaN(d.getTime())) {
+                                                                    updates.tanggal_lahir = birthDate;
+                                                                    updates.usia = calculateAge(birthDate);
+                                                                }
+                                                            }
+                                                            setForm({...form, ...updates});
+                                                        }} required={form.status_kepegawaian !== "PPPK-PW"} autoComplete="off" />
+                                                        <button type="button" onClick={() => handleNipLookup(form.nip)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm"><Search size={12} /></button>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Pangkat & Golongan</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-indigo-500 outline-none transition-all shadow-sm text-sm" value={form.pangkat} onChange={e => setForm({...form, pangkat: e.target.value})} required>
+                                                        {PANGKAT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Pendidikan Terakhir</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-indigo-500 outline-none transition-all shadow-sm text-sm" value={form.pendidikan} onChange={e => setForm({...form, pendidikan: e.target.value})} required>
+                                                        {PENDIDIKAN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="md:col-span-2 space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Jabatan Saat Ini</label>
+                                                    <input type="text" className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-indigo-500 outline-none transition-all shadow-sm text-sm" value={form.jabatan} onChange={e => setForm({...form, jabatan: e.target.value.toUpperCase()})} required />
+                                                </div>
+                                                <div className="md:col-span-2 space-y-1.5">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Unit Kerja Penempatan</label>
+                                                    <select className="w-full px-4 py-2.5 bg-white rounded-xl font-bold border border-slate-200 focus:border-indigo-500 outline-none transition-all shadow-sm text-sm" value={form.unit_kerja} onChange={e => setForm({...form, unit_kerja: e.target.value})} required>
+                                                        {UNIT_KERJA_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 flex gap-3">
+                                            <button type="submit" className="flex-1 py-3.5 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg hover:bg-sky-600 transition-all flex items-center justify-center gap-2">
+                                                <Save size={16} /> {editId ? 'Perbarui Data' : 'Simpan Pegawai'}
+                                            </button>
+                                            <button type="button" onClick={() => { 
+                                                setActiveTab('history'); 
+                                                setEditId(null); 
+                                                setForm(initialForm); 
+                                                setPhotoFile(null);
+                                                setPreviewPhoto('');
+                                            }} className="px-6 py-3.5 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all">Batal</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                        <datalist id="list-nip-suggest">
+                            {listPegawai.map(p => <option key={p.id} value={p.nip}>{p.nama}</option>)}
+                        </datalist>
+                    </main>
+
+                    {showCamera && (
+                        <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 backdrop-blur-xl">
+                            <div className="relative w-full max-w-lg aspect-[3/4] bg-slate-900 rounded-[3rem] overflow-hidden border-2 border-white/20 shadow-2xl">
+                                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
+                            </div>
+                            <div className="mt-10 flex gap-6">
+                                <button onClick={stopCamera} className="w-16 h-16 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-md"><X size={24} /></button>
+                                <button onClick={takePhoto} className="w-20 h-20 bg-white text-slate-950 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-2xl"><Camera size={32} /></button>
+                            </div>
+                        </div>
+                    )}
+
+                    {pinModal.show && (
+                        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
+                            <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl space-y-6 text-center animate-in">
+                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center m-auto text-slate-900"><KeyRound size={32}/></div>
+                                <div>
+                                    <h3 className="text-[16px] font-black uppercase text-slate-950">
+                                        {pinModal.type === 'restore' ? 'Konfirmasi Restore' : 
+                                         pinModal.type === 'toggle_lock' ? (pinModal.payload?.is_locked ? 'Buka Kunci Data' : 'Kunci Data Pegawai') :
+                                         pinModal.type === 'delete_row' ? 'Konfirmasi Hapus' : 'Akses Pengaturan'}
+                                    </h3>
+                                    <p className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-widest">
+                                        {pinModal.type === 'delete_row' ? `Hapus data ${pinModal.payload?.nama}?` : 'Masukkan PIN Master'}
+                                    </p>
+                                </div>
+                                <input type="password" placeholder="" className="w-full text-center text-4xl tracking-[1em] py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 outline-none rounded-2xl font-black" value={pinInput} onChange={e => setPinInput(e.target.value.replace(/\D/g,''))} onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        if (pinInput === MASTER_PIN) {
+                                            if (pinModal.type === 'restore') handleRestoreAction();
+                                            else if (pinModal.type === 'toggle_lock') handleToggleLock();
+                                            else if (pinModal.type === 'delete_row') handleDelete();
+                                            else {
+                                                setShowSettings(true);
+                                                setPinModal({ show: false, type: '', payload: null });
+                                                setPinInput('');
+                                            }
+                                        } else {
+                                            showNotif("PIN Salah", "error");
+                                            setPinInput('');
+                                        }
+                                    }
+                                }} maxLength={4} autoFocus autoComplete="new-password" />
+                                <div className="flex flex-col gap-3">
+                                    <button onClick={() => {
+                                        if (pinInput === MASTER_PIN) {
+                                            if (pinModal.type === 'restore') handleRestoreAction();
+                                            else if (pinModal.type === 'toggle_lock') handleToggleLock();
+                                            else if (pinModal.type === 'delete_row') handleDelete();
+                                            else {
+                                                setShowSettings(true);
+                                                setPinModal({ show: false, type: '', payload: null });
+                                                setPinInput('');
+                                            }
+                                        } else {
+                                            showNotif("PIN Salah", "error");
+                                            setPinInput('');
+                                        }
+                                    }} className={`w-full py-4 rounded-2xl font-black uppercase text-[12px] shadow-xl transition-all ${pinModal.type === 'restore' ? 'bg-blue-600 text-white hover:bg-blue-700' : (pinModal.type === 'delete_row' ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-slate-900 text-white hover:bg-indigo-600')}`}>
+                                        {pinModal.type === 'restore' ? 'Konfirmasi Restore' : 
+                                         pinModal.type === 'toggle_lock' ? 'Konfirmasi' :
+                                         pinModal.type === 'delete_row' ? 'Hapus Data' : 'Buka Pengaturan'}
+                                    </button>
+                                    <button onClick={() => { setPinModal({show:false, type:'', payload:null}); setPinInput(''); }} className="text-[11px] font-black uppercase text-slate-400 hover:text-slate-900">Kembali</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showSettings && (
+                        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
+                            <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-lg shadow-2xl space-y-8 animate-in relative overflow-hidden">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-slate-100 rounded-xl text-slate-900"><Settings size={20}/></div>
+                                        <h3 className="text-[16px] font-black uppercase tracking-tight">Manajemen Database</h3>
+                                    </div>
+                                    <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X size={20}/></button>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <button onClick={handleExportExcel} className="w-full p-6 bg-slate-50 border border-slate-200 rounded-3xl text-left hover:bg-white hover:border-indigo-600 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors"><DownloadCloud size={24}/></div>
+                                        <div>
+                                            <p className="font-black uppercase text-[12px]">Ekspor ke Excel</p>
+                                            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Unduh seluruh data pegawai ke format .xlsx</p>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button onClick={handleBackupJson} className="w-full p-6 bg-slate-50 border border-slate-200 rounded-3xl text-left hover:bg-white hover:border-blue-600 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors"><FileUp size={24}/></div>
+                                        <div>
+                                            <p className="font-black uppercase text-[12px]">Backup JSON</p>
+                                            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Simpan data dalam format JSON untuk restore nanti</p>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button onClick={() => restoreInputRef.current?.click()} className="w-full p-6 bg-slate-50 border border-slate-200 rounded-3xl text-left hover:bg-white hover:border-emerald-600 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors"><UploadCloud size={24}/></div>
+                                        <div>
+                                            <p className="font-black uppercase text-[12px]">Restore Data</p>
+                                            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Pilih file JSON untuk mengganti data database</p>
+                                        </div>
+                                    </div>
+                                </button>
+                                    <div className="p-6 bg-rose-50 border border-rose-100 rounded-3xl space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-rose-600 text-white rounded-xl"><AlertTriangle size={24}/></div>
+                                            <div>
+                                                <p className="font-black uppercase text-[12px] text-rose-950">ZONA BAHAYA</p>
+                                                <p className="text-[10px] text-rose-600 font-bold uppercase mt-0.5 tracking-tighter">Penghapusan Seluruh Database</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={async () => {
+                                            if (confirm("KONFIRMASI AKHIR: Hapus seluruh database pegawai?")) {
+                                                setIsProcessing(true);
+                                                try {
+                                                    const { error } = await supabaseClient.from('data_pegawai').delete().not('id', 'is', null);
+                                                    if (error) throw error;
+                                                    showNotif("Database dikosongkan");
+                                                    setShowSettings(false);
+                                                    fetchData();
+                                                } catch (e) { showNotif("Gagal: " + e.message, "error"); }
+                                                finally { setIsProcessing(false); }
+                                            }
+                                        }} className="w-full py-3 bg-rose-600 text-white rounded-xl font-black uppercase text-[10px] hover:bg-rose-700 shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+                                            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Eraser size={16} />} Kosongkan Seluruh Data
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPANDU - Sistem informasi Penyimpanan Data Terpadu (Portal Internal PPS Raharjo Sragen - RPS Mojomulyo - RPS
+        Pamardi Siwi - RPS Gondang)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Supabase SDK & Config -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        window.SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        window.SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        #main-content {
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .submenu-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .submenu-container.open {
+            max-height: 500px;
+            /* Nilai cukup besar untuk menampung list */
+        }
+
+        .chevron-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .chevron-icon.rotate {
+            transform: rotate(180deg);
+        }
+
+        .active-menu {
+            background-color: rgba(253, 224, 71, 0.3);
+            /* Kuning cerah transparan */
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(253, 224, 71, 0.4);
+        }
+
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(14, 165, 233, 0.2);
+            border-radius: 10px;
+        }
+
+        #sidebar-overlay {
+            transition: opacity 0.3s ease;
+        }
+
+        #sidebar-overlay.active {
+            opacity: 1;
+        }
+
+        /* Slider Styles */
+        .slider-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            border-radius: 1.5rem;
+            background: #f1f5f9;
+        }
+
+        .slider-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+            width: 100%;
+        }
+
+        .slider-item {
+            flex: 0 0 50%;
+            /* Tampilkan 2 foto sekaligus */
+            aspect-ratio: 5/3;
+            /* Tinggi dikurangi 20% agar lebih ramping */
+            width: 100%;
+            border-right: 4px solid white;
+            /* Pembatas antar foto */
+        }
+
+        .slider-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes slide {
+            0% {
+                transform: translateX(0);
+            }
+
+            30% {
+                transform: translateX(0);
+            }
+
+            35% {
+                transform: translateX(-100%);
+            }
+
+            /* Geser ke slide 3,4 */
+            65% {
+                transform: translateX(-100%);
+            }
+
+            70% {
+                transform: translateX(-200%);
+            }
+
+            /* Geser ke slide 5,6 */
+            95% {
+                transform: translateX(-200%);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .animate-slide {
+            animation: slide 20s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Deletion Animation & Custom Modal */
+        .row-deleting {
+            transform: translateX(100px);
+            opacity: 0;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .custom-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .custom-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .custom-modal {
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .custom-modal-overlay.active .custom-modal {
+            transform: scale(1);
+        }
+
+        .toast-gagah {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #0f172a;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(100px);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .toast-gagah.active {
+            transform: translateY(0);
+        }
+
+        /* Running Text */
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 15s linear infinite, blink 1s step-end infinite;
+        }
+
+        @keyframes marquee {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        @keyframes wave-sweep {
+            0% {
+                transform: translateX(-150%);
+            }
+
+            100% {
+                transform: translateX(150%);
+            }
+        }
+
+        .animate-wave {
+            background: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.7) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            position: absolute;
+            inset: 0;
+            width: 150%;
+            height: 100%;
+            animation: wave-sweep 3s linear infinite;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        @keyframes pop-in {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .animate-pop {
+            animation: pop-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Gaya untuk menu yang dinonaktifkan */
+        .menu-disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            filter: grayscale(1);
+            pointer-events: none;
+        }
+
+        .menu-disabled i {
+            color: #cbd5e1 !important;
+        }
+
+        .menu-disabled span {
+            color: #cbd5e1 !important;
+        }
+    </style>
+
+    <script>
+        function initIcons() {
+            if (typeof lucide !== 'undefined') {
+                // Gunakan timeout kecil untuk memastikan DOM sudah siap
+                setTimeout(() => {
+                    // Jika ada error brand icons, pastikan script Lucide lengkap atau gunakan objek icons eksplisit
+                    lucide.createIcons();
+                }, 100);
+            }
+        }
+    </script>
+
+
+
+
+
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Login Page -->
+    <div id="login-page"
+        class="fixed inset-0 bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md text-center space-y-6">
+            <img src="maskot-sipandu.png" alt="Logo Sipandu" class="w-24 h-24 mx-auto mb-2">
+            <div class="space-y-1">
+                <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">SIPANDU Login</h2>
+                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sistem Informasi Penyimpanan Data Terpadu</p>
+            </div>
+            
+            <div class="space-y-4 text-left">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Username (NIP)</label>
+                    <div class="relative group">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <input type="text" id="username-input" placeholder="Masukkan NIP"
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Role / Jabatan</label>
+                    <div class="relative">
+                        <i data-lucide="shield" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="role-display" placeholder="Role Terdeteksi Otomatis" readonly
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-100 border-2 border-slate-100 rounded-2xl font-black text-xs text-sky-600 uppercase outline-none cursor-default">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Password</label>
+                    <div class="relative group">
+                        <i data-lucide="key" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <input type="password" id="password-input" placeholder="Masukkan Password"
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
+                    </div>
+                </div>
+            </div>
+
+            <button id="login-button"
+                class="w-full bg-sky-500 text-white font-black py-4 rounded-2xl hover:bg-sky-600 transition-all shadow-lg shadow-sky-100 uppercase tracking-widest text-xs flex items-center justify-center gap-2 group">
+                <span>Masuk ke Sistem</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <div class="pt-2">
+                <button onclick="showForgotPassword()" class="text-[10px] font-black text-slate-400 hover:text-sky-500 uppercase tracking-widest transition-colors">
+                    Ganti Password
+                </button>
+            </div>
+            
+            <p id="login-error" class="text-rose-500 text-[10px] font-bold uppercase tracking-wider hidden"></p>
+        </div>
+    </div>
+
+    <div id="main-app-content" class="flex h-screen overflow-hidden hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-sky-600 text-white flex flex-col shadow-2xl z-40">
+            <div
+                class="p-6 bg-sky-700/50 backdrop-blur-md flex items-center justify-between border-b border-sky-400/30">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                        <img src="maskot-sipandu.png" alt="Logo Sipandu" class="w-8 h-8 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-black tracking-tight leading-none text-yellow-400 drop-shadow-sm">
+                            SIPANDU</h1>
+                        <p class="text-[9px] text-sky-100 mt-1 uppercase font-bold tracking-wider"></p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-white/20 rounded-lg text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto sidebar-scroll py-4 px-3 space-y-1">
+                <!-- Dashboard Utama -->
+                <button onclick="showPage('dashboard')" id="menu-dashboard"
+                    class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 active-menu transition-all text-left">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span class="font-bold text-sm">Dashboard</span>
+                </button>
+
+                <!-- Kelompok Tata Usaha -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-tu', this)" id="btn-sub-tu"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="briefcase" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Adm.umum & kepegawaian</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-tu" class="submenu-container pl-11 space-y-0">
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('pengumuman')" id="menu-pengumuman"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="megaphone" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Pengumuman</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('surat-masuk')" id="menu-surat-masuk"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="mail" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Arsip Surat Masuk</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('surat-keluar')" id="menu-surat-keluar"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Arsip Surat Keluar</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('pegawai')" id="menu-pegawai"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="user-cog" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Data Pegawai</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('kp_kgb')" id="menu-kp_kgb"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="award" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Manajemen KP - KGB</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+<div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('data_keluarga')" id="menu-data_keluarga"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="award" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Data Keluarga</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+
+
+                        
+                    </div>
+                </div>
+
+                <!-- Kelompok Data PM. -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-pm', this)" id="btn-sub-pm"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Data Layanan PM</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-pm" class="submenu-container pl-11 space-y-0">
+
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('absensi-pm')" id="menu-absensi-pm"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Rekap Absensi PM</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('monitoring-resos')" id="menu-monitoring-resos"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring Pelayanan Resos</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('kesehatan-pm')" id="menu-kesehatan-pm"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="heart-pulse" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring Kesehatan PM</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('pendidikan')" id="menu-pendidikan"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="wallet" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring Biaya Transport & pendidikan</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pencatatan Belanja -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-belanja', this)" id="btn-sub-belanja"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Pencatatan Belanja</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-belanja" class="submenu-container pl-11 space-y-0">
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('bend23')" id="menu-bend23"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="list-checks" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Daftar belanja (Bend 23)</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('sosh')" id="menu-sosh"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="package" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja SOSH</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('pakaian')" id="menu-pakaian"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="shirt" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja Pakaian</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('belanja_jasa')" id="menu-belanja_jasa"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="wrench" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja Jasa</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('belanja_modal')" id="menu-belanja_modal"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja Modal</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('belanja_lain')" id="menu-belanja_lain"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja lainnya</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pencatatan Operasional -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-operasional', this)" id="btn-sub-operasional"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Pencatatan Operasional</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-operasional" class="submenu-container pl-11 space-y-0">
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('sppd')" id="menu-sppd"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="car" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">SPPD</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('bbm')" id="menu-bbm"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="fuel" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Pencatatan Voucer BBM</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Laporan -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-laporan', this)" id="btn-sub-laporan"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Data Laporan</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-laporan" class="submenu-container pl-11 space-y-0">
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href=" https://gemini.google.com/share/3e772cf27fff" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="file-text" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan Unit Kerja</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/c0820067018f" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan Kedinasan</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/1737142bcee1" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan IKM</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/2ccb5c59c469" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="check-square" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan SPM</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/814ba7808ddb" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="laptop" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan E-PEKPP</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                           <button onclick="showPage('bmd')" id="menu-bmd"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="database" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Laporan BMD</span>
+                           </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ruang Approver -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-approver', this)" id="btn-sub-approver"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Ruang Approver</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-approver" class="submenu-container pl-11 space-y-0">
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/bf5b635e88ed" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring Voucer BBM</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/027bdab157cd" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring Transport & Kesehatan</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/f45a2769eadb" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Monitoring SPPD</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/027bdab157cd" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Persetujuan Belanja</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <a href="https://gemini.google.com/share/027bdab157cd" target="_blank"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="file-check" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Persetujuan Laporan</span>
+                            </a>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sistem & Database -->
+                <div class="space-y-0.5">
+                    <button onclick="toggleSubmenu('sub-database', this)" id="btn-sub-database"
+                        class="flex items-center justify-between w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="database" class="w-5 h-5"></i>
+                            <span class="font-bold text-sm">Sistem & Database</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
+                    </button>
+                    <div id="sub-database" class="submenu-container pl-11 space-y-0">
+                          <div class="flex items-center justify-between py-1 pr-4">
+                              <button onclick="showPage('setting-akses')" id="menu-setting-akses"
+                                  class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                  <span class="font-bold text-xs">Setting Akses</span>
+                              </button>
+                              <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                          </div>
+                          <div class="flex items-center justify-between py-1 pr-4">
+                              <button onclick="showPage('form-informasi-sipandu')" id="menu-form-informasi-sipandu"
+                                  class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                  <i data-lucide="info" class="w-4 h-4"></i>
+                                  <span class="font-bold text-xs">Pengaturan Informasi SIPANDU</span>
+                              </button>
+                              <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                          </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('restore-json')" id="menu-restore-json-main"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Restore Data</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('cetak-kartu')" id="menu-cetak-kartu"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="contact-2" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Cetak Kartu Akun</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Profile Area -->
+            <div class="p-4 bg-sky-600 border-t border-sky-400/50">
+                <div class="flex items-center space-x-3 p-2 rounded-xl bg-white/10 cursor-pointer hover:bg-white/20 transition-all"
+                    onclick="handleAdminClick()">
+                    <div id="profile-initials"
+                        class="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-sky-500 text-[10px]">
+                        AD</div>
+                    <div class="flex-1 overflow-hidden text-[10px]">
+                        <p id="profile-name" class="font-black truncate uppercase">Admin </p>
+                        <p id="profile-role" class="text-sky-100 font-bold uppercase opacity-70">PPS RAHARJO SRAGEN</p>
+                    </div>
+                </div>
+                <!-- Admin Links Container -->
+                <div id="admin-links" class="hidden mt-3 pt-3 border-t border-sky-400/30 space-y-1">
+                    <p class="text-[9px] font-black text-sky-200 uppercase tracking-widest mb-2">Menu Khusus Admin</p>
+                    <button onclick="showPage('statistik-pengunjung')" id="menu-statistik-pengunjung"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white text-left">
+                        <i data-lucide="bar-chart-3" class="w-3 h-3"></i>
+                        <span>Statistik Pengunjung</span>
+                    </button>
+                    <a href="https://gemini.google.com/share/7945ab24d3ac" target="_blank"
+                        class="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white">
+                        <i data-lucide="user-check" class="w-3 h-3"></i>
+                        <span>Data Personal</span>
+                    </a>
+                    <button onclick="showPage('apbd')" id="menu-apbd"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white text-left">
+                        <i data-lucide="wallet" class="w-3 h-3"></i>
+                        <span>Monitoring APBD</span>
+                    </button>
+                </div>
+                <button id="logout-button"
+                    class="flex items-center space-x-3 w-full px-4 py-2 mt-4 rounded-xl bg-sky-700 hover:bg-sky-800 transition-all text-left">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <span class="font-bold text-sm">Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="toggleSidebar()">
+        </div>
+
+        <!-- Modal Konfirmasi Logout -->
+        <div id="logout-modal" class="fixed inset-0 z-[100] hidden">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-6">
+                <div class="bg-white rounded-3xl shadow-2xl p-8 text-center space-y-6">
+                    <div
+                        class="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500">
+                        <i data-lucide="log-out" class="w-10 h-10"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="text-xl font-black text-slate-800">Konfirmasi Keluar</h3>
+                        <p class="text-slate-500 text-sm font-medium leading-relaxed">Apakah Anda yakin ingin keluar
+                            dari sistem SIPANDU?</p>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="closeLogoutModal()"
+                            class="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-all">
+                            Tidak
+                        </button>
+                        <button onclick="confirmLogout()"
+                            class="flex-1 py-3 px-4 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl shadow-lg shadow-rose-200 transition-all">
+                            Ya, Keluar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 flex flex-col lg:ml-72 transition-all duration-300 p-2 gap-2">
+            <!-- Header Bar -->
+            <header
+                class="h-14 bg-sky-600 border border-sky-500 px-6 flex justify-between items-center rounded-xl sticky top-0 z-20 shadow-lg shadow-sky-900/20">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()"
+                        class="p-2.5 bg-sky-700/50 hover:bg-sky-800/50 rounded-xl text-white border border-sky-400/30 lg:hidden">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div id="running-text-container"
+                        class="marquee-container flex-1 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 hidden ml-4 border border-white/30">
+                        <p class="marquee-text text-sm font-black text-yellow-300">Selamat Datang di SIPANDU - Sistem
+                            Informasi Penyimpanan Data Terpadu PPS Raharjo Sragen</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center gap-4 bg-sky-700/50 px-4 py-2 rounded-xl border border-sky-400/30">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-4 h-4 text-sky-200"></i>
+                            <div class="flex items-baseline gap-2">
+                                <p id="current-day" class="text-sm font-black text-white uppercase tracking-tighter">
+                                </p>
+                                <p id="current-date" class="text-sm font-black text-white uppercase tracking-tighter">
+                                </p>
+                            </div>
+                        </div>
+                        <div class="w-px h-4 bg-sky-400/30"></div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-sky-200 animate-pulse"></i>
+                            <p id="current-time" class="text-sm font-black text-white"></p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content Container -->
+            <div
+                class="flex-1 overflow-hidden bg-sky-200 rounded-[1.5rem] border border-sky-400 shadow-sm flex flex-col">
+                <div id="page-content" class="flex-1 overflow-y-auto p-4 lg:p-5 space-y-6">
+
+                    <!-- Hero Section -->
+                    <div
+                        class="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-3xl p-5 text-white relative overflow-hidden shadow-2xl shadow-sky-200">
+                        <!-- Logo PPSDI di Pojok Kanan Atas -->
+                        <div class="absolute top-5 right-6 z-20">
+                            <div class="relative group">
+                                <div
+                                    class="absolute -inset-2 bg-white/20 rounded-2xl blur-xl opacity-25 group-hover:opacity-60 transition duration-1000 group-hover:duration-200">
+                                </div>
+                                <img src="logo-ppsdri-raharjo.png" alt="Logo PPSDI"
+                                    class="relative w-32 h-32 object-contain rounded-2xl bg-white/10 p-2 shadow-2xl ring-2 ring-white/40"
+                                    onerror="this.style.display='none'">
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 max-w-5xl">
+                            <div class="flex items-center gap-6 mb-4">
+                                <!-- Logo Maskot Sipandu -->
+                                <div class="relative group shrink-0 animate-float">
+                                    <div
+                                        class="absolute -inset-2 bg-white/20 rounded-2xl blur-xl opacity-25 group-hover:opacity-60 transition duration-1000 group-hover:duration-200">
+                                    </div>
+                                    <img src="maskot-sipandu.png" alt="Logo Sipandu"
+                                        class="relative w-32 h-32 object-contain rounded-2xl bg-white/10 p-2 shadow-2xl ring-2 ring-white/40"
+                                        onerror="this.style.display='none'">
+                                </div>
+                                <div class="animate-pop">
+                                    <h3
+                                        class="text-6xl font-black uppercase tracking-tighter mb-0.5 drop-shadow-2xl text-yellow-400 leading-none">
+                                        SIPANDU</h3>
+                                    <div class="relative inline-block overflow-hidden rounded-lg">
+                                        <p
+                                            class="text-xl font-bold text-yellow-400 leading-tight mb-0.5 whitespace-nowrap relative z-10">
+                                            Sistem Informasi Penyimpanan Data Terpadu
+                                        </p>
+                                        <div class="animate-wave"></div>
+                                    </div>
+                                    <div class="relative block overflow-hidden rounded-lg mt-1">
+                                        <p
+                                            class="text-sm font-medium text-sky-100/80 italic leading-snug relative z-10">
+                                            (Portal Internal PPS Raharjo Sragen - RPS Mojomulyo - RPS Pamardi Siwi - RPS
+                                            Gondang)
+                                        </p>
+                                        <div class="animate-wave"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <div
+                                    class="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/20 rounded-lg text-[9px] font-bold uppercase tracking-widest">
+                                    Status: Aktif</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gallery Slider (Replacing Stats Grid) -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Galeri PPS
+                                    Raharjo Sragen</h4>
+                                <div class="flex items-center gap-3 sm:border-l sm:border-slate-200 sm:pl-4">
+                                    <a href="https://www.instagram.com/ppsraharjosragen/" target="_blank"
+                                        class="flex items-center justify-center w-6 h-6 bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 hover:scale-110 transition-all shadow-sm"
+                                        title="Instagram">
+                                        <i data-lucide="instagram" class="w-4 h-4"></i>
+                                    </a>
+                                    <a href="https://www.facebook.com/pps.raharjo.sragen" target="_blank"
+                                        class="flex items-center justify-center w-6 h-6 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:scale-110 transition-all shadow-sm"
+                                        title="Facebook">
+                                        <i data-lucide="facebook" class="w-4 h-4"></i>
+                                    </a>
+                                    <a href="https://www.youtube.com/@ppsraharjosragen" target="_blank"
+                                        class="flex items-center justify-center w-6 h-6 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:scale-110 transition-all shadow-sm"
+                                        title="YouTube">
+                                        <i data-lucide="youtube" class="w-4 h-4"></i>
+                                    </a>
+                                    <a href="https://ppsraharjosragen.com" target="_blank"
+                                        class="flex items-center justify-center w-6 h-6 bg-sky-50 text-sky-500 rounded-lg hover:bg-sky-100 hover:scale-110 transition-all shadow-sm"
+                                        title="Website Resmi">
+                                        <i data-lucide="globe" class="w-4 h-4"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase shrink-0">Geser Otomatis</span>
+                        </div>
+                        <div class="slider-container shadow-xl border-4 border-white">
+                            <div class="slider-track animate-slide">
+                                <!-- GANTI URL GAMBAR DI SINI SEWAKTU-WAKTU (SLIDE 1-6) -->
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=1gqpsBofXZIHAmZCCt_XeHkqj8MjdsWYs&sz=w1200"
+                                        alt="Slider 1">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 1</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Filosofi Logo PPS Raharjo</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=11mQCi5h3sikm4WQuaDtf7U-SiiPULXyH&sz=w1200"
+                                        alt="Slider 2">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 2</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Kepala Dinas Sosial Provinsi
+                                                Jawa Tengah Bersama Pegawai PPS Raharjo dan RPS</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=1wkgiGR1U76m55rsh_47hED4j58uLlWxZ&sz=w1200"
+                                        alt="Slider 3">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 3</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Kepala PPS Raharjo Sragen</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=1cf_h2eqaoiPrEzh96xfZJdQpZ26y5O_y&sz=w1200"
+                                        alt="Slider 4">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 4</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Kepala Bidang Rehabilitasi
+                                                Sosial Dinsos Prov Jateng bersama Penerima Manfaat</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=1SbT-1S2KVg3BJswr1M0YhCKVmB3hBvmn&sz=w1200"
+                                        alt="Slider 5">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 5</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Galery Penerima Manfaat</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slider-item relative">
+                                    <img src="https://drive.google.com/thumbnail?id=16duM3ujQBF_PfpDoIfcJGW-ytgqJgL-5&sz=w1200"
+                                        alt="Slider 6">
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                                        <div
+                                            class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
+                                            <h5 class="font-black text-2xl drop-shadow-lg">Slide 6</h5>
+                                        </div>
+                                        <div
+                                            class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
+                                            <p class="text-sm font-bold drop-shadow-md">Pemeriksaan Kesehatan Penerima
+                                                Manfaat</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div
+                            class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-sky-500"></i>
+                                <h4 class="font-black text-sm uppercase tracking-wider">Navigasi Dropdown</h4>
+                            </div>
+                            <p class="text-sm text-slate-500 leading-relaxed">Klik pada nama kelompok kerja di sidebar
+                                untuk membuka sub-menu dan mengakses data spesifik yang Anda butuhkan.</p>
+                        </div>
+                        <div
+                            class="bg-sky-50 p-8 rounded-3xl border border-sky-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <i data-lucide="info" class="w-5 h-5 text-sky-600"></i>
+                                <h4 class="font-black text-sm uppercase tracking-wider text-sky-800">Satu Pintu</h4>
+                            </div>
+                            <p class="text-sm text-sky-700/70 leading-relaxed">Seluruh laporan dan data transaksi
+                                belanja kini terintegrasi dalam satu sistem untuk memudahkan monitoring pimpinan.</p>
+                        </div>
+                    </div>
+                </div> <!-- End of Page Content Container -->
+
+                <footer class="px-8 py-2 bg-transparent shrink-0">
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">Portal
+                        Internal &bull; PPS RAHARJO SRAGEN &copy; 2026</p>
+                </footer>
+        </main>
+    </div>
+
+    <!-- SIPANDU Info Modal -->
+    <div id="sipandu-info-modal" class="fixed inset-0 z-[1000] hidden">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg p-3">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+                <!-- Wave Animation Overlay -->
+                <div class="absolute inset-0 animate-wave pointer-events-none"></div>
+                
+                <div class="relative p-4 space-y-3">
+                    <!-- Close Button -->
+                    <button onclick="closeSipanduInfoModal()" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                    
+                    <!-- Header -->
+                    <div class="flex items-center gap-2 pb-2">
+                        <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg shrink-0">
+                            <img src="maskot-sipandu.png" alt="Sipandu" class="w-8 h-8 object-contain">
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight">SIPANDU</h3>
+                            <p class="text-[10px] text-slate-500 font-bold">Sistem Informasi Penyimpanan Data Terpadu</p>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="sipandu-info-content" class="space-y-2">
+                        <!-- Photo Section -->
+                        <div id="sipandu-info-photo" class="hidden">
+                            <img id="sipandu-photo-img" src="" alt="Informasi" class="w-full h-56 object-cover rounded-xl border border-slate-200">
+                        </div>
+
+                        <!-- Text Section -->
+                        <div id="sipandu-info-text" class="hidden">
+                            <p class="text-xs font-black text-yellow-600 uppercase tracking-widest mb-1.5">NOTIFIKASI :</p>
+                            <pre id="sipandu-text-content" class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans whitespace-pre-wrap"></pre>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-end pt-1">
+                        <button onclick="closeSipanduInfoModal()" class="px-5 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 font-black text-[11px] uppercase tracking-widest rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-200">
+                            Tutup & Lanjutkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cool Toast Notification -->
+    <div id="cool-toast" class="toast-gagah">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="cool-toast-msg">Data berhasil dihapus</span>
+    </div>
+
+    <!-- Firebase Configuration for iframe pages -->
+    <script>
+        // Firebase configuration - replace with your actual Firebase config
+        window.__firebase_config = JSON.stringify({
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        });
+
+        // App ID for Firestore collections
+        window.__app_id = 'arsip-dinsos-sragen-v2';
+    </script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

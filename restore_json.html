@@ -1,0 +1,576 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore JSON - SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 p-6 flex flex-col items-center">
+
+    <div class="max-w-3xl w-full space-y-6">
+        <!-- Navigation Tabs -->
+        <div class="flex bg-white/50 p-1.5 rounded-[2rem] border border-slate-200 shadow-sm w-fit mx-auto backdrop-blur-md no-print">
+            <button onclick="switchTab('restore')" id="tab-restore" class="px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all bg-white text-indigo-600 shadow-lg shadow-indigo-100/50">
+                <div class="flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> Restore Data</div>
+            </button>
+            <button onclick="switchTab('backup')" id="tab-backup" class="px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-600">
+                <div class="flex items-center gap-2"><i data-lucide="download-cloud" class="w-4 h-4"></i> Backup Data</div>
+            </button>
+        </div>
+
+        <!-- Restore Section -->
+        <div id="section-restore" class="bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-500">
+            <div class="bg-indigo-600 p-10 text-white relative">
+                <div class="relative z-10">
+                    <h1 class="text-2xl font-black uppercase tracking-tighter mb-2 flex items-center gap-3">
+                        <div class="p-3 bg-white/20 rounded-2xl backdrop-blur-md"><i data-lucide="database" class="w-6 h-6"></i></div>
+                        Master Restore JSON
+                    </h1>
+                    <p class="text-xs font-bold text-indigo-100 uppercase tracking-widest opacity-80">Pemulihan Data Database Supabase</p>
+                </div>
+                <div class="absolute top-0 right-0 p-10 opacity-10">
+                    <i data-lucide="upload-cloud" class="w-32 h-32"></i>
+                </div>
+            </div>
+
+            <div class="p-10 space-y-8">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">1. Pilih Target Tabel</label>
+                        <select id="target-table" class="w-full h-14 px-5 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all appearance-none">
+                            <option value="">Pilih Tabel Database...</option>
+                            <option value="belanja_jasa">Belanja Jasa (belanja_jasa)</option>
+                            <option value="modal">Belanja Modal (modal)</option>
+                            <option value="belanja_lainnya">Barang Lainnya (belanja_lainnya)</option>
+                            <option value="mutasi_pm">Monitoring Resos (mutasi_pm)</option>
+                            <option value="voucher_data">Pencatatan BBM (voucher_data)</option>
+                            <option value="unit_quotas_logs">Log Kuota BBM (unit_quotas_logs)</option>
+                            <option value="pakaian">Belanja Pakaian (pakaian)</option>
+                            <option value="data_pegawai">Data Pegawai (data_pegawai)</option>
+                            <option value="absensi_pm">Absensi PM (absensi_pm)</option>
+                            <option value="surat_masuk">Surat Masuk (surat_masuk)</option>
+                            <option value="surat_keluar">Surat Keluar (surat_keluar)</option>
+                            <option value="data_kp_kgb">KP & KGB (data_kp_kgb)</option>
+                            <option value="sppd_data">Data SPPD (sppd_data)</option>
+                            <option value="user_access">Hak Akses User (user_access)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">2. Unggah File JSON</label>
+                        <label class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50 hover:bg-white hover:border-indigo-600 cursor-pointer transition-all group">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i data-lucide="file-json" class="w-10 h-10 text-slate-300 group-hover:text-indigo-600 mb-3 transition-colors"></i>
+                                <p id="file-name" class="text-[11px] font-black text-slate-500 uppercase tracking-wider">Klik untuk pilih file .json</p>
+                            </div>
+                            <input type="file" id="json-file" accept=".json" class="hidden" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex flex-col gap-4">
+                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3">
+                        <i data-lucide="alert-triangle" class="text-amber-600 w-5 h-5 shrink-0"></i>
+                        <p class="text-[10px] font-bold text-amber-900 leading-relaxed uppercase">
+                            PERHATIAN: Memulihkan data akan MENAMBAHKAN data baru ke database. Pastikan format JSON sesuai dengan skema tabel yang dipilih.
+                        </p>
+                    </div>
+
+                    <button onclick="askPin('restore')" id="restore-btn" class="w-full h-16 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[12px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                        <i data-lucide="play" class="w-5 h-5"></i>
+                        Mulai Restore Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup Section -->
+        <div id="section-backup" class="bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-500 hidden">
+            <div class="bg-emerald-600 p-10 text-white relative">
+                <div class="relative z-10">
+                    <h1 class="text-2xl font-black uppercase tracking-tighter mb-2 flex items-center gap-3">
+                        <div class="p-3 bg-white/20 rounded-2xl backdrop-blur-md"><i data-lucide="download-cloud" class="w-6 h-6"></i></div>
+                        Master Backup JSON
+                    </h1>
+                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-widest opacity-80">Ekspor Seluruh Database ke File JSON</p>
+                </div>
+                <div class="absolute top-0 right-0 p-10 opacity-10">
+                    <i data-lucide="database" class="w-32 h-32"></i>
+                </div>
+            </div>
+
+            <div class="p-10 space-y-8">
+                <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Daftar Tabel yang Akan Di-Backup:</h3>
+                    <div id="table-list-backup" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Table list will be injected here -->
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex flex-col gap-4">
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex gap-3">
+                        <i data-lucide="info" class="text-emerald-600 w-5 h-5 shrink-0"></i>
+                        <p class="text-[10px] font-bold text-emerald-900 leading-relaxed uppercase">
+                            Seluruh data dari tabel di atas akan diunduh dalam satu file JSON sebagai cadangan database. Dibutuhkan PIN Admin (888).
+                        </p>
+                    </div>
+
+                    <button onclick="askPin('backup')" id="backup-btn" class="w-full h-16 bg-emerald-600 text-white rounded-[1.5rem] font-black text-[12px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-200 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                        Unduh Backup Database
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Modal -->
+    <div id="modal-pin" class="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-[280px] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 animate-in zoom-in duration-300">
+            <h3 class="text-[10px] font-black uppercase tracking-widest mb-6 text-slate-400">Verifikasi Admin</h3>
+            <input type="password" id="pin-input" maxlength="3" class="w-full text-center p-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-4xl mb-8 outline-none focus:border-indigo-600 tracking-[0.5em]" placeholder="•••">
+            <div class="flex flex-col gap-3">
+                <button onclick="startRestore()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-wider">Konfirmasi PIN</button>
+                <button onclick="closePinModal()" class="text-[10px] font-bold text-slate-400 uppercase">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notif" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 text-white rounded-full shadow-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 opacity-0 transition-all duration-300 pointer-events-none translate-y-10">
+        <span id="notif-msg"></span>
+    </div>
+
+    <script>
+        const PIN_ADMIN = "888";
+        let supabaseClient = null;
+        let selectedFile = null;
+        let currentAction = 'restore';
+
+        const TABLES_TO_BACKUP = [
+            { id: 'belanja_jasa', name: 'Belanja Jasa' },
+            { id: 'modal', name: 'Belanja Modal' },
+            { id: 'belanja_lainnya', name: 'Barang Lainnya' },
+            { id: 'mutasi_pm', name: 'Monitoring Resos' },
+            { id: 'voucher_data', name: 'Pencatatan BBM' },
+            { id: 'unit_quotas_logs', name: 'Log Kuota BBM' },
+            { id: 'pakaian', name: 'Belanja Pakaian' },
+            { id: 'data_pegawai', name: 'Data Pegawai' },
+            { id: 'absensi_pm', name: 'Absensi PM' },
+            { id: 'surat_masuk', name: 'Surat Masuk' },
+            { id: 'surat_keluar', name: 'Surat Keluar' },
+            { id: 'data_kp_kgb', name: 'KP & KGB' },
+            { id: 'sppd_data', name: 'Data SPPD' },
+            { id: 'user_access', name: 'Hak Akses User' }
+        ];
+
+        function init() {
+            console.log("Memulai Inisialisasi Master JSON...");
+            
+            // Hardcoded credentials untuk stabilitas maksimal di protokol file://
+            const url = 'https://yewkffbatvrbtfliikia.supabase.co';
+            const key = 'sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg';
+            
+            try {
+                if (typeof supabase !== 'undefined') {
+                    supabaseClient = supabase.createClient(url, key);
+                    console.log("Koneksi Supabase Berhasil Dibuat");
+                } else {
+                    console.error("Library Supabase (supabase-js) tidak terdeteksi!");
+                }
+            } catch (e) {
+                console.error("Gagal membuat client Supabase:", e);
+            }
+            
+            // Render list secara paksa
+            renderBackupTableList();
+            
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        // Jalankan inisialisasi secara bertahap
+        init();
+        setTimeout(init, 500); // Jalankan ulang setelah 0.5 detik untuk memastikan DOM siap
+        window.onload = init;
+
+        function switchTab(tab) {
+            currentAction = tab;
+            const resSection = document.getElementById('section-restore');
+            const backSection = document.getElementById('section-backup');
+            const resTab = document.getElementById('tab-restore');
+            const backTab = document.getElementById('tab-backup');
+
+            if (tab === 'restore') {
+                resSection.classList.remove('hidden');
+                backSection.classList.add('hidden');
+                resTab.className = "px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all bg-white text-indigo-600 shadow-lg shadow-indigo-100/50";
+                backTab.className = "px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-600";
+            } else {
+                resSection.classList.add('hidden');
+                backSection.classList.remove('hidden');
+                backTab.className = "px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all bg-white text-emerald-600 shadow-lg shadow-emerald-100/50";
+                resTab.className = "px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-600";
+                renderBackupTableList(); // Pastikan list di-render saat pindah tab
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function renderBackupTableList() {
+            const list = document.getElementById('table-list-backup');
+            if (!list) {
+                console.warn("Elemen table-list-backup tidak ditemukan!");
+                return;
+            }
+            
+            list.innerHTML = TABLES_TO_BACKUP.map(t => `
+                <div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-wider">${t.name}</span>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('json-file').onchange = (e) => {
+            selectedFile = e.target.files[0];
+            document.getElementById('file-name').innerText = selectedFile ? selectedFile.name : 'Klik untuk pilih file .json';
+        };
+
+        function showNotif(msg, type = 'success') {
+            const el = document.getElementById('notif');
+            const msgEl = document.getElementById('notif-msg');
+            msgEl.innerText = msg;
+            el.className = `fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 text-white rounded-full shadow-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 transition-all duration-300 opacity-100 translate-y-0 ${type === 'error' ? 'bg-rose-600' : (type === 'info' ? 'bg-indigo-500' : 'bg-slate-900')}`;
+            setTimeout(() => {
+                el.classList.add('opacity-0', 'translate-y-10');
+                el.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        function askPin(action) {
+            if (action === 'restore') {
+                const table = document.getElementById('target-table').value;
+                if (!table) return showNotif("Pilih tabel target dulu!", "error");
+                if (!selectedFile) return showNotif("Pilih file JSON dulu!", "error");
+            }
+            
+            document.getElementById('modal-pin').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('modal-pin').classList.add('hidden');
+        }
+
+        function startRestore() {
+            const pin = document.getElementById('pin-input').value;
+            if (pin !== PIN_ADMIN) return showNotif("PIN Admin Salah!", "error");
+            
+            closePinModal();
+            if (currentAction === 'restore') {
+                performRestore();
+            } else {
+                performBackup();
+            }
+        }
+
+        async function performBackup() {
+            const btn = document.getElementById('backup-btn');
+            const originalBtnText = btn.innerHTML;
+            
+            // Re-init jika client null
+            if (!supabaseClient) {
+                console.log("[BACKUP] Client null, mencoba re-inisialisasi...");
+                init();
+            }
+
+            if (!supabaseClient) {
+                showNotif("Database tidak terhubung. Periksa koneksi internet.", "error");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mengekspor Database...`;
+            if (window.lucide) window.lucide.createIcons();
+
+            try {
+                const fullBackup = {};
+                showNotif("Memulai proses backup seluruh tabel...", "info");
+
+                for (const table of TABLES_TO_BACKUP) {
+                    btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Membaca ${table.name}...`;
+                    if (window.lucide) window.lucide.createIcons();
+                    
+                    const { data, error } = await supabaseClient.from(table.id).select('*');
+                    if (error) throw error;
+                    fullBackup[table.id] = data;
+                }
+
+                const dataStr = JSON.stringify(fullBackup, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const exportFileDefaultName = `SIPANDU_FULL_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+
+                const linkElement = document.createElement('a');
+                linkElement.href = url;
+                linkElement.download = exportFileDefaultName;
+                document.body.appendChild(linkElement);
+                linkElement.click();
+                document.body.removeChild(linkElement);
+                URL.revokeObjectURL(url);
+
+                showNotif("Backup database berhasil diunduh!");
+                btn.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> Backup Selesai`;
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnText;
+                    if (window.lucide) window.lucide.createIcons();
+                }, 2000);
+
+            } catch (err) {
+                console.error("[BACKUP] Error:", err);
+                showNotif("Gagal Backup: " + (err.message || "Kesalahan teknis"), "error");
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }
+
+        async function performRestore() {
+            const table = document.getElementById('target-table').value;
+            const btn = document.getElementById('restore-btn');
+            
+            if (!table) return showNotif("Pilih tabel target dulu!", "error");
+            if (!selectedFile) return showNotif("Pilih file JSON dulu!", "error");
+
+            btn.disabled = true;
+            const originalBtnText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses Restore...`;
+            lucide.createIcons();
+
+            const reader = new FileReader();
+            reader.onerror = () => {
+                showNotif("Gagal membaca file dari disk", "error");
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+            };
+
+            reader.onload = async (e) => {
+                try {
+                    let rawData;
+                    try {
+                        rawData = JSON.parse(e.target.result);
+                    } catch (parseErr) {
+                        throw new Error("File bukan format JSON yang valid. Pastikan file berakhiran .json dan berisi teks JSON.");
+                    }
+
+                    console.log("[RESTORE] Data Mentah:", rawData);
+
+                    let data = rawData;
+                    
+                    // Logic to handle full backup file (which is an object of arrays)
+                    if (!Array.isArray(data) && typeof data === 'object' && data !== null) {
+                        // If it's a full backup and we're restoring to a specific table
+                        if (data[table] && Array.isArray(data[table])) {
+                            data = data[table];
+                            console.log(`[RESTORE] Data untuk tabel "${table}" ditemukan dalam file backup.`);
+                        } else {
+                            // Try common keys if not found directly
+                            const possibleKeys = ['reports', 'data', 'list', 'pakaian', 'jasa', 'vouchers', 'records', 'items'];
+                            let found = false;
+                            for (const key of possibleKeys) {
+                                if (data[key] && Array.isArray(data[key])) {
+                                    data = data[key];
+                                    found = true;
+                                    console.log(`[RESTORE] Data ditemukan dalam key: "${key}"`);
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                // If it's just one object, wrap it
+                                data = [data];
+                                console.log("[RESTORE] Objek tunggal dideteksi.");
+                            }
+                        }
+                    }
+
+                    if (data.length === 0) {
+                        throw new Error("File JSON kosong atau tidak berisi data yang dapat dipulihkan.");
+                    }
+
+                    showNotif("Memulai pemulihan " + data.length + " data ke " + table + "...", "info");
+
+                    // Mapping logic based on table
+                    const chunks = [];
+                    for (let i = 0; i < data.length; i += 20) {
+                        const chunk = data.slice(i, i + 20).map(item => {
+                            const cleanItem = { ...item };
+                            
+                            // Remove internal Supabase/Firebase fields
+                            delete cleanItem.id;
+                            delete cleanItem.created_at;
+                            delete cleanItem.updated_at;
+                            delete cleanItem.createdAt;
+                            delete cleanItem.updatedAt;
+                            delete cleanItem._id;
+
+                            // Table specific normalization with flexible field naming
+                            if (table === 'belanja_jasa') {
+                                return {
+                                    unit_pelayanan: item.unit_pelayanan || item.unitPelayanan || item.unit_kerja || 'Tanpa Unit',
+                                    jenis_jasa: item.jenis_jasa || item.jenisJasa || 'Jasa Lainnya',
+                                    nama_pekerjaan: item.nama_pekerjaan || item.namaPekerjaan || item.uraian || 'Tanpa Nama',
+                                    tanggal_pekerjaan: item.tanggal_pekerjaan || item.tanggalPekerjaan || item.tanggal || new Date().toISOString().split('T')[0],
+                                    nama_rekanan: item.nama_rekanan || item.namaRekanan || item.penyedia || '',
+                                    nominal: parseInt(item.nominal) || 0,
+                                    url_spk: item.url_spk || item.urlSpk || item.document_url || null,
+                                    url_bayar: item.url_bayar || item.urlBayar || null,
+                                    dokumentasi: Array.isArray(item.dokumentasi) ? item.dokumentasi : (Array.isArray(item.photos) ? item.photos : []),
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+                            
+                            if (table === 'modal') {
+                                return {
+                                    unit_kerja: item.unit_kerja || item.unit_pelayanan || item.unitKerja || 'Tanpa Unit',
+                                    tanggal_belanja: item.tanggal_belanja || item.tanggal_pekerjaan || item.tanggalBelanja || new Date().toISOString().split('T')[0],
+                                    nomor_bp: item.nomor_bp || item.nomorBp || item.no_bp || '-',
+                                    jenis_pakaian: item.jenis_pakaian || item.jenisPakaian || item.kategori || 'Belanja Modal',
+                                    uraian: item.uraian || item.nama_pekerjaan || item.namaPekerjaan || '-',
+                                    penyedia: item.penyedia || item.nama_rekanan || item.namaRekanan || '-',
+                                    penerima_barang: item.penerima_barang || item.penerimaBarang || '-',
+                                    volume: parseFloat(item.volume) || 1,
+                                    satuan: item.satuan || 'Unit',
+                                    harga_satuan: parseFloat(item.harga_satuan) || parseFloat(item.hargaSatuan) || 0,
+                                    nominal: parseFloat(item.nominal) || 0,
+                                    photos: Array.isArray(item.photos) ? item.photos : (Array.isArray(item.dokumentasi) ? item.dokumentasi : []),
+                                    document_url: item.document_url || item.url_spk || item.documentUrl || null,
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+
+                            if (table === 'mutasi_pm') {
+                                return {
+                                    unit_pelayanan: item.unit_pelayanan || item.unit_kerja || 'Tanpa Unit',
+                                    bulan_tahun: item.bulan_tahun || item.bulanTahun || new Date().toISOString().substring(0, 7),
+                                    jumlah_awal: parseInt(item.jumlah_awal) || 0,
+                                    pm_masuk: parseInt(item.pm_masuk) || 0,
+                                    pm_keluar: parseInt(item.pm_keluar) || 0,
+                                    jumlah_akhir: parseInt(item.jumlah_akhir) || 0,
+                                    catatan: item.catatan || '',
+                                    pdf_url: item.pdf_url || item.pdfUrl || null,
+                                    public_id: item.public_id || '',
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+
+                            if (table === 'voucher_data') {
+                                return {
+                                    unit_kerja: item.unit_kerja || item.unitKerja || 'Tanpa Unit',
+                                    tanggal_voucher: item.tanggal_voucher || item.tanggalVoucher || item.tanggal || new Date().toISOString().split('T')[0],
+                                    nomor_voucher: item.nomor_voucher || item.nomorVoucher || item.no_voucher || '-',
+                                    nama_driver: item.nama_driver || item.namaDriver || '-',
+                                    jenis_bbm: item.jenis_bbm || item.jenisBbm || 'Pertalite',
+                                    liter: parseFloat(item.liter) || 0,
+                                    harga_per_liter: parseFloat(item.harga_per_liter) || parseFloat(item.hargaPerLiter) || 0,
+                                    total_harga: parseFloat(item.total_harga) || parseFloat(item.totalHarga) || parseFloat(item.nominal) || 0,
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+
+                            if (table === 'belanja_lainnya') {
+                                return {
+                                    unit_kerja: item.unit_kerja || item.unitKerja || item.unit_pelayanan || 'Tanpa Unit',
+                                    tanggal_belanja: item.tanggal_belanja || item.tanggalBelanja || item.tanggal || new Date().toISOString().split('T')[0],
+                                    nomor_bp: item.nomor_bp || item.nomorBp || item.no_bp || '-',
+                                    jenis_pakaian: item.jenis_pakaian || item.jenisPakaian || item.kategori || 'Barang Lainnya',
+                                    uraian: item.uraian || item.nama_pekerjaan || item.namaPekerjaan || '-',
+                                    penyedia: item.penyedia || item.nama_rekanan || item.namaRekanan || '-',
+                                    penerima_barang: item.penerima_barang || item.penerimaBarang || '-',
+                                    volume: parseFloat(item.volume) || 1,
+                                    satuan: item.satuan || 'Unit',
+                                    harga_satuan: parseFloat(item.harga_satuan) || parseFloat(item.hargaSatuan) || 0,
+                                    nominal: parseFloat(item.nominal) || 0,
+                                    photos: Array.isArray(item.photos) ? item.photos : (Array.isArray(item.dokumentasi) ? item.dokumentasi : []),
+                                    document_url: item.document_url || item.url_spk || item.documentUrl || null,
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+
+                            if (table === 'absensi_pm') {
+                                return {
+                                    unit_pelayanan: item.unit_pelayanan || item.unitKerja || 'Tanpa Unit',
+                                    bulan_tahun: item.bulan_tahun || item.bulanTahun || new Date().toISOString().substring(0, 7),
+                                    periode_laporan: item.periode_laporan || 'Reguler',
+                                    jumlah_pm: parseInt(item.jumlah_pm) || 0,
+                                    hadir: parseInt(item.hadir) || 0,
+                                    sakit: parseInt(item.sakit) || 0,
+                                    ijin: parseInt(item.hadir) || 0,
+                                    alpha: parseInt(item.alpha) || 0,
+                                    keterangan: item.catatan || item.keterangan || '',
+                                    is_locked: !!(item.is_locked || item.locked),
+                                    updated_at: new Date().toISOString()
+                                };
+                            }
+
+                            // Generic fallback for other tables
+                            return {
+                                ...cleanItem,
+                                updated_at: new Date().toISOString()
+                            };
+                        });
+
+                        const { error } = await supabaseClient.from(table).insert(chunk);
+                        if (error) {
+                            console.error("[RESTORE] Batch Error:", error);
+                            throw new Error(`Gagal menyimpan ke Supabase: ${error.message}`);
+                        }
+                    }
+
+                    showNotif("Berhasil memulihkan " + data.length + " data ke tabel " + table);
+                    btn.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> Restore Berhasil!`;
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalBtnText;
+                        lucide.createIcons();
+                    }, 2000);
+
+                } catch (err) {
+                    console.error("[RESTORE] Main Error:", err);
+                    showNotif("Gagal: " + (err.message || "Kesalahan tidak dikenal"), "error");
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnText;
+                    lucide.createIcons();
+                }
+            };
+            reader.readAsText(selectedFile);
+        }
+
+    </script>
+    <script>
+        // Sinyal aktivitas ke induk untuk mencegah logout otomatis
+        ['mousedown', 'keypress', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (window.parent !== window) {
+                    window.parent.postMessage('resetSession', '*');
+                }
+            }, true);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Informasi SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 p-6 font-sans">
+    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl p-8 space-y-6">
+        <div class="flex items-center gap-4 border-b border-slate-200 pb-6">
+            <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center text-yellow-900">
+                <i data-lucide="info" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-slate-800 uppercase tracking-wider">Pengaturan Informasi SIPANDU</h2>
+                <p class="text-xs text-slate-500 font-bold">Atur foto dan teks yang muncul di modal saat login</p>
+            </div>
+        </div>
+
+        <form id="informasiForm" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Tampilkan Foto?</label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="showPhoto" class="w-4 h-4 text-yellow-600 rounded border-slate-300 focus:ring-yellow-500">
+                        <span class="text-sm font-bold text-slate-700">Ya, tampilkan foto</span>
+                    </label>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Tampilkan Teks?</label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="showText" class="w-4 h-4 text-yellow-600 rounded border-slate-300 focus:ring-yellow-500">
+                        <span class="text-sm font-bold text-slate-700">Ya, tampilkan teks</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Unggah Foto</label>
+                <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 hover:bg-yellow-50 hover:border-yellow-400 transition-all">
+                    <input type="file" id="photoFile" accept="image/*" class="hidden">
+                    <div id="photoPreview" class="space-y-3">
+                        <div class="w-20 h-20 bg-slate-200 rounded-xl mx-auto flex items-center justify-center text-slate-400">
+                            <i data-lucide="image" class="w-8 h-8"></i>
+                        </div>
+                        <p class="text-sm font-bold text-slate-500">Klik untuk mengunggah foto</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-black text-slate-500 uppercase tracking-widest">Teks Informasi</label>
+                <textarea id="infoText" rows="4" placeholder="Masukkan teks informasi yang ingin ditampilkan..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-yellow-400 transition-all"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" id="resetBtn" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-slate-200 transition-all">
+                    Reset
+                </button>
+                <button type="submit" id="saveBtn" class="px-6 py-2.5 bg-yellow-500 text-yellow-900 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-200 flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Simpan Pengaturan
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const STORAGE_BUCKET = "informasi_sipandu"; // Nama bucket di Supabase Storage
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Form Elements
+        const form = document.getElementById('informasiForm');
+        const showPhotoEl = document.getElementById('showPhoto');
+        const showTextEl = document.getElementById('showText');
+        const photoFileEl = document.getElementById('photoFile');
+        const photoPreviewEl = document.getElementById('photoPreview');
+        const infoTextEl = document.getElementById('infoText');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Variables
+        let currentPhotoUrl = '';
+        let selectedFile = null;
+
+        // Photo preview and file select
+        photoPreviewEl.addEventListener('click', () => photoFileEl.click());
+        photoFileEl.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    photoPreviewEl.innerHTML = `
+                        <img src="${event.target.result}" alt="Preview" class="w-32 h-32 object-cover rounded-xl mx-auto shadow-lg">
+                        <p class="text-sm font-bold text-slate-600">${selectedFile.name}</p>
+                    `;
+                };
+                reader.readAsDataURL(selectedFile);
+            }
+        });
+
+        // Fetch current data on load
+        async function fetchCurrentInfo() {
+            try {
+                const { data, error } = await supa
+                    .from('informasi_sipandu')
+                    .select('*')
+                    .single();
+
+                if (error) {
+                    // If no record exists, create one with defaults
+                    if (error.code === 'PGRST116') {
+                        await createDefaultInfo();
+                        return;
+                    }
+                    throw error;
+                }
+
+                if (data) {
+                    showPhotoEl.checked = data.show_photo ?? true;
+                    showTextEl.checked = data.show_text ?? true;
+                    infoTextEl.value = data.info_text ?? '';
+                    currentPhotoUrl = data.photo_url ?? '';
+
+                    // Preview current photo
+                    if (currentPhotoUrl) {
+                        photoPreviewEl.innerHTML = `
+                            <img src="${currentPhotoUrl}" alt="Preview" class="w-32 h-32 object-cover rounded-xl mx-auto shadow-lg">
+                            <p class="text-sm font-bold text-slate-600">Foto saat ini</p>
+                        `;
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching info:', err);
+            }
+        }
+
+        // Create default info if none exists
+        async function createDefaultInfo() {
+            try {
+                await supa.from('informasi_sipandu').insert([{
+                    show_photo: true,
+                    show_text: true,
+                    photo_url: '',
+                    info_text: ''
+                }]);
+                fetchCurrentInfo();
+            } catch (err) {
+                console.error('Error creating default info:', err);
+            }
+        }
+
+        // Upload file to Supabase Storage
+        async function uploadFile(file) {
+            try {
+                const fileName = `informasi-sipandu-${Date.now()}-${file.name}`;
+                const { data, error } = await supa.storage
+                    .from(STORAGE_BUCKET)
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (error) throw error;
+
+                // Get public URL
+                const { data: urlData } = supa.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(data.path);
+
+                return urlData.publicUrl;
+            } catch (err) {
+                console.error('Error uploading file:', err);
+                throw err;
+            }
+        }
+
+        // Save data
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Menyimpan...';
+            lucide.createIcons();
+
+            try {
+                let photoUrlToSave = currentPhotoUrl;
+
+                // If new file is selected, upload it
+                if (selectedFile) {
+                    photoUrlToSave = await uploadFile(selectedFile);
+                }
+
+                // Check if record exists
+                const { data: existingData } = await supa
+                    .from('informasi_sipandu')
+                    .select('id')
+                    .single();
+
+                if (existingData) {
+                    // Update existing
+                    await supa
+                        .from('informasi_sipandu')
+                        .update({
+                            show_photo: showPhotoEl.checked,
+                            show_text: showTextEl.checked,
+                            photo_url: photoUrlToSave,
+                            info_text: infoTextEl.value
+                        })
+                        .eq('id', existingData.id);
+                } else {
+                    // Insert new
+                    await supa.from('informasi_sipandu').insert([{
+                        show_photo: showPhotoEl.checked,
+                        show_text: showTextEl.checked,
+                        photo_url: photoUrlToSave,
+                        info_text: infoTextEl.value
+                    }]);
+                }
+
+                alert('Pengaturan berhasil disimpan!');
+                currentPhotoUrl = photoUrlToSave;
+                selectedFile = null;
+            } catch (err) {
+                console.error('Error saving info:', err);
+                alert('Gagal menyimpan pengaturan: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Pengaturan';
+                lucide.createIcons();
+            }
+        });
+
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Yakin ingin mereset ke pengaturan awal?')) {
+                selectedFile = null;
+                fetchCurrentInfo();
+            }
+        });
+
+        // Load data on page load
+        fetchCurrentInfo();
+    </script>
+</body>
+</html>
+
