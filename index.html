@@ -90,8 +90,8 @@
             width: 100%;
             overflow: hidden;
             position: relative;
-            border-radius: 1.5rem;
-            background: #f1f5f9;
+            border-radius: 1rem;
+            background: #f8fafc;
         }
 
         .slider-track {
@@ -108,12 +108,51 @@
             width: 100%;
             border-right: 4px solid white;
             /* Pembatas antar foto */
+            background: #f8fafc;
         }
 
         .slider-item img {
             width: 100%;
             height: 100%;
+            object-fit: contain;
+            background: #f8fafc;
+        }
+
+        .dashboard-slider-page {
+            flex: 0 0 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 4px;
+            height: 100%;
+            background: white;
+        }
+
+        .dashboard-slider-page img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
+            min-width: 0;
+        }
+
+        .dashboard-slider.animate-slide {
+            animation: dashboard-slide 22s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes dashboard-slide {
+
+            0%,
+            30% {
+                transform: translateX(0);
+            }
+
+            35%,
+            65% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
         }
 
         @keyframes slide {
@@ -891,11 +930,11 @@
             <!-- Page Content Container -->
             <div
                 class="flex-1 overflow-hidden bg-sky-200 rounded-[1.5rem] border border-sky-400 shadow-sm flex flex-col">
-                <div id="page-content" class="flex-1 overflow-y-auto p-4 lg:p-5 space-y-6">
+                <div id="page-content" class="flex-1 overflow-y-auto p-4 lg:p-5 space-y-2">
 
                     <!-- Hero Section -->
                     <div
-                        class="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-3xl p-5 text-white relative overflow-hidden shadow-2xl shadow-sky-200">
+                        class="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-3xl p-4 text-white relative overflow-hidden shadow-2xl shadow-sky-200">
                         <!-- Logo PPSDI di Pojok Kanan Atas -->
                         <div class="absolute top-5 right-6 z-20">
                             <div class="relative group">
@@ -909,7 +948,7 @@
                         </div>
 
                         <div class="relative z-10 max-w-5xl">
-                            <div class="flex items-center gap-6 mb-4">
+                            <div class="flex items-center gap-6 mb-2">
                                 <!-- Logo Maskot Sipandu -->
                                 <div class="relative group shrink-0 animate-float">
                                     <div
@@ -949,7 +988,7 @@
                     </div>
 
                     <!-- Gallery Slider (Replacing Stats Grid) -->
-                    <div class="space-y-4">
+                    <div class="space-y-2">
                         <div class="flex items-center justify-between">
                             <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                                 <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Galeri PPS
@@ -1080,9 +1119,9 @@
                     </div>
 
                     <!-- Info Cards -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div
-                            class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
+                            class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-2">
                             <div class="flex items-center space-x-3 mb-2">
                                 <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-sky-500"></i>
                                 <h4 class="font-black text-sm uppercase tracking-wider">Navigasi Dropdown</h4>
@@ -1091,7 +1130,7 @@
                                 untuk membuka sub-menu dan mengakses data spesifik yang Anda butuhkan.</p>
                         </div>
                         <div
-                            class="bg-sky-50 p-8 rounded-3xl border border-sky-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
+                            class="bg-sky-50 p-5 rounded-3xl border border-sky-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-2">
                             <div class="flex items-center space-x-3 mb-2">
                                 <i data-lucide="info" class="w-5 h-5 text-sky-600"></i>
                                 <h4 class="font-black text-sm uppercase tracking-wider text-sky-800">Satu Pintu</h4>

@@ -96,6 +96,23 @@ function initIcons() {
     }
 }
 
+function openInMainFrame(url) {
+    try {
+        resetSessionTimeout();
+        const pageContent = document.getElementById('page-content');
+        if (!pageContent) return;
+        // clear active menu state
+        document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-menu'));
+        const content = `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="${url}" class="w-full h-full border-none"></iframe>
+            </div>`;
+        pageContent.innerHTML = content;
+    } catch (e) {
+        console.error('openInMainFrame error', e);
+    }
+}
+
 function showPage(pageId) {
     resetSessionTimeout(); // Reset saat pindah halaman
     trackPageVisit(pageId); // Track page visit
@@ -161,116 +178,59 @@ function showPage(pageId) {
                 </div>
             </div>
 
-            <!-- Gallery Slider (Replacing Stats Grid) -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Galery PPS Raharjo Sragen</h4>
-                        <div class="flex items-center gap-3 sm:border-l sm:border-slate-200 sm:pl-4">
-                            <a href="https://www.instagram.com/ppsraharjosragen/" target="_blank" class="flex items-center justify-center w-6 h-6 bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 hover:scale-110 transition-all shadow-sm" title="Instagram">
-                                <i data-lucide="instagram" class="w-4 h-4"></i>
-                            </a>
-                            <a href="https://www.facebook.com/pps.raharjo.sragen" target="_blank" class="flex items-center justify-center w-6 h-6 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:scale-110 transition-all shadow-sm" title="Facebook">
-                                <i data-lucide="facebook" class="w-4 h-4"></i>
-                            </a>
-                            <a href="https://www.youtube.com/@ppsraharjosragen" target="_blank" class="flex items-center justify-center w-6 h-6 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:scale-110 transition-all shadow-sm" title="YouTube">
-                                <i data-lucide="youtube" class="w-4 h-4"></i>
-                            </a>
-                            <a href="https://ppsraharjosragen.com" target="_blank" class="flex items-center justify-center w-6 h-6 bg-sky-50 text-sky-500 rounded-lg hover:bg-sky-100 hover:scale-110 transition-all shadow-sm" title="Website Resmi">
-                                <i data-lucide="globe" class="w-4 h-4"></i>
-                            </a>
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6 mb-6">
+                <div class="space-y-6">
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Galeri</h4>
+                            <span class="text-[10px] font-black text-sky-600 uppercase tracking-widest bg-sky-50 border border-sky-100 px-3 py-1 rounded-full">Foto</span>
                         </div>
-                    </div>
-                    <span class="text-[10px] text-slate-400 font-bold uppercase shrink-0">Geser Otomatis</span>
-                </div>
-                <div class="slider-container shadow-xl border-4 border-white">
-                    <div class="slider-track animate-slide">
-                        <!-- GANTI URL GAMBAR DI SINI SEWAKTU-WAKTU (SLIDE 1-6) -->
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=1gqpsBofXZIHAmZCCt_XeHkqj8MjdsWYs&sz=w1200" alt="Slider 1">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 1</h5>
+                        <div class="slider-container shadow-inner border border-slate-200 rounded-2xl overflow-hidden h-[300px] sm:h-[380px] xl:h-[430px] bg-slate-50">
+                            <div class="slider-track dashboard-slider animate-slide h-full">
+                                <div class="dashboard-slider-page">
+                                    <img src="https://drive.google.com/thumbnail?id=1gqpsBofXZIHAmZCCt_XeHkqj8MjdsWYs&sz=w1200" alt="Slide 1" class="w-full h-full object-cover">
+                                    <img src="https://drive.google.com/thumbnail?id=11mQCi5h3sikm4WQuaDtf7U-SiiPULXyH&sz=w1200" alt="Slide 2" class="w-full h-full object-cover">
                                 </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Filosofi Logo PPS Raharjo</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=11mQCi5h3sikm4WQuaDtf7U-SiiPULXyH&sz=w1200" alt="Slider 2">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 2</h5>
-                                </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Kepala Dinas Sosial Provinsi Jawa Tengah Bersama Pegawai PPS Raharjo dan RPS</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=1wkgiGR1U76m55rsh_47hED4j58uLlWxZ&sz=w1200" alt="Slider 3">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 3</h5>
-                                </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Kepala PPS Raharjo Sragen</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=1cf_h2eqaoiPrEzh96xfZJdQpZ26y5O_y&sz=w1200" alt="Slider 4">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 4</h5>
-                                </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Kepala Bidang Rehabilitasi Sosial Dinsos Prov Jateng bersama Penerima Manfaat</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=1SbT-1S2KVg3BJswr1M0YhCKVmB3hBvmn&sz=w1200" alt="Slider 5">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 5</h5>
-                                </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Galery Penerima Manfaat</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slider-item relative">
-                            <img src="https://drive.google.com/thumbnail?id=16duM3ujQBF_PfpDoIfcJGW-ytgqJgL-5&sz=w1200" alt="Slider 6">
-                            <div class="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                                <div class="inline-block bg-sky-500/90 px-4 py-1.5 rounded-xl mb-3 shadow-xl backdrop-blur-sm">
-                                    <h5 class="font-black text-2xl drop-shadow-lg">Slide 6</h5>
-                                </div>
-                                <div class="block bg-sky-400/30 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 w-fit">
-                                    <p class="text-sm font-bold drop-shadow-md">Pemeriksaan Kesehatan Penerima Manfaat</p>
+                                <div class="dashboard-slider-page">
+                                    <img src="https://drive.google.com/thumbnail?id=1wkgiGR1U76m55rsh_47hED4j58uLlWxZ&sz=w1200" alt="Slide 3" class="w-full h-full object-cover">
+                                    <img src="https://drive.google.com/thumbnail?id=1cf_h2eqaoiPrEzh96xfZJdQpZ26y5O_y&sz=w1200" alt="Slide 4" class="w-full h-full object-cover">
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Info Cards -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
-                    <div class="flex items-center space-x-3 mb-2">
-                        <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-sky-500"></i>
-                        <h4 class="font-black text-sm uppercase tracking-wider">Navigasi Dropdown</h4>
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        <div class="flex items-center justify-between gap-3 mb-5">
+                            <div>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                    <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Statistik Pegawai</h4>
+                                    <button type="button" onclick="showPage('pegawai');" class="inline-flex w-fit items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg hover:bg-emerald-700 transition-colors">
+                                        <i data-lucide="user-cog" class="w-3.5 h-3.5"></i>
+                                        <span>Data Pegawai</span>
+                                    </button>
+                                </div>
+                                <p class="text-xs font-semibold text-slate-500 mt-1">Rekap berdasarkan unit kerja</p>
+                            </div>
+                            <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                                <i data-lucide="users-round" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div id="statistik-pegawai-content" class="space-y-6">
+                            <!-- Tables will be inserted here by JavaScript -->
+                        </div>
                     </div>
-                    <p class="text-sm text-slate-500 leading-relaxed">Klik pada Menu pada sidebar untuk membuka sub-menu dan mengakses data yang Anda butuhkan.</p>
                 </div>
-                <div class="bg-sky-50 p-8 rounded-3xl border border-sky-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all space-y-4">
-                    <div class="flex items-center space-x-3 mb-2">
-                        <i data-lucide="info" class="w-5 h-5 text-sky-600"></i>
-                        <h4 class="font-black text-sm uppercase tracking-wider text-sky-800">Data Terpadu</h4>
+                <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-4">
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Statistik Layanan & Kinerja</h4>
+                        <button type="button" onclick="openInMainFrame('Statistik_layanan_kinerja.html');" class="inline-flex w-fit items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg hover:bg-emerald-700 transition-colors">
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            <span>Lihat Selengkapnya</span>
+                        </button>
                     </div>
-                    <p class="text-sm text-sky-700/70 leading-relaxed">Seluruh data dan Laporan Panti dan RPS terintegrasi dalam satu sistem untuk memudahkan monitoring pimpinan.</p>
+                    <div class="overflow-hidden">
+                        <iframe id="dashboard-statistik-frame" src="Statistik_layanan_kinerja.html" class="w-full border-0" style="width: 100%; min-height: 560px; transform: none;" title="Statistik Layanan & Kinerja" scrolling="no"></iframe>
+                    </div>
                 </div>
             </div>
         `,
@@ -607,7 +567,271 @@ function showPage(pageId) {
 
     if (window.innerWidth < 1024) toggleSidebar();
     if (pageId === 'mutasi-pm') initMutasiForm();
+    if (pageId === 'dashboard') renderEmployeeStatistics();
     initIcons();
+}
+
+// Fungsi untuk mengambil dan menampilkan statistik pegawai
+async function renderEmployeeStatistics() {
+    const container = document.getElementById('statistik-pegawai-content');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                    <div class="h-4 w-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-xs font-black text-slate-700 uppercase tracking-widest">Memuat Statistik Pegawai</p>
+                    <p class="text-xs font-semibold text-slate-400">Mengambil data ringkas pegawai...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    try {
+        // Inisialisasi Supabase client
+        const supabaseClient = supabase.createClient(
+            'https://yewkffbatvrbtfliikia.supabase.co', 
+            'sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg'
+        );
+        
+        const now = Date.now();
+        const cache = renderEmployeeStatistics.cache;
+        let employees = cache && (now - cache.timestamp < 5 * 60 * 1000) ? cache.data : null;
+
+        if (!employees) {
+            const { data, error } = await supabaseClient
+                .from('data_pegawai')
+                .select('unit_kerja,status_kepegawaian,jenis_kelamin,pendidikan,pangkat');
+            
+            if (error) throw error;
+
+            employees = data || [];
+            renderEmployeeStatistics.cache = {
+                timestamp: now,
+                data: employees
+            };
+        }
+        
+        // Unit kerja yang kita gunakan
+        const units = [
+            { key: 'all', label: 'SEMUA', dbKey: null },
+            { key: 'pps', label: 'PPS RAHARJO', dbKey: 'PPS Raharjo Sragen' },
+            { key: 'rps-pamardi', label: 'RPS PAMARDI SIWI', dbKey: 'RPS Pamardi Siwi Sragen' },
+            { key: 'rps-mojomulyo', label: 'RPS MOJOMULYO', dbKey: 'RPS Mojomulyo Sragen' },
+            { key: 'rps-gondang', label: 'RPS GONDANG', dbKey: 'RPS PMKS Gondang' }
+        ];
+        
+        const employeeGroups = new Map();
+        employeeGroups.set('all', employees);
+        units.filter(unit => unit.dbKey).forEach(unit => {
+            employeeGroups.set(unit.dbKey, employees.filter(emp => emp.unit_kerja === unit.dbKey));
+        });
+
+        // Fungsi untuk memfilter pegawai berdasarkan unit kerja
+        const filterEmployees = (unitKey) => {
+            if (!unitKey) return employeeGroups.get('all') || [];
+            return employeeGroups.get(unitKey) || [];
+        };
+        
+        const columnStyles = [
+            { header: '#0f172a', cell: '#ffffff', total: '#ecfdf5', text: '#0f172a', border: '#e2e8f0' },
+            { header: '#0f172a', cell: '#ffffff', total: '#ecfdf5', text: '#0f172a', border: '#e2e8f0' },
+            { header: '#059669', cell: 'rgba(16, 185, 129, 0.13)', total: 'rgba(16, 185, 129, 0.24)', text: '#065f46', border: 'rgba(16, 185, 129, 0.32)' },
+            { header: '#3b82f6', cell: 'rgba(59, 130, 246, 0.13)', total: 'rgba(59, 130, 246, 0.24)', text: '#1d4ed8', border: 'rgba(59, 130, 246, 0.32)' },
+            { header: '#f59e0b', cell: 'rgba(245, 158, 11, 0.16)', total: 'rgba(245, 158, 11, 0.28)', text: '#92400e', border: 'rgba(245, 158, 11, 0.36)' },
+            { header: '#ef4444', cell: 'rgba(239, 68, 68, 0.13)', total: 'rgba(239, 68, 68, 0.24)', text: '#b91c1c', border: 'rgba(239, 68, 68, 0.32)' }
+        ];
+
+        const getColumnStyle = (index, isTotal = false) => {
+            const color = columnStyles[index] || columnStyles[0];
+            return `background:${isTotal ? color.total : color.cell}; color:${color.text}; border-color:${color.border};`;
+        };
+
+        const getHeaderStyle = (index) => {
+            const color = columnStyles[index] || columnStyles[0];
+            return `background:${color.header}; border-color:${color.border};`;
+        };
+
+        // Fungsi untuk membuat tabel
+        const createTable = (title, rows) => `
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-sky-50 px-4 py-3 border-b border-slate-200">
+                    <h5 class="text-xs font-black text-slate-700 uppercase tracking-widest">${title}</h5>
+                    <span class="text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-white/80 border border-emerald-100 px-2.5 py-1 rounded-full">Data Pegawai</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[720px] border-collapse text-sm">
+                        <thead>
+                            <tr class="text-white">
+                                ${rows[0].map((cell, index) => `
+                                    <th style="${getHeaderStyle(index)}" class="px-3 py-3 text-${index === 0 ? 'left' : 'center'} text-[11px] font-black uppercase tracking-wider border-r last:border-r-0">
+                                        ${cell}
+                                    </th>
+                                `).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${rows.slice(1).map((row, rowIndex) => {
+                                const isTotal = row[0] === 'JUMLAH';
+                                return `
+                                    <tr class="transition-colors">
+                                        ${row.map((cell, cellIndex) => `
+                                            <td style="${getColumnStyle(cellIndex, isTotal)}" class="px-3 py-2.5 ${cellIndex === 0 ? 'text-left font-bold' : 'text-center font-black'} ${isTotal ? 'font-black' : ''} border-r last:border-r-0">
+                                                ${cellIndex > 0 && cell === 0 ? '-' : cell}
+                                            </td>
+                                        `).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        // 1. Tabel Status
+        const statusTableData = [
+            ['STATUS', 'SEMUA', 'PPS RAHARJO', 'RPS PAMARDI SIWI', 'RPS MOJOMULYO', 'RPS GONDANG']
+        ];
+        const statuses = ['PNS', 'PPPK', 'PPPK-PW'];
+        statuses.forEach(status => {
+            const row = [status];
+            units.forEach(unit => {
+                const filtered = filterEmployees(unit.dbKey);
+                const count = filtered.filter(emp => emp.status_kepegawaian === status).length;
+                row.push(count);
+            });
+            statusTableData.push(row);
+        });
+        // Jumlah total
+        statusTableData.push(['JUMLAH', ...units.map(unit => filterEmployees(unit.dbKey).length)]);
+        
+        // 2. Tabel Jenis Kelamin
+        const genderTableData = [
+            ['JENIS KELAMIN', 'SEMUA', 'PPS RAHARJO', 'RPS PAMARDI SIWI', 'RPS MOJOMULYO', 'RPS GONDANG']
+        ];
+        const genders = ['Laki-laki', 'Perempuan'];
+        genders.forEach(gender => {
+            const row = [gender === 'Laki-laki' ? 'PUTRA' : 'PUTRI'];
+            units.forEach(unit => {
+                const filtered = filterEmployees(unit.dbKey);
+                const count = filtered.filter(emp => emp.jenis_kelamin === gender).length;
+                row.push(count);
+            });
+            genderTableData.push(row);
+        });
+        genderTableData.push(['JUMLAH', ...units.map(unit => filterEmployees(unit.dbKey).length)]);
+        
+        // 3. Tabel Pendidikan
+        const educationTableData = [
+            ['PENDIDIKAN', 'SEMUA', 'PPS RAHARJO', 'RPS PAMARDI SIWI', 'RPS MOJOMULYO', 'RPS GONDANG']
+        ];
+        const educations = ['SD', 'SMP', 'SMA/SMK', 'DI', 'DII', 'DIII', 'DIV', 'S1', 'S2', 'S3'];
+        educations.forEach(edu => {
+            const row = [edu];
+            units.forEach(unit => {
+                const filtered = filterEmployees(unit.dbKey);
+                const count = filtered.filter(emp => emp.pendidikan === edu).length;
+                row.push(count);
+            });
+            educationTableData.push(row);
+        });
+        educationTableData.push(['JUMLAH', ...units.map(unit => filterEmployees(unit.dbKey).length)]);
+        
+        // 4. Tabel Pangkat
+        const rankTableData = [
+            ['PANGKAT', 'SEMUA', 'PPS RAHARJO', 'RPS PAMARDI SIWI', 'RPS MOJOMULYO', 'RPS GONDANG']
+        ];
+        const ranks = [
+            '-', 'I/a - Juru Muda', 'I/b - Juru Muda Tingkat I', 'I/c - Juru', 'I/d - Juru Tingkat I',
+            'II/a - Pengatur Muda', 'II/b - Pengatur Muda Tingkat I', 'II/c - Pengatur', 'II/d - Pengatur Tingkat I',
+            'III/a - Penata Muda', 'III/b - Penata Muda Tingkat I', 'III/c - Penata', 'III/d - Penata Tingkat I',
+            'IV/a - Pembina', 'IV/b - Pembina Tingkat I', 'IV/c - Pembina Utama Muda', 'IV/d - Pembina Utama Madya', 'IV/e - Pembina Utama',
+            'Gol V', 'Gol VI', 'Gol VII', 'Gol IX', 'Gol X'
+        ];
+        // Kelompokkan pangkat untuk ringkasnya
+        const rankGroups = {};
+        ranks.forEach(rank => rankGroups[rank] = true);
+        // Tampilkan semua pangkat
+        ranks.forEach(rank => {
+            const row = [rank];
+            units.forEach(unit => {
+                const filtered = filterEmployees(unit.dbKey);
+                const count = filtered.filter(emp => emp.pangkat === rank).length;
+                row.push(count);
+            });
+            // Hanya tampilkan jika ada setidaknya 1 di salah satu unit
+            if (row.slice(1).some(count => count > 0)) {
+                rankTableData.push(row);
+            }
+        });
+        rankTableData.push(['JUMLAH', ...units.map(unit => filterEmployees(unit.dbKey).length)]);
+        
+        // Gabungkan semua tabel
+        container.innerHTML = `
+            ${createTable('STATUS', statusTableData)}
+            ${createTable('JENIS KELAMIN', genderTableData)}
+            ${createTable('PANGKAT', rankTableData)}
+            ${createTable('PENDIDIKAN', educationTableData)}
+        `;
+        
+    } catch (error) {
+        console.error('Error loading employee statistics:', error);
+        container.innerHTML = `
+            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <p class="text-sm text-yellow-700">Gagal memuat data statistik pegawai. Silakan coba lagi nanti.</p>
+            </div>
+        `;
+    }
+}
+
+window.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'resizeIframe' || event.data.page !== 'statistik') return;
+    const iframe = document.getElementById('dashboard-statistik-frame');
+    if (iframe && typeof event.data.height === 'number' && event.data.height > 0) {
+        const nextHeight = Math.max(560, Math.ceil(event.data.height));
+        const currentHeight = parseInt(iframe.style.height, 10) || 0;
+        if (Math.abs(nextHeight - currentHeight) > 8) {
+            iframe.style.height = `${nextHeight}px`;
+        }
+    }
+});
+
+// Fungsi untuk menampilkan tab Galeri atau Statistik
+function showTab(tabName) {
+    // Dapatkan elemen
+    const tabGaleri = document.getElementById('tab-galeri');
+    const tabStatistik = document.getElementById('tab-statistik');
+    const contentGaleri = document.getElementById('content-galeri');
+    const contentStatistik = document.getElementById('content-statistik');
+
+    // Reset semua tombol tab ke keadaan default
+    if (tabGaleri) {
+        tabGaleri.className = 'flex-1 px-6 py-3 bg-slate-200 text-slate-700 font-black rounded-2xl shadow hover:bg-slate-300 transition-all flex items-center justify-center gap-2';
+    }
+    if (tabStatistik) {
+        tabStatistik.className = 'flex-1 px-6 py-3 bg-slate-200 text-slate-700 font-black rounded-2xl shadow hover:bg-slate-300 transition-all flex items-center justify-center gap-2';
+    }
+
+    // Sembunyikan semua konten
+    if (contentGaleri) {
+        contentGaleri.classList.add('hidden');
+    }
+    if (contentStatistik) {
+        contentStatistik.classList.add('hidden');
+    }
+
+    // Aktifkan tab yang dipilih dan tampilkan kontennya
+    if (tabName === 'galeri' && tabGaleri && contentGaleri) {
+        tabGaleri.className = 'flex-1 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black rounded-2xl shadow-lg hover:from-sky-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2';
+        contentGaleri.classList.remove('hidden');
+    } else if (tabName === 'statistik' && tabStatistik && contentStatistik) {
+        tabStatistik.className = 'flex-1 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black rounded-2xl shadow-lg hover:from-sky-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2';
+        contentStatistik.classList.remove('hidden');
+    }
 }
 
 
