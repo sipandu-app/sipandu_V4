@@ -231,13 +231,24 @@
             window.parent.postMessage({ type: 'resizeIframe', page: 'statistik', height }, '*');
         }
 
-        window.addEventListener('load', function() {
+        function scheduleParentIframeHeight() {
             sendParentIframeHeight();
-            setTimeout(sendParentIframeHeight, 200);
-            setTimeout(sendParentIframeHeight, 1000);
+            setTimeout(sendParentIframeHeight, 150);
+            setTimeout(sendParentIframeHeight, 500);
+            setTimeout(sendParentIframeHeight, 1200);
+        }
+
+        window.addEventListener('load', function() {
+            scheduleParentIframeHeight();
+
+            const main = document.querySelector('main');
+            if (main && 'ResizeObserver' in window) {
+                const resizeObserver = new ResizeObserver(scheduleParentIframeHeight);
+                resizeObserver.observe(main);
+            }
         });
 
-        window.addEventListener('resize', sendParentIframeHeight);
+        window.addEventListener('resize', scheduleParentIframeHeight);
 
         // Ambil viewMode yang terkunci dari localStorage
         function getActiveViewMode() {
@@ -397,8 +408,7 @@
                 if (Object.keys(latestData).length > 0 || Object.keys(monthlyData).length > 0) {
                     renderPieCharts(latestData);
                     renderLineChart(monthlyData);
-                    setTimeout(sendParentIframeHeight, 250);
-                    setTimeout(sendParentIframeHeight, 900);
+                    scheduleParentIframeHeight();
                 } else {
                     renderDemoPMData();
                 }
@@ -430,8 +440,7 @@
             renderPieCharts(demoLatest);
             renderLineChart(demoMonthly);
             renderDemoAPBDCharts();
-            setTimeout(sendParentIframeHeight, 250);
-            setTimeout(sendParentIframeHeight, 900);
+            scheduleParentIframeHeight();
         }
 
         function renderPieCharts(latestData) {
@@ -1324,6 +1333,8 @@
 
                 if (animationProgress < 1) {
                     requestAnimationFrame(animate);
+                } else {
+                    scheduleParentIframeHeight();
                 }
             };
 

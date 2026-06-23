@@ -729,7 +729,7 @@ async function renderEmployeeStatistics() {
         const educationTableData = [
             ['PENDIDIKAN', 'SEMUA', 'PPS RAHARJO', 'RPS PAMARDI SIWI', 'RPS MOJOMULYO', 'RPS GONDANG']
         ];
-        const educations = ['SD', 'SMP', 'SMA/SMK', 'DI', 'DII', 'DIII', 'DIV', 'S1', 'S2', 'S3'];
+        const educations = ['S3', 'S2', 'S1', 'DIV', 'DIII', 'DII', 'DI', 'SMA/SMK', 'SMP', 'SD'];
         educations.forEach(edu => {
             const row = [edu];
             units.forEach(unit => {
@@ -751,7 +751,7 @@ async function renderEmployeeStatistics() {
             'III/a - Penata Muda', 'III/b - Penata Muda Tingkat I', 'III/c - Penata', 'III/d - Penata Tingkat I',
             'IV/a - Pembina', 'IV/b - Pembina Tingkat I', 'IV/c - Pembina Utama Muda', 'IV/d - Pembina Utama Madya', 'IV/e - Pembina Utama',
             'Gol V', 'Gol VI', 'Gol VII', 'Gol IX', 'Gol X'
-        ];
+        ].reverse();
         // Kelompokkan pangkat untuk ringkasnya
         const rankGroups = {};
         ranks.forEach(rank => rankGroups[rank] = true);
