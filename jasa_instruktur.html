@@ -630,6 +630,19 @@
         function editInstruktur(id) {
             const i = instrukturList.find(x => x.id === id);
             if (!i) return;
+            
+            // Tampilkan form terlebih dahulu
+            const formSection = document.getElementById("instruktur-form-section");
+            const tableSection = document.getElementById("instruktur-table-section");
+            const toggleBtn = document.getElementById("toggle-instruktur-btn");
+            
+            formSection.classList.remove("hidden");
+            tableSection.classList.add("hidden");
+            toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+            toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+            toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+            
+            // Isi data ke form
             document.getElementById("edit-instruktur-id").value = i.id;
             document.getElementById("instruktur-kode").value = i.kode || "01";
             document.getElementById("instruktur-nama").value = i.nama || "";
@@ -1159,33 +1172,54 @@
         function duplicatePembayaran(id) {
             const p = pembayaranList.find(x => x.id === id);
             if (!p) return;
-            if (!confirm("Buat duplikat data ini?")) return;
             
-            const newItem = {
-                ...p,
-                id: Date.now().toString(),
-                is_locked: false,
-                no: generateNomorBP(),
-                nomor_bp: p.nomor_bp ? p.nomor_bp + " (copy)" : "",
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            saveDuplicateToDB(newItem);
-        }
-
-        async function saveDuplicateToDB(newItem) {
-            showLoading(true, "Menyimpan duplikat...");
-            try {
-                await supabaseClient.from(TABLE_PEMBAYARAN).insert([newItem]);
-                await loadPembayaran();
-                renderPembayaranTable();
-                alert("Data berhasil dibuat ulang!");
-            } catch (e) {
-                console.error("Error duplicate:", e);
-                alert("Gagal membuat duplikat: " + e.message);
-            } finally {
-                showLoading(false);
+            // Show form and hide table
+            document.getElementById("input-form-section").classList.remove("hidden");
+            document.getElementById("table-section").classList.add("hidden");
+            
+            // Update toggle button
+            const toggleBtn = document.getElementById("toggle-input-btn");
+            toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+            toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+            toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+            
+            const newNo = generateNomorBP();
+            
+            document.getElementById("edit-pembayaran-id").value = ""; // Empty ID to treat it as a new insert
+            document.getElementById("pembayaran-no").value = newNo;
+            document.getElementById("pembayaran-unit").value = p.unit_kerja || "";
+            updateKegiatan();
+            setTimeout(() => {
+                document.getElementById("pembayaran-kegiatan").value = p.kegiatan_id || "";
+                updateSubKegiatan();
+                setTimeout(() => {
+                    document.getElementById("pembayaran-subkegiatan").value = p.sub_kegiatan_id || "";
+                }, 50);
+            }, 50);
+            document.getElementById("pembayaran-uraian").value = p.uraian || "";
+            if (document.getElementById("pembayaran-tanggal-form")) {
+                document.getElementById("pembayaran-tanggal-form").value = p.tanggal || "";
             }
+            if (document.getElementById("pembayaran-nomor-bp-form")) {
+                document.getElementById("pembayaran-nomor-bp-form").value = newNo;
+            }
+            
+            rincianList = (p.rincian || []).map((r, index) => ({
+                ...r,
+                id: Date.now().toString() + "_" + index,
+                jamLat: 75000,
+                jumlah: r.jam * 75000,
+                pph21: Math.round(r.jam * 75000 * 0.025),
+                diterima: r.jam * 75000 - Math.round(r.jam * 75000 * 0.025)
+            }));
+            renderRincianTable();
+            
+            document.getElementById("form-pembayaran-title").innerHTML = `
+                <div class="p-1.5 bg-green-100 text-green-600 rounded-md"><i data-lucide="copy" class="w-4 h-4"></i></div>
+                Buat Ulang Pembayaran
+            `;
+            document.getElementById("btn-cancel-pembayaran").classList.remove("hidden");
+            lucide.createIcons();
         }
 
         function toggleInstrukturForm() {
@@ -1231,38 +1265,6 @@
         function resetInstrukturFilters() {
             document.getElementById("filter-instruktur-nama").value = "";
             renderInstrukturTable();
-        }
-
-        function editInstruktur(id) {
-            const i = instrukturList.find(x => x.id === id);
-            if (!i) return;
-            
-            // Show form, hide table
-            document.getElementById("instruktur-form-section").classList.remove("hidden");
-            document.getElementById("instruktur-table-section").classList.add("hidden");
-            
-            // Update toggle button
-            const toggleBtn = document.getElementById("toggle-instruktur-btn");
-            toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
-            toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
-            toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
-            
-            document.getElementById("edit-instruktur-id").value = i.id;
-            document.getElementById("instruktur-kode").value = i.kode || "";
-            document.getElementById("instruktur-nama").value = i.nama || "";
-            document.getElementById("instruktur-nik").value = i.nik || "";
-            document.getElementById("instruktur-npwp").value = i.npwp || "";
-            document.getElementById("instruktur-alamat").value = i.alamat || "";
-            document.getElementById("instruktur-bank").value = i.bank || "";
-            document.getElementById("instruktur-rek").value = i.rekening || "";
-            document.getElementById("instruktur-an").value = i.atasNama || "";
-            
-            document.getElementById("form-instruktur-title").innerHTML = `
-                <div class="p-1.5 bg-amber-100 text-amber-600 rounded-md"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
-                Edit Instruktur
-            `;
-            document.getElementById("btn-cancel-instruktur").classList.remove("hidden");
-            lucide.createIcons();
         }
 
         // --- LAPORAN PAJAK ---
