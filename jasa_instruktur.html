@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,25 +10,38 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .active-tab { 
-            background-color: #2563eb; 
-            color: white; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        .text-shadow-sm { text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        [v-cloak] { display: none; }
+
+        .active-tab {
+            background-color: #2563eb;
+            color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .text-shadow-sm {
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        [v-cloak] {
+            display: none;
+        }
     </style>
 </head>
+
 <body class="min-h-screen bg-slate-50 text-slate-800 pb-10 text-[11px]">
 
     <!-- Notification -->
-    <div id="notification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none">
+    <div id="notification"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none">
         <span id="notification-message"></span>
     </div>
 
     <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center text-white bg-black/50">
+    <div id="loadingOverlay"
+        class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center text-white bg-black/50">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p id="loading-text" class="text-xs font-bold uppercase tracking-widest">Menyinkronkan Data...</p>
     </div>
@@ -40,18 +53,23 @@
                     <i data-lucide="users" class="text-blue-600 w-[18px] h-[18px]"></i>
                 </div>
                 <div>
-                    <h1 class="text-[11px] font-black text-white tracking-tight leading-none uppercase text-shadow-sm">JASA INSTRUKTUR</h1>
-                    <p class="text-[8px] font-bold text-blue-100 mt-1 uppercase tracking-widest opacity-90">Pengajuan Pembayaran</p>
+                    <h1 class="text-[11px] font-black text-white tracking-tight leading-none uppercase text-shadow-sm">
+                        JASA INSTRUKTUR</h1>
+                    <p class="text-[8px] font-bold text-blue-100 mt-1 uppercase tracking-widest opacity-90">Pengajuan
+                        Pembayaran</p>
                 </div>
             </div>
             <nav class="flex bg-white/20 p-0.5 rounded-md border border-white/20 backdrop-blur-sm">
-                <button onclick="switchTab('instruktur')" id="tab-instruktur-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab hover:bg-blue-700 hover:text-white">
+                <button onclick="switchTab('instruktur')" id="tab-instruktur-btn"
+                    class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab hover:bg-blue-700 hover:text-white">
                     <i data-lucide="user" class="w-3 h-3"></i> Instruktur
                 </button>
-                <button onclick="switchTab('pembayaran')" id="tab-pembayaran-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
+                <button onclick="switchTab('pembayaran')" id="tab-pembayaran-btn"
+                    class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
                     <i data-lucide="credit-card" class="w-3 h-3"></i> Pengajuan Pembayaran
                 </button>
-                <button onclick="switchTab('pajak')" id="tab-pajak-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
+                <button onclick="switchTab('pajak')" id="tab-pajak-btn"
+                    class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
                     <i data-lucide="file-text" class="w-3 h-3"></i> Laporan Pajak
                 </button>
             </nav>
@@ -66,14 +84,19 @@
                 <div class="px-6 py-4">
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex flex-col">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama</label>
-                            <input type="text" id="filter-instruktur-nama" oninput="renderInstrukturTable()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Cari Nama">
+
+                            <input type="text" id="filter-instruktur-nama" oninput="renderInstrukturTable()"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                placeholder="Cari Nama">
                         </div>
                         <div class="flex items-end gap-2">
-                            <button type="button" onclick="resetInstrukturFilters()" class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
+                            <button type="button" onclick="resetInstrukturFilters()"
+                                class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
                                 Reset
                             </button>
-                            <button id="toggle-instruktur-btn" type="button" onclick="toggleInstrukturForm()" class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
+
+                            <button id="toggle-instruktur-btn" type="button" onclick="toggleInstrukturForm()"
+                                class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
                                 <i data-lucide="plus" class="w-3 h-3"></i> Input Data
                             </button>
                         </div>
@@ -82,60 +105,81 @@
             </div>
 
             <!-- Input Form Section -->
-            <div id="instruktur-form-section" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
+            <div id="instruktur-form-section"
+                class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
                 <div class="px-6 py-5">
-                    <h2 id="form-instruktur-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
-                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="user-plus" class="w-4 h-4"></i></div>
+                    <h2 id="form-instruktur-title"
+                        class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="user-plus"
+                                class="w-4 h-4"></i></div>
                         Input Instruktur Baru
                     </h2>
                     <form id="form-instruktur" class="space-y-4">
                         <input type="hidden" id="edit-instruktur-id">
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Kode</label>
-                                <input type="text" id="instruktur-kode" value="01" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                <input type="text" id="instruktur-kode" value="01"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
                             </div>
                             <div class="flex flex-col md:col-span-2">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama</label>
-                                <input type="text" id="instruktur-nama" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nama Instruktur" required>
+                                <input type="text" id="instruktur-nama"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="Nama Instruktur" required>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">NIK</label>
-                                <input type="text" id="instruktur-nik" maxlength="16" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor Induk Kependudukan" required>
+                                <input type="text" id="instruktur-nik" maxlength="16"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="Nomor Induk Kependudukan" required>
                             </div>
                             <div class="flex flex-col">
-                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">NPWP (Opsional)</label>
-                                <input type="text" id="instruktur-npwp" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="NPWP">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">NPWP
+                                    (Opsional)</label>
+                                <input type="text" id="instruktur-npwp"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="NPWP">
                             </div>
                         </div>
 
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Alamat</label>
-                            <textarea id="instruktur-alamat" class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none" rows="2" placeholder="Alamat"></textarea>
+                            <textarea id="instruktur-alamat"
+                                class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none"
+                                rows="2" placeholder="Alamat"></textarea>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama Bank</label>
-                                <input type="text" id="instruktur-bank" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nama Bank">
+                                <input type="text" id="instruktur-bank"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="Nama Bank">
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor Rekening</label>
-                                <input type="text" id="instruktur-rek" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor Rekening">
+                                <input type="text" id="instruktur-rek"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="Nomor Rekening">
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Atas Nama</label>
-                                <input type="text" id="instruktur-an" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Atas Nama">
+                                <input type="text" id="instruktur-an"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="Atas Nama">
                             </div>
                         </div>
 
                         <div class="flex gap-2 pt-2">
-                            <button type="button" onclick="resetInstrukturForm()" id="btn-cancel-instruktur" class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
-                            <button type="submit" id="btn-save-instruktur" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
+                            <button type="button" onclick="resetInstrukturForm()" id="btn-cancel-instruktur"
+                                class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
+                            <button type="submit" id="btn-save-instruktur"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
                                 <i data-lucide="save" class="w-4 h-4 inline mr-2"></i> Simpan Instruktur
                             </button>
                         </div>
@@ -143,7 +187,13 @@
                 </div>
             </div>
 
-            <div id="instruktur-table-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div id="instruktur-table-section"
+                class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Daftar Instruktur</span>
+                    <span id="instruktur-count"
+                        class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[9px] font-bold">0 Baris</span>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -163,6 +213,30 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination Section -->
+                <div
+                    class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Tampilkan:</span>
+                        <select id="instruktur-page-size" onchange="renderInstrukturTable()"
+                            class="h-8 px-2 bg-white border border-slate-200 rounded text-[10px] font-bold outline-none focus:border-blue-500">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="all">Semua</option>
+                        </select>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">baris</span>
+                    </div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase" id="instruktur-pagination-info">
+                        Menampilkan 0-0 dari 0 data
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="prevInstrukturPage()" id="instruktur-prev-btn"
+                            class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
+                        <button type="button" onclick="nextInstrukturPage()" id="instruktur-next-btn"
+                            class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Selanjutnya</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -173,8 +247,9 @@
                 <div class="px-6 py-4">
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex flex-col">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Kerja</label>
-                            <select id="filter-unit-kerja" onchange="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+
+                            <select id="filter-unit-kerja" onchange="applyFilters()"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
                                 <option value="">Semua</option>
                                 <option value="PPS Raharjo">PPS Raharjo</option>
                                 <option value="RPS Pamardi Siwi">RPS Pamardi Siwi</option>
@@ -183,43 +258,62 @@
                             </select>
                         </div>
                         <div class="flex flex-col">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Bulan</label>
-                            <input type="month" id="filter-bulan" onchange="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+
+                            <input type="month" id="filter-bulan" onchange="applyFilters()"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
                         </div>
                         <div class="flex flex-col">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
-                            <input type="text" id="filter-nomor-bp" oninput="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor BP">
+
+                            <input type="text" id="filter-nomor-bp" oninput="applyFilters()"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                placeholder="Nomor BP">
                         </div>
                         <div class="flex items-end gap-2">
-                            <button type="button" onclick="resetFilters()" class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
+                            <button type="button" onclick="resetFilters()"
+                                class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
                                 Reset
                             </button>
-                            <button id="toggle-input-btn" type="button" onclick="toggleInputForm()" class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
+                            <button id="toggle-input-btn" type="button" onclick="toggleInputForm()"
+                                class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
                                 <i data-lucide="plus" class="w-3 h-3"></i> Input Data
                             </button>
+                        </div>
+                        <div class="flex flex-col ml-auto pl-4 border-l border-slate-200">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Total Jumlah SPJ</label>
+                            <div id="filter-total-spj-display"
+                                class="h-10 px-4 bg-blue-50 border border-blue-200 rounded-md text-[13px] font-black text-blue-700 flex items-center justify-center min-w-[150px]">
+                                Rp 0
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Input Form Section -->
-            <div id="input-form-section" class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
+            <div id="input-form-section"
+                class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
                 <div class="px-6 py-5">
-                    <h2 id="form-pembayaran-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
-                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="credit-card" class="w-4 h-4"></i></div>
+                    <h2 id="form-pembayaran-title"
+                        class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="credit-card"
+                                class="w-4 h-4"></i></div>
                         Input Pembayaran Jasa
                     </h2>
                     <form id="form-pembayaran" class="space-y-4">
                         <input type="hidden" id="edit-pembayaran-id">
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                             <div class="flex flex-col hidden">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">No</label>
-                                <input type="text" id="pembayaran-no" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="No">
+                                <input type="text" id="pembayaran-no"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    placeholder="No">
                             </div>
                             <div class="flex flex-col md:col-span-1">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Kerja</label>
-                                <select id="pembayaran-unit" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" required onchange="updateKegiatan()">
+                                <select id="pembayaran-unit"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    required onchange="updateKegiatan()">
                                     <option value="">Pilih Unit...</option>
                                     <option value="PPS Raharjo">PPS Raharjo</option>
                                     <option value="RPS Pamardi Siwi">RPS Pamardi Siwi</option>
@@ -229,13 +323,16 @@
                             </div>
                             <div class="flex flex-col md:col-span-5">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Kegiatan</label>
-                                <select id="pembayaran-kegiatan" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" required onchange="updateSubKegiatan()">
+                                <select id="pembayaran-kegiatan"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                    required onchange="updateSubKegiatan()">
                                     <option value="">Pilih Kegiatan...</option>
                                 </select>
                             </div>
                             <div class="flex flex-col md:col-span-4">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Sub Kegiatan</label>
-                                <select id="pembayaran-subkegiatan" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                <select id="pembayaran-subkegiatan"
+                                    class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
                                     <option value="">Pilih Sub Kegiatan...</option>
                                 </select>
                             </div>
@@ -243,22 +340,32 @@
 
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Uraian Belanja</label>
-                            <textarea id="pembayaran-uraian" class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none" rows="2" placeholder="Uraian Belanja"></textarea>
+                            <textarea id="pembayaran-uraian"
+                                class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none"
+                                rows="2" placeholder="Uraian Belanja"></textarea>
                         </div>
 
                         <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
                             <div class="flex items-center justify-between mb-4">
-                                <label class="text-[9px] font-bold text-slate-400 uppercase">Rincian Instruktur</label>
-                                <button type="button" onclick="addRincianInstruktur()" class="bg-green-600 text-white px-3 py-1 rounded-md text-[9px] font-bold uppercase hover:bg-green-700 transition-all">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase">Rincian
+                                        Instruktur</label>
+                                    <span id="rincian-count"
+                                        class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[8px] font-bold">0
+                                        Baris</span>
+                                </div>
+                                <button type="button" onclick="addRincianInstruktur()"
+                                    class="bg-green-600 text-white px-3 py-1 rounded-md text-[9px] font-bold uppercase hover:bg-green-700 transition-all">
                                     <i data-lucide="plus" class="w-3 h-3 inline mr-1"></i> Tambah Rincian
                                 </button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
-                            <tr class="bg-blue-500 text-white text-[8px] font-black uppercase tracking-wider">
-                                <th class="px-3 py-2 w-48">Nama Instruktur</th>
-                                <th class="px-3 py-2 w-96">Jenis Keterampilan</th>
+                                        <tr
+                                            class="bg-blue-500 text-white text-[8px] font-black uppercase tracking-wider">
+                                            <th class="px-3 py-2 w-48">Nama Instruktur</th>
+                                            <th class="px-3 py-2 w-96">Jenis Keterampilan</th>
                                             <th class="px-3 py-2 text-center w-24">Jam</th>
                                             <th class="px-3 py-2 text-center w-32">Jam/Lat</th>
                                             <th class="px-3 py-2 text-center w-32">Jumlah</th>
@@ -271,10 +378,18 @@
                                     </tbody>
                                     <tfoot>
                                         <tr class="bg-blue-50 border-t-2 border-blue-200">
-                                            <td colspan="4" class="px-3 py-2 text-right font-black text-[10px] text-blue-800 uppercase">TOTAL</td>
-                                            <td id="total-spj" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
-                                            <td id="total-pph" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
-                                            <td id="total-diterima" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                            <td colspan="4"
+                                                class="px-3 py-2 text-right font-black text-[10px] text-blue-800 uppercase">
+                                                TOTAL</td>
+                                            <td id="total-spj"
+                                                class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0
+                                            </td>
+                                            <td id="total-pph"
+                                                class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0
+                                            </td>
+                                            <td id="total-diterima"
+                                                class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0
+                                            </td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -283,22 +398,28 @@
                         </div>
 
                         <div class="border-t border-slate-200 pt-4 mt-4">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Input Checker/Verifikator</p>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Input
+                                Checker/Verifikator</p>
                             <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                                 <div class="flex flex-col md:col-span-1">
                                     <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal</label>
-                                    <input type="date" id="pembayaran-tanggal-form" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                    <input type="date" id="pembayaran-tanggal-form"
+                                        class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
                                 </div>
                                 <div class="flex flex-col md:col-span-2">
                                     <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
-                                    <input type="text" id="pembayaran-nomor-bp-form" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor BP">
+                                    <input type="text" id="pembayaran-nomor-bp-form"
+                                        class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500"
+                                        placeholder="Nomor BP">
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex gap-2 pt-2">
-                            <button type="button" onclick="resetPembayaranForm()" id="btn-cancel-pembayaran" class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
-                            <button type="submit" id="btn-save-pembayaran" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
+                            <button type="button" onclick="resetPembayaranForm()" id="btn-cancel-pembayaran"
+                                class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
+                            <button type="submit" id="btn-save-pembayaran"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
                                 <i data-lucide="save" class="w-4 h-4 inline mr-2"></i> Simpan Pembayaran
                             </button>
                         </div>
@@ -307,6 +428,11 @@
             </div>
 
             <div id="table-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Daftar Pembayaran</span>
+                    <span id="pembayaran-count"
+                        class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[9px] font-bold">0 Baris</span>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -324,7 +450,41 @@
                         </thead>
                         <tbody id="pembayaran-table" class="divide-y divide-slate-100">
                         </tbody>
+                        <tfoot>
+                            <tr class="bg-blue-50 border-t-2 border-blue-200">
+                                <td colspan="7"
+                                    class="px-3 py-2 text-right font-black text-[10px] text-blue-800 uppercase">Total
+                                    SPJ</td>
+                                <td id="pembayaran-total-spj"
+                                    class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
+                </div>
+                <!-- Pagination Section -->
+                <div
+                    class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Tampilkan:</span>
+                        <select id="pembayaran-page-size" onchange="renderPembayaranTable()"
+                            class="h-8 px-2 bg-white border border-slate-200 rounded text-[10px] font-bold outline-none focus:border-blue-500">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="all">Semua</option>
+                        </select>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">baris</span>
+                    </div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase" id="pembayaran-pagination-info">
+                        Menampilkan 0-0 dari 0 data
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="prevPembayaranPage()" id="pembayaran-prev-btn"
+                            class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
+                        <button type="button" onclick="nextPembayaranPage()" id="pembayaran-next-btn"
+                            class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Selanjutnya</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -334,26 +494,61 @@
             <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="px-6 py-5">
                     <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
-                        <div class="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+                        <div class="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><i data-lucide="file-text"
+                                class="w-4 h-4"></i></div>
                         Laporan Pajak
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal Dari</label>
-                            <input type="date" id="pajak-tanggal-dari" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                            <input type="date" id="pajak-tanggal-dari"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
                         </div>
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal Sampai</label>
-                            <input type="date" id="pajak-tanggal-sampai" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                            <input type="date" id="pajak-tanggal-sampai"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Kerja</label>
+                            <select id="pajak-unit-kerja"
+                                class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                                <option value="">Semua</option>
+                                <option value="PPS Raharjo">PPS Raharjo</option>
+                                <option value="RPS Pamardi Siwi">RPS Pamardi Siwi</option>
+                                <option value="RPS Mojomulyo">RPS Mojomulyo</option>
+                                <option value="RPS Gondang">RPS Gondang</option>
+                            </select>
                         </div>
                     </div>
-                    <button onclick="generateLaporanPajak()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all mb-6">
-                        <i data-lucide="printer" class="w-4 h-4 inline mr-2"></i> Generate Laporan
-                    </button>
+                    <div class="flex flex-wrap gap-2 items-center mb-6">
+                        <button onclick="generateLaporanPajak()"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all flex-1 md:flex-initial">
+                            <i data-lucide="printer" class="w-4 h-4 inline mr-2"></i> Generate Laporan
+                        </button>
+                        <button onclick="resetLaporanPajak()"
+                            class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
+                            Reset
+                        </button>
+                        <div class="flex flex-col ml-auto pl-4 border-l border-slate-200">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Total Jumlah Bayar</label>
+                            <div id="filter-total-bayar-display"
+                                class="h-10 px-4 bg-indigo-50 border border-indigo-200 rounded-md text-[13px] font-black text-indigo-700 flex items-center justify-center min-w-[150px]">
+                                Rp 0
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Hasil Laporan Pajak</span>
+                        <span id="pajak-count"
+                            class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[9px] font-bold">0
+                            Baris</span>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-blue-500 text-white border-b text-[8px] font-black uppercase tracking-wider">
+                                <tr
+                                    class="bg-blue-500 text-white border-b text-[8px] font-black uppercase tracking-wider">
                                     <th class="px-3 py-3 text-center">No</th>
                                     <th class="px-3 py-3">Unit Kerja</th>
                                     <th class="px-3 py-3">NIK</th>
@@ -368,7 +563,45 @@
                             </thead>
                             <tbody id="pajak-table" class="divide-y divide-slate-100">
                             </tbody>
+                            <tfoot>
+                                <tr class="bg-blue-50 border-t-2 border-blue-200">
+                                    <td colspan="5"
+                                        class="px-3 py-2 text-right font-black text-[10px] text-blue-800 uppercase">
+                                        Total</td>
+                                    <td id="pajak-total-bayar"
+                                        class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                    <td id="pajak-total-pajak"
+                                        class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                    <td id="pajak-total-bersih"
+                                        class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
                         </table>
+                    </div>
+                    <!-- Pagination Section -->
+                    <div
+                        class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Tampilkan:</span>
+                            <select id="pajak-page-size" onchange="generateLaporanPajak()"
+                                class="h-8 px-2 bg-white border border-slate-200 rounded text-[10px] font-bold outline-none focus:border-blue-500">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="all">Semua</option>
+                            </select>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">baris</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-500 uppercase" id="pajak-pagination-info">
+                            Menampilkan 0-0 dari 0 data
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="prevPajakPage()" id="pajak-prev-btn"
+                                class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Sebelumnya</button>
+                            <button type="button" onclick="nextPajakPage()" id="pajak-next-btn"
+                                class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-[10px] font-bold text-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Selanjutnya</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -396,6 +629,48 @@
         let kegiatanList = []; // Kegiatan with kode_rekening 5.1.2.2.1.3
         let activeTab = "instruktur";
 
+        // --- PAGINATION STATE ---
+        let instrukturCurrentPage = 1;
+        let pembayaranCurrentPage = 1;
+        let pajakCurrentPage = 1;
+
+        function resetInstrukturPage() { instrukturCurrentPage = 1; }
+        function resetPembayaranPage() { pembayaranCurrentPage = 1; }
+        function resetPajakPage() { pajakCurrentPage = 1; }
+
+        function prevInstrukturPage() {
+            if (instrukturCurrentPage > 1) {
+                instrukturCurrentPage--;
+                renderInstrukturTable(true);
+            }
+        }
+        function nextInstrukturPage() {
+            instrukturCurrentPage++;
+            renderInstrukturTable(true);
+        }
+
+        function prevPembayaranPage() {
+            if (pembayaranCurrentPage > 1) {
+                pembayaranCurrentPage--;
+                renderPembayaranTable(true);
+            }
+        }
+        function nextPembayaranPage() {
+            pembayaranCurrentPage++;
+            renderPembayaranTable(true);
+        }
+
+        function prevPajakPage() {
+            if (pajakCurrentPage > 1) {
+                pajakCurrentPage--;
+                generateLaporanPajak(true);
+            }
+        }
+        function nextPajakPage() {
+            pajakCurrentPage++;
+            generateLaporanPajak(true);
+        }
+
         // --- HELPERS ---
         function showLoading(show, text = "Menyinkronkan Data...") {
             const overlay = document.getElementById('loadingOverlay');
@@ -404,13 +679,13 @@
                 overlay.classList.toggle('hidden', !show);
             }
         }
-        
+
         // Format number as Indonesian thousand separator (e.g., 75000 → "75.000")
         function formatNumberID(num) {
             if (num === null || num === undefined) return "";
             return new Intl.NumberFormat('id-ID').format(num);
         }
-        
+
         // Parse formatted number (e.g., "75.000" → 75000)
         function parseNumberID(str) {
             if (!str) return 0;
@@ -419,7 +694,7 @@
 
         function capitalizeEachWord(str) {
             if (!str) return str;
-            return str.replace(/\w\S*/g, function(txt) {
+            return str.replace(/\w\S*/g, function (txt) {
                 return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
             });
         }
@@ -444,15 +719,15 @@
             const subKegiatanSelect = document.getElementById("pembayaran-subkegiatan");
             kegiatanSelect.innerHTML = '<option value="">Pilih Kegiatan...</option>';
             subKegiatanSelect.innerHTML = '<option value="">Pilih Sub Kegiatan...</option>';
-            
+
             console.log("Updating Kegiatan options, kegiatanList:", kegiatanList, "selected unit:", unit);
-            
+
             // Filter kegiatanList to only show type 'kegiatan'
             const kegiatans = kegiatanList.filter(k => k.type === 'kegiatan');
             kegiatans.forEach(k => {
                 kegiatanSelect.innerHTML += `<option value="${k.id}">${k.kode} - ${k.uraian}</option>`;
             });
-            
+
             // Map Unit Kerja to Kegiatan index
             const unitToKegiatanIndex = {
                 'PPS Raharjo': 0,
@@ -460,7 +735,7 @@
                 'RPS Mojomulyo': 2,
                 'RPS Gondang': 3
             };
-            
+
             if (unit && unitToKegiatanIndex[unit] !== undefined && kegiatans[unitToKegiatanIndex[unit]]) {
                 kegiatanSelect.value = kegiatans[unitToKegiatanIndex[unit]].id;
                 updateSubKegiatan(); // Update sub kegiatan after selecting kegiatan
@@ -471,9 +746,9 @@
             const kegiatanId = document.getElementById("pembayaran-kegiatan").value;
             const subKegiatanSelect = document.getElementById("pembayaran-subkegiatan");
             subKegiatanSelect.innerHTML = '<option value="">Pilih Sub Kegiatan...</option>';
-            
+
             if (!kegiatanId) return;
-            
+
             // Find the selected kegiatan in kegiatanList
             const selectedKegiatan = kegiatanList.find(k => k.id === kegiatanId);
             if (selectedKegiatan && selectedKegiatan.children) {
@@ -488,7 +763,7 @@
                     return false;
                 }
                 // Filter sub kegiatan that have the target rekening
-                const subKegiatans = selectedKegiatan.children.filter(sk => 
+                const subKegiatans = selectedKegiatan.children.filter(sk =>
                     sk.type === 'sub_kegiatan' && hasTargetRekening(sk)
                 );
                 subKegiatans.forEach(sk => {
@@ -520,6 +795,10 @@
                 updateKegiatan();
                 // Auto-generate nomor BP
                 document.getElementById("pembayaran-no").value = generateNomorBP();
+                // Auto-generate kode Instruktur
+                document.getElementById("instruktur-kode").value = generateKodeInstruktur();
+                // Generate initial tax report
+                generateLaporanPajak();
             } catch (e) {
                 console.error("Error init:", e);
             } finally {
@@ -587,22 +866,68 @@
 
 
 
-        function renderInstrukturTable() {
+        function renderInstrukturTable(isFromPagination = false) {
             const tbody = document.getElementById("instruktur-table");
             const filterNama = document.getElementById("filter-instruktur-nama").value.toLowerCase();
-            
+
+            if (!isFromPagination) {
+                instrukturCurrentPage = 1;
+            }
+
             // Filter data
             let filteredList = instrukturList;
             if (filterNama) {
                 filteredList = instrukturList.filter(i => i.nama.toLowerCase().includes(filterNama));
             }
-            
-            if (!filteredList.length) {
+
+            // Sort by kode (always ordered/sequential)
+            filteredList.sort((a, b) => {
+                const numA = parseInt(a.kode, 10);
+                const numB = parseInt(b.kode, 10);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                return (a.kode || "").localeCompare(b.kode || "");
+            });
+
+            const totalItems = filteredList.length;
+
+            if (!totalItems) {
                 tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data instruktur</td></tr>";
+                document.getElementById("instruktur-count").innerText = "0 Baris";
+                document.getElementById("instruktur-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("instruktur-prev-btn").disabled = true;
+                document.getElementById("instruktur-next-btn").disabled = true;
                 return;
             }
-            
-            tbody.innerHTML = filteredList.map(i => `
+
+            document.getElementById("instruktur-count").innerText = `${totalItems} Baris`;
+
+            // Pagination calculations
+            const pageSizeSelect = document.getElementById("instruktur-page-size");
+            const pageSize = pageSizeSelect.value === "all" ? totalItems : parseInt(pageSizeSelect.value, 10);
+
+            const totalPages = Math.ceil(totalItems / pageSize) || 1;
+            if (instrukturCurrentPage > totalPages) {
+                instrukturCurrentPage = totalPages;
+            }
+            if (instrukturCurrentPage < 1) {
+                instrukturCurrentPage = 1;
+            }
+
+            const startIndex = (instrukturCurrentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+            const paginatedList = filteredList.slice(startIndex, endIndex);
+
+            // Update UI pagination info and buttons
+            document.getElementById("instruktur-pagination-info").innerText =
+                `Menampilkan ${startIndex + 1}-${endIndex} dari ${totalItems} data`;
+
+            document.getElementById("instruktur-prev-btn").disabled = (instrukturCurrentPage === 1);
+            document.getElementById("instruktur-next-btn").disabled = (instrukturCurrentPage === totalPages);
+
+            tbody.innerHTML = paginatedList.map(i => `
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="px-3 py-3 text-center text-gray-500 font-bold">${i.kode || "-"}</td>
                     <td class="px-3 py-3 font-bold text-slate-800">${i.nama}</td>
@@ -630,18 +955,18 @@
         function editInstruktur(id) {
             const i = instrukturList.find(x => x.id === id);
             if (!i) return;
-            
+
             // Tampilkan form terlebih dahulu
             const formSection = document.getElementById("instruktur-form-section");
             const tableSection = document.getElementById("instruktur-table-section");
             const toggleBtn = document.getElementById("toggle-instruktur-btn");
-            
+
             formSection.classList.remove("hidden");
             tableSection.classList.add("hidden");
             toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
             toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
             toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
-            
+
             // Isi data ke form
             document.getElementById("edit-instruktur-id").value = i.id;
             document.getElementById("instruktur-kode").value = i.kode || "01";
@@ -695,10 +1020,10 @@
                     .eq('app_id', 'SIPD_PAGU_ADVANCED_v2')
                     .maybeSingle();
                 if (error) throw error;
-                
+
                 apbdData = data?.pagu || [];
                 console.log("APBD Data loaded:", apbdData);
-                
+
                 // Function to check if any descendant has kode_rekening '5.1.2.2.1.3'
                 function hasTargetRekening(item) {
                     if (item.type === 'rekening' && item.kode === '5.1.2.2.1.3') {
@@ -709,7 +1034,7 @@
                     }
                     return false;
                 }
-                
+
                 // Collect all Kegiatan that have or contain the target rekening
                 let allKegiatan = [];
                 apbdData.forEach(program => {
@@ -721,7 +1046,7 @@
                         });
                     }
                 });
-                
+
                 kegiatanList = allKegiatan;
                 console.log("Filtered Kegiatan List:", kegiatanList);
             } catch (e) {
@@ -749,8 +1074,10 @@
             if (!rincianList.length) {
                 tbody.innerHTML = "<tr><td colspan=\"8\" class=\"px-3 py-6 text-center text-gray-400 font-bold italic\">Belum ada rincian instruktur</td></tr>";
                 updateTotal();
+                document.getElementById("rincian-count").innerText = "0 Baris";
                 return;
             }
+            document.getElementById("rincian-count").innerText = `${rincianList.length} Baris`;
             tbody.innerHTML = rincianList.map(r => {
                 const options = instrukturList.map(i => `<option value="${i.id}" ${r.instrukturId === i.id ? 'selected' : ''}>${i.nama}</option>`).join("");
                 return `
@@ -847,7 +1174,7 @@
 
             const kegiatan = kegiatanList.find(k => k.id === kegiatanId);
             const subKegiatan = kegiatan?.children?.find(sk => sk.id === subKegiatanId);
-            
+
             const kegiatanNama = kegiatan ? `${kegiatan.kode} - ${kegiatan.uraian}` : "";
             const subKegiatanNama = subKegiatan ? `${subKegiatan.kode} - ${subKegiatan.uraian}` : "";
 
@@ -923,7 +1250,7 @@
             const formSection = document.getElementById("input-form-section");
             const tableSection = document.getElementById("table-section");
             const toggleBtn = document.getElementById("toggle-input-btn");
-            
+
             if (formSection.classList.contains("hidden")) {
                 resetPembayaranForm();
                 formSection.classList.remove("hidden");
@@ -948,25 +1275,36 @@
             renderPembayaranTable();
         }
 
-        function renderPembayaranTable() {
+        function renderPembayaranTable(isFromPagination = false) {
             const tbody = document.getElementById("pembayaran-table");
+
+            if (!isFromPagination) {
+                pembayaranCurrentPage = 1;
+            }
+
             if (!pembayaranList.length) {
                 tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data pembayaran</td></tr>";
+                document.getElementById("pembayaran-count").innerText = "0 Baris";
+                document.getElementById("pembayaran-total-spj").innerText = formatIDR(0);
+                document.getElementById("filter-total-spj-display").innerText = formatIDR(0);
+                document.getElementById("pembayaran-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("pembayaran-prev-btn").disabled = true;
+                document.getElementById("pembayaran-next-btn").disabled = true;
                 return;
             }
-            
+
             // Apply filters
             const filterUnitKerja = document.getElementById("filter-unit-kerja").value;
             const filterBulan = document.getElementById("filter-bulan").value;
             const filterNomorBP = document.getElementById("filter-nomor-bp").value.toLowerCase();
-            
+
             let filteredList = [...pembayaranList];
-            
+
             // Filter by Unit Kerja
             if (filterUnitKerja) {
                 filteredList = filteredList.filter(p => p.unit_kerja === filterUnitKerja);
             }
-            
+
             // Filter by Bulan
             if (filterBulan) {
                 filteredList = filteredList.filter(p => {
@@ -976,12 +1314,12 @@
                     return itemYearMonth === filterBulan;
                 });
             }
-            
+
             // Filter by Nomor BP
             if (filterNomorBP) {
                 filteredList = filteredList.filter(p => (p.nomor_bp || "").toLowerCase().includes(filterNomorBP));
             }
-            
+
             // Sort by Tanggal (newest first), then by Nomor BP (newest first)
             const sortedList = filteredList.sort((a, b) => {
                 // First compare Tanggal (newest first)
@@ -995,13 +1333,55 @@
                 const createdAtB = b.created_at ? new Date(b.created_at) : new Date(0);
                 return createdAtB - createdAtA;
             });
-            
+
             if (!sortedList.length) {
                 tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Tidak ada data yang sesuai filter</td></tr>";
+                document.getElementById("pembayaran-count").innerText = "0 Baris";
+                document.getElementById("pembayaran-total-spj").innerText = formatIDR(0);
+                document.getElementById("filter-total-spj-display").innerText = formatIDR(0);
+                document.getElementById("pembayaran-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("pembayaran-prev-btn").disabled = true;
+                document.getElementById("pembayaran-next-btn").disabled = true;
                 return;
             }
-            
-            tbody.innerHTML = sortedList.map((p, index) => {
+
+            const totalItems = sortedList.length;
+            document.getElementById("pembayaran-count").innerText = `${totalItems} Baris`;
+
+            // Calculate total SPJ
+            let totalSpjSum = 0;
+            sortedList.forEach(p => {
+                totalSpjSum += p.total_spj || 0;
+            });
+            document.getElementById("pembayaran-total-spj").innerText = formatIDR(totalSpjSum);
+            document.getElementById("filter-total-spj-display").innerText = formatIDR(totalSpjSum);
+
+            // Pagination calculations
+            const pageSizeSelect = document.getElementById("pembayaran-page-size");
+            const pageSize = pageSizeSelect.value === "all" ? totalItems : parseInt(pageSizeSelect.value, 10);
+
+            const totalPages = Math.ceil(totalItems / pageSize) || 1;
+            if (pembayaranCurrentPage > totalPages) {
+                pembayaranCurrentPage = totalPages;
+            }
+            if (pembayaranCurrentPage < 1) {
+                pembayaranCurrentPage = 1;
+            }
+
+            const startIndex = (pembayaranCurrentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+            const paginatedList = sortedList.slice(startIndex, endIndex);
+
+            // Update UI pagination info and buttons
+            document.getElementById("pembayaran-pagination-info").innerText =
+                `Menampilkan ${startIndex + 1}-${endIndex} dari ${totalItems} data`;
+
+            document.getElementById("pembayaran-prev-btn").disabled = (pembayaranCurrentPage === 1);
+            document.getElementById("pembayaran-next-btn").disabled = (pembayaranCurrentPage === totalPages);
+
+            tbody.innerHTML = paginatedList.map((p, index) => {
+                const rowNum = startIndex + index + 1;
                 // Get penerima names from rincian
                 const penerimaNames = (p.rincian || [])
                     .map(r => {
@@ -1009,7 +1389,7 @@
                         return instruktur ? instruktur.nama : null;
                     })
                     .filter(name => name !== null);
-                
+
                 let penerimaText = "-";
                 if (penerimaNames.length > 0) {
                     if (penerimaNames.length === 1) {
@@ -1018,10 +1398,10 @@
                         penerimaText = penerimaNames[0] + ", dkk.";
                     }
                 }
-                
+
                 return `
                 <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-3 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
+                    <td class="px-3 py-3 text-center text-gray-500 font-bold">${rowNum}</td>
                     <td class="px-3 py-3">
                         <div class="font-bold text-slate-800">${p.unit_kerja}</div>
                     </td>
@@ -1053,7 +1433,7 @@
                                     title="Edit">
                                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="deletePembayaran('${p.id}')" 
+                            <button onclick="${p.is_locked ? '' : `deletePembayaran('${p.id}')`}" 
                                     class="p-1 ${p.is_locked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-red-100 text-red-600 hover:bg-red-600 hover:text-white'} rounded transition-colors"
                                     ${p.is_locked ? 'disabled' : ''}
                                     title="Hapus">
@@ -1069,17 +1449,17 @@
         function editPembayaran(id) {
             const p = pembayaranList.find(x => x.id === id);
             if (!p) return;
-            
+
             // Show form and hide table
             document.getElementById("input-form-section").classList.remove("hidden");
             document.getElementById("table-section").classList.add("hidden");
-            
+
             // Update toggle button
             const toggleBtn = document.getElementById("toggle-input-btn");
             toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
             toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
             toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
-            
+
             document.getElementById("edit-pembayaran-id").value = p.id;
             document.getElementById("pembayaran-no").value = p.no || "";
             document.getElementById("pembayaran-unit").value = p.unit_kerja || "";
@@ -1172,19 +1552,19 @@
         function duplicatePembayaran(id) {
             const p = pembayaranList.find(x => x.id === id);
             if (!p) return;
-            
+
             // Show form and hide table
             document.getElementById("input-form-section").classList.remove("hidden");
             document.getElementById("table-section").classList.add("hidden");
-            
+
             // Update toggle button
             const toggleBtn = document.getElementById("toggle-input-btn");
             toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
             toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
             toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
-            
+
             const newNo = generateNomorBP();
-            
+
             document.getElementById("edit-pembayaran-id").value = ""; // Empty ID to treat it as a new insert
             document.getElementById("pembayaran-no").value = newNo;
             document.getElementById("pembayaran-unit").value = p.unit_kerja || "";
@@ -1203,7 +1583,7 @@
             if (document.getElementById("pembayaran-nomor-bp-form")) {
                 document.getElementById("pembayaran-nomor-bp-form").value = newNo;
             }
-            
+
             rincianList = (p.rincian || []).map((r, index) => ({
                 ...r,
                 id: Date.now().toString() + "_" + index,
@@ -1213,7 +1593,7 @@
                 diterima: r.jam * 75000 - Math.round(r.jam * 75000 * 0.025)
             }));
             renderRincianTable();
-            
+
             document.getElementById("form-pembayaran-title").innerHTML = `
                 <div class="p-1.5 bg-green-100 text-green-600 rounded-md"><i data-lucide="copy" class="w-4 h-4"></i></div>
                 Buat Ulang Pembayaran
@@ -1226,7 +1606,7 @@
             const formSection = document.getElementById("instruktur-form-section");
             const tableSection = document.getElementById("instruktur-table-section");
             const toggleBtn = document.getElementById("toggle-instruktur-btn");
-            
+
             if (formSection.classList.contains("hidden")) {
                 resetInstrukturForm();
                 formSection.classList.remove("hidden");
@@ -1240,20 +1620,31 @@
             }
         }
 
+        function generateKodeInstruktur() {
+            let maxVal = 0;
+            instrukturList.forEach(i => {
+                const numericPart = parseInt(i.kode, 10);
+                if (!isNaN(numericPart) && numericPart > maxVal) {
+                    maxVal = numericPart;
+                }
+            });
+            return String(maxVal + 1).padStart(2, '0');
+        }
+
         function resetInstrukturForm() {
             document.getElementById("form-instruktur").reset();
             document.getElementById("edit-instruktur-id").value = "";
-            document.getElementById("instruktur-kode").value = "01";
+            document.getElementById("instruktur-kode").value = generateKodeInstruktur();
             document.getElementById("form-instruktur-title").innerHTML = `
                 <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="user-plus" class="w-4 h-4"></i></div>
                 Input Instruktur Baru
             `;
             document.getElementById("btn-cancel-instruktur").classList.add("hidden");
-            
+
             // Hide form, show table
             document.getElementById("instruktur-form-section").classList.add("hidden");
             document.getElementById("instruktur-table-section").classList.remove("hidden");
-            
+
             // Reset toggle button
             const toggleBtn = document.getElementById("toggle-instruktur-btn");
             toggleBtn.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline mr-1"></i> Input Data`;
@@ -1268,17 +1659,38 @@
         }
 
         // --- LAPORAN PAJAK ---
-        function generateLaporanPajak() {
+        function resetLaporanPajak() {
+            document.getElementById("pajak-tanggal-dari").value = "";
+            document.getElementById("pajak-tanggal-sampai").value = "";
+            document.getElementById("pajak-unit-kerja").value = "";
+            generateLaporanPajak();
+        }
+
+        function generateLaporanPajak(isFromPagination = false) {
             const tbody = document.getElementById("pajak-table");
+
+            if (!isFromPagination) {
+                pajakCurrentPage = 1;
+            }
+
             if (!pembayaranList.length) {
                 tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data pembayaran</td></tr>";
+                document.getElementById("pajak-count").innerText = "0 Baris";
+                document.getElementById("pajak-total-bayar").innerText = formatIDR(0);
+                document.getElementById("filter-total-bayar-display").innerText = formatIDR(0);
+                document.getElementById("pajak-total-pajak").innerText = formatIDR(0);
+                document.getElementById("pajak-total-bersih").innerText = formatIDR(0);
+                document.getElementById("pajak-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("pajak-prev-btn").disabled = true;
+                document.getElementById("pajak-next-btn").disabled = true;
                 return;
             }
 
             const tanggalDari = document.getElementById("pajak-tanggal-dari").value;
             const tanggalSampai = document.getElementById("pajak-tanggal-sampai").value;
-            
-            // Filter by date range
+            const unitKerja = document.getElementById("pajak-unit-kerja").value;
+
+            // Filter by date range and unit kerja
             let filteredPembayaran = pembayaranList;
             if (tanggalDari) {
                 filteredPembayaran = filteredPembayaran.filter(p => p.tanggal && p.tanggal >= tanggalDari);
@@ -1286,12 +1698,23 @@
             if (tanggalSampai) {
                 filteredPembayaran = filteredPembayaran.filter(p => p.tanggal && p.tanggal <= tanggalSampai);
             }
+            if (unitKerja) {
+                filteredPembayaran = filteredPembayaran.filter(p => p.unit_kerja === unitKerja);
+            }
 
             if (!filteredPembayaran.length) {
-                tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Tidak ada data untuk rentang tanggal tersebut</td></tr>";
+                tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Tidak ada data untuk filter tersebut</td></tr>";
+                document.getElementById("pajak-count").innerText = "0 Baris";
+                document.getElementById("pajak-total-bayar").innerText = formatIDR(0);
+                document.getElementById("filter-total-bayar-display").innerText = formatIDR(0);
+                document.getElementById("pajak-total-pajak").innerText = formatIDR(0);
+                document.getElementById("pajak-total-bersih").innerText = formatIDR(0);
+                document.getElementById("pajak-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("pajak-prev-btn").disabled = true;
+                document.getElementById("pajak-next-btn").disabled = true;
                 return;
             }
-            
+
             // Group by BP number
             const groupedByBP = {};
             filteredPembayaran.forEach(p => {
@@ -1301,15 +1724,23 @@
                 }
                 groupedByBP[key].push(p);
             });
-            
+
             let rows = [];
             let no = 1;
-            
+            let totalBayar = 0;
+            let totalPajak = 0;
+            let totalBersih = 0;
+
             Object.keys(groupedByBP).forEach(nomorBP => {
                 const payments = groupedByBP[nomorBP];
                 payments.forEach(p => {
                     (p.rincian || []).forEach(r => {
                         const instruktur = instrukturList.find(i => i.id === r.instrukturId);
+
+                        totalBayar += r.jumlah || 0;
+                        totalPajak += r.pph21 || 0;
+                        totalBersih += r.diterima || 0;
+
                         rows.push(`
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="px-3 py-3 text-center text-gray-500 font-bold">${no++}</td>
@@ -1327,13 +1758,53 @@
                     });
                 });
             });
-            
+
             if (rows.length === 0) {
-                tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada rincian instruktur di data pembayaran</td></tr>";
+                tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada rincian instruktur di data pembayaran</td></tr>";
+                document.getElementById("pajak-count").innerText = "0 Baris";
+                document.getElementById("pajak-total-bayar").innerText = formatIDR(0);
+                document.getElementById("filter-total-bayar-display").innerText = formatIDR(0);
+                document.getElementById("pajak-total-pajak").innerText = formatIDR(0);
+                document.getElementById("pajak-total-bersih").innerText = formatIDR(0);
+                document.getElementById("pajak-pagination-info").innerText = "Menampilkan 0-0 dari 0 data";
+                document.getElementById("pajak-prev-btn").disabled = true;
+                document.getElementById("pajak-next-btn").disabled = true;
             } else {
-                tbody.innerHTML = rows.join("");
+                const totalItems = rows.length;
+                document.getElementById("pajak-count").innerText = `${totalItems} Baris`;
+
+                // Pagination calculations
+                const pageSizeSelect = document.getElementById("pajak-page-size");
+                const pageSize = pageSizeSelect.value === "all" ? totalItems : parseInt(pageSizeSelect.value, 10);
+
+                const totalPages = Math.ceil(totalItems / pageSize) || 1;
+                if (pajakCurrentPage > totalPages) {
+                    pajakCurrentPage = totalPages;
+                }
+                if (pajakCurrentPage < 1) {
+                    pajakCurrentPage = 1;
+                }
+
+                const startIndex = (pajakCurrentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+                const paginatedRows = rows.slice(startIndex, endIndex);
+                tbody.innerHTML = paginatedRows.join("");
+
+                // Update UI pagination info and buttons
+                document.getElementById("pajak-pagination-info").innerText =
+                    `Menampilkan ${startIndex + 1}-${endIndex} dari ${totalItems} data`;
+
+                document.getElementById("pajak-prev-btn").disabled = (pajakCurrentPage === 1);
+                document.getElementById("pajak-next-btn").disabled = (pajakCurrentPage === totalPages);
+
+                document.getElementById("pajak-total-bayar").innerText = formatIDR(totalBayar);
+                document.getElementById("filter-total-bayar-display").innerText = formatIDR(totalBayar);
+                document.getElementById("pajak-total-pajak").innerText = formatIDR(totalPajak);
+                document.getElementById("pajak-total-bersih").innerText = formatIDR(totalBersih);
             }
         }
     </script>
 </body>
+
 </html>
