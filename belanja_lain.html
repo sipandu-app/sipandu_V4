@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -283,18 +283,32 @@
                         <!-- Row 4: Penyedia & Penerima -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Nama Toko
-                                    / Penyedia</label>
-                                <input type="text" id="penyedia" placeholder="Nama toko atau vendor..."
-                                    class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
-                                    required>
+                                <div class="flex justify-between items-center mb-2 px-1">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Nama Toko
+                                        / Penyedia</label>
+                                    <button type="button" id="toggle-penyedia" onclick="togglePenyedia()" class="text-[9px] font-black text-orange-600 hover:underline uppercase">Baru</button>
+                                </div>
+                                <div id="penyedia-select-wrapper">
+                                    <select id="penyedia"
+                                        class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                        required>
+                                        <option value="">Pilih Penyedia...</option>
+                                    </select>
+                                </div>
+                                <div id="penyedia-input-wrapper" class="hidden">
+                                    <input type="text" id="penyedia-custom" placeholder="Nama toko baru..."
+                                        class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                        required>
+                                </div>
                             </div>
-                            <div>
+                            <div class="relative">
                                 <label class="text-[9px] font-black text-slate-400 uppercase mb-2 block px-1">Penerima
                                     Barang</label>
-                                <input type="text" id="penerima_barang" placeholder="Nama penanggung jawab..."
+                                <input type="text" id="penerima_barang" placeholder="Cari nama pegawai..."
                                     class="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[12px] font-black text-slate-700 transition-all"
+                                    autocomplete="off"
                                     required>
+                                <div id="penerima-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl border border-orange-200 shadow-xl z-50 max-h-48 overflow-y-auto hidden"></div>
                             </div>
                         </div>
 
@@ -345,7 +359,8 @@
                                 <label class="text-[9px] font-black text-slate-400 uppercase mb-3 block px-1">Foto
                                     Dokumentasi (Maks 4)</label>
                                 <div class="grid grid-cols-4 gap-3">
-                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                    <label for="file-photo"
+                                        class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
                                         onclick="triggerPhotoUpload(0)">
                                         <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
                                                 class="w-5 h-5"></i></div>
@@ -354,8 +369,9 @@
                                         <button type="button" onclick="clearPhoto(event, 0)"
                                             class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
                                                 data-lucide="x" class="w-3 h-3"></i></button>
-                                    </div>
-                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                    </label>
+                                    <label for="file-photo"
+                                        class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
                                         onclick="triggerPhotoUpload(1)">
                                         <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
                                                 class="w-5 h-5"></i></div>
@@ -364,8 +380,9 @@
                                         <button type="button" onclick="clearPhoto(event, 1)"
                                             class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
                                                 data-lucide="x" class="w-3 h-3"></i></button>
-                                    </div>
-                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                    </label>
+                                    <label for="file-photo"
+                                        class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
                                         onclick="triggerPhotoUpload(2)">
                                         <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
                                                 class="w-5 h-5"></i></div>
@@ -374,8 +391,9 @@
                                         <button type="button" onclick="clearPhoto(event, 2)"
                                             class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
                                                 data-lucide="x" class="w-3 h-3"></i></button>
-                                    </div>
-                                    <div class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
+                                    </label>
+                                    <label for="file-photo"
+                                        class="photo-slot aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-white hover:border-orange-500 transition-all group"
                                         onclick="triggerPhotoUpload(3)">
                                         <div class="text-slate-300 group-hover:text-orange-500"><i data-lucide="camera"
                                                 class="w-5 h-5"></i></div>
@@ -384,9 +402,9 @@
                                         <button type="button" onclick="clearPhoto(event, 3)"
                                             class="hidden absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-lg"><i
                                                 data-lucide="x" class="w-3 h-3"></i></button>
-                                    </div>
+                                    </label>
                                 </div>
-                                <input type="file" id="file-photo" hidden accept="image/*"
+                                <input type="file" id="file-photo" class="sr-only" accept="image/*,.jpg,.jpeg,.png,.webp"
                                     onchange="handlePhotoFile(event)">
                             </div>
 
@@ -413,7 +431,7 @@
                                             <p class="text-[7px] font-bold text-orange-600 uppercase">Klik untuk
                                                 mengganti</p>
                                         </div>
-                                        <button onclick="clearPdf(event)"
+                                        <button type="button" onclick="clearPdf(event)"
                                             class="p-2 text-orange-300 hover:text-rose-500 transition-colors"><i
                                                 data-lucide="trash-2" class="w-4 h-4"></i></button>
                                     </div>
@@ -511,18 +529,20 @@
                             <thead>
                                 <tr class="bg-slate-50 border-b border-slate-100">
                                     <th class="px-6 py-5 text-center w-16">No</th>
+                                    <th class="px-6 py-5">No BP</th>
                                     <th class="px-6 py-5">Unit & Tanggal</th>
                                     <th class="px-6 py-5">Uraian & Kategori</th>
                                     <th class="px-6 py-5">Vendor & Penerima</th>
                                     <th class="px-6 py-5 text-right">Volume</th>
                                     <th class="px-6 py-5 text-right">Total (Rp)</th>
+                                    <th class="px-6 py-5 text-center">Media</th>
                                     <th class="px-6 py-5 text-center w-32">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="table-body" class="divide-y divide-slate-50">
                                 <!-- Data rows injected here -->
                                 <tr>
-                                    <td colspan="7" class="px-6 py-20 text-center">
+                                    <td colspan="9" class="px-6 py-20 text-center">
                                         <div class="flex flex-col items-center gap-4 text-slate-300">
                                             <i data-lucide="loader-2"
                                                 class="w-10 h-10 animate-spin text-orange-500"></i>
@@ -595,23 +615,133 @@
         const DB_TABLE = 'belanja_lainnya';
         const PIN_ADMIN = "888";
 
+        const defaultPenyedia = ["CV. Renata Citra Mandiri", "CV. Wibowo"];
+
+        function getPenyediaOptions() {
+            const unique = new Set([...defaultPenyedia, ...rawData.map(item => item.penyedia).filter(Boolean)]);
+            return Array.from(unique).sort();
+        }
+
         // Cloudinary
         const CLOUDINARY_CLOUD = "dkxehjgu0";
         const CLOUDINARY_PRESET = "belanja_pakaian"; // Shared preset
-
         // --- STATE ---
         let rawData = [];
+        let listPegawai = [];
         let currentTab = 'history';
         let photos = [null, null, null, null];
         let documentUrl = null;
         let isSubmitting = false;
+        let activeMediaUploads = 0;
         let pinCallback = null;
+        let showLainnyaPenyedia = false;
+        let customPenyedia = '';
+
+        function getKategoriBelanja(item) {
+            return item?.jenis_pakaian || item?.jenis_belanja || 'UMUM';
+        }
+
+        function isMissingColumnError(error) {
+            const text = [
+                error?.message,
+                error?.details,
+                error?.hint,
+                error?.code
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            return text.includes('column') ||
+                text.includes('schema cache') ||
+                text.includes('could not find');
+        }
+
+        async function ensureBelanjaLainSchema() {
+            const { error } = await supabaseClient
+                .from(DB_TABLE)
+                .select('nomor_bp,jenis_pakaian,photos,document_url')
+                .limit(1);
+
+            if (error && isMissingColumnError(error)) {
+                throw new Error("Kolom database belum lengkap. Jalankan ALTER TABLE di belanja_lainnya_schema.sql, lalu refresh halaman.");
+            }
+
+            if (error) throw error;
+        }
+
+        async function fetchPegawai() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('data_pegawai')
+                    .select('nama')
+                    .order('nama', { ascending: true });
+                if (error) {
+                    console.error("Error fetching pegawai:", error);
+                    return;
+                }
+                listPegawai = data || [];
+            } catch (err) {
+                console.error("Error fetching pegawai:", err);
+            }
+        }
+
+        async function uploadToCloudinary(file, label = 'file') {
+            if (!file) return null;
+
+            const resourceTypes = file.type && file.type.startsWith('image/')
+                ? ['image', 'auto']
+                : ['auto', 'raw'];
+            let lastError = null;
+
+            for (const resourceType of resourceTypes) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${resourceType}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.secure_url) return data.secure_url;
+
+                lastError = new Error(data.error?.message || `Upload ${label} gagal`);
+                console.error(`Cloudinary upload ${label} gagal (${resourceType}):`, data);
+            }
+
+            throw lastError || new Error(`Upload ${label} gagal`);
+        }
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error || new Error("Gagal membaca file"));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function setMediaUploadState(delta) {
+            activeMediaUploads = Math.max(0, activeMediaUploads + delta);
+            const btn = document.getElementById('save-btn');
+            if (!btn || isSubmitting) return;
+
+            btn.disabled = activeMediaUploads > 0;
+            if (activeMediaUploads > 0) {
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Upload Media...`;
+            } else {
+                btn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i> Simpan Data`;
+            }
+            lucide.createIcons();
+        }
 
         // --- INITIALIZATION ---
         async function init() {
             lucide.createIcons();
             setupAutoCalculate();
+            setupPenerimaAutocomplete();
             await fetchData();
+            await fetchPegawai();
+            renderPenyediaOptions();
             switchTab('history');
         }
 
@@ -645,6 +775,7 @@
 
                 if (error) throw error;
                 rawData = data || [];
+                renderPenyediaOptions();
                 renderTable();
             } catch (err) {
                 console.error("Fetch Error:", err);
@@ -661,6 +792,8 @@
 
             let filtered = rawData.filter(item => {
                 const matchSearch = (item.uraian?.toLowerCase() || "").includes(search) ||
+                    (item.nomor_bp?.toLowerCase() || "").includes(search) ||
+                    (getKategoriBelanja(item).toLowerCase() || "").includes(search) ||
                     (item.penyedia?.toLowerCase() || "").includes(search) ||
                     (item.penerima_barang?.toLowerCase() || "").includes(search);
                 const matchUnit = unit === 'Semua' || item.unit_kerja === unit;
@@ -680,13 +813,19 @@
             document.getElementById('stat-total').innerText = "Rp " + formatRibuan(totalVal);
 
             if (filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="7" class="px-6 py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">Tidak ada data ditemukan</td></tr>`;
+                body.innerHTML = `<tr><td colspan="9" class="px-6 py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">Tidak ada data ditemukan</td></tr>`;
                 return;
             }
 
-            body.innerHTML = filtered.map((item, idx) => `
+            body.innerHTML = filtered.map((item, idx) => {
+                const dataIndex = rawData.findIndex(row => row.id === item.id);
+                const firstPhoto = (item.photos || []).find(p => p);
+                return `
                 <tr class="group hover:bg-slate-50 transition-all ${item.is_locked ? 'bg-slate-50/50 opacity-70' : ''}">
                     <td class="px-6 py-5 text-center font-black text-slate-300 text-[10px]">${idx + 1}</td>
+                    <td class="px-6 py-5">
+                        <span class="inline-flex items-center px-3 py-1 bg-orange-50 border border-orange-100 rounded-lg text-[9px] font-black text-orange-700 uppercase whitespace-nowrap">${item.nomor_bp || '-'}</span>
+                    </td>
                     <td class="px-6 py-5">
                         <div class="flex flex-col gap-1">
                             <span class="text-[9px] font-black text-orange-600 uppercase tracking-tighter">${item.unit_kerja}</span>
@@ -697,7 +836,7 @@
                         <div class="flex flex-col gap-1 max-w-xs">
                             <span class="text-[11px] font-black text-slate-800 leading-snug line-clamp-2 uppercase">${item.uraian}</span>
                             <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                <i data-lucide="tag" class="w-3 h-3 opacity-50"></i> ${item.jenis_belanja || 'UMUM'}
+                                <i data-lucide="tag" class="w-3 h-3 opacity-50"></i> ${getKategoriBelanja(item)}
                                 ${item.document_url ? '<i data-lucide="file-text" class="w-3 h-3 text-emerald-500"></i>' : ''}
                             </span>
                         </div>
@@ -714,18 +853,25 @@
                     <td class="px-6 py-5 text-right font-black text-slate-900 text-[11px]">Rp ${formatRibuan(item.nominal)}</td>
                     <td class="px-6 py-5">
                         <div class="flex justify-center gap-1.5">
-                            <button onclick="requestPrint(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-sky-500 hover:text-white transition-all shadow-sm" title="Cetak Report"><i data-lucide="printer" class="w-4 h-4"></i></button>
+                            ${firstPhoto ? `<a href="${firstPhoto}" target="_blank" rel="noopener noreferrer" class="p-2 bg-sky-50 text-sky-600 rounded-xl hover:bg-sky-600 hover:text-white transition-all shadow-sm" title="Lihat Foto"><i data-lucide="image" class="w-4 h-4"></i></a>` : `<span class="p-2 bg-slate-50 text-slate-200 rounded-xl" title="Tidak ada foto"><i data-lucide="image" class="w-4 h-4"></i></span>`}
+                            ${item.document_url ? `<a href="${item.document_url}" target="_blank" rel="noopener noreferrer" class="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Lihat PDF"><i data-lucide="file-text" class="w-4 h-4"></i></a>` : `<span class="p-2 bg-slate-50 text-slate-200 rounded-xl" title="Tidak ada PDF"><i data-lucide="file-text" class="w-4 h-4"></i></span>`}
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex justify-center gap-1.5">
+                            <button onclick="requestPrint(${dataIndex})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-sky-500 hover:text-white transition-all shadow-sm" title="Cetak Report"><i data-lucide="printer" class="w-4 h-4"></i></button>
                             ${!item.is_locked ? `
-                                <button onclick="editEntry(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm" title="Ubah Data"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                                <button onclick="requestLock(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="Kunci Data"><i data-lucide="unlock" class="w-4 h-4"></i></button>
-                                <button onclick="requestDelete(${idx})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Hapus Data"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <button onclick="editEntry(${dataIndex})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm" title="Ubah Data"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="requestLock(${dataIndex})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="Kunci Data"><i data-lucide="unlock" class="w-4 h-4"></i></button>
+                                <button onclick="requestDelete(${dataIndex})" class="p-2 bg-slate-100 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Hapus Data"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             ` : `
-                                <button onclick="requestLock(${idx}, true)" class="p-2 bg-slate-900 text-orange-400 rounded-xl hover:bg-orange-500 hover:text-white transition-all shadow-sm" title="Buka Kunci"><i data-lucide="lock" class="w-4 h-4"></i></button>
+                                <button onclick="requestLock(${dataIndex}, true)" class="p-2 bg-slate-900 text-orange-400 rounded-xl hover:bg-orange-500 hover:text-white transition-all shadow-sm" title="Buka Kunci"><i data-lucide="lock" class="w-4 h-4"></i></button>
                             `}
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
             lucide.createIcons();
         }
 
@@ -733,19 +879,28 @@
         document.getElementById('belanja-form').onsubmit = async (e) => {
             e.preventDefault();
             if (isSubmitting) return;
+            if (activeMediaUploads > 0) {
+                showToast("Tunggu upload foto/PDF selesai", "error");
+                return;
+            }
 
             const btn = document.getElementById('save-btn');
             const id = document.getElementById('entry-id').value;
             const hs = parseFloat(document.getElementById('harga_satuan').value.replace(/\D/g, "")) || 0;
             const vol = parseFloat(document.getElementById('volume').value) || 0;
 
+            // Get penyedia value
+            const penyediaValue = showLainnyaPenyedia 
+                ? document.getElementById('penyedia-custom').value 
+                : document.getElementById('penyedia').value;
+
             const payload = {
                 unit_kerja: document.getElementById('unit_kerja').value,
                 tanggal_belanja: document.getElementById('tanggal_belanja').value,
                 nomor_bp: document.getElementById('nomor_bp').value,
-                jenis_belanja: document.getElementById('jenis_belanja').value,
+                jenis_pakaian: document.getElementById('jenis_belanja').value,
                 uraian: document.getElementById('uraian').value,
-                penyedia: document.getElementById('penyedia').value,
+                penyedia: penyediaValue,
                 penerima_barang: document.getElementById('penerima_barang').value,
                 volume: vol,
                 satuan: document.getElementById('satuan').value,
@@ -757,6 +912,7 @@
             };
 
             try {
+                await ensureBelanjaLainSchema();
                 isSubmitting = true;
                 btn.disabled = true;
                 btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Menyimpan...`;
@@ -794,13 +950,30 @@
             document.getElementById('unit_kerja').value = item.unit_kerja;
             document.getElementById('tanggal_belanja').value = item.tanggal_belanja;
             document.getElementById('nomor_bp').value = item.nomor_bp;
-            document.getElementById('jenis_belanja').value = item.jenis_belanja;
+            document.getElementById('jenis_belanja').value = getKategoriBelanja(item);
             document.getElementById('uraian').value = item.uraian;
-            document.getElementById('penyedia').value = item.penyedia;
             document.getElementById('penerima_barang').value = item.penerima_barang;
             document.getElementById('volume').value = item.volume;
             document.getElementById('satuan').value = item.satuan;
             document.getElementById('harga_satuan').value = formatRibuan(item.harga_satuan);
+
+            // Set penyedia
+            const isCustom = !getPenyediaOptions().includes(item.penyedia);
+            if (isCustom) {
+                showLainnyaPenyedia = true;
+                customPenyedia = item.penyedia;
+                document.getElementById('penyedia-select-wrapper').classList.add('hidden');
+                document.getElementById('penyedia-input-wrapper').classList.remove('hidden');
+                document.getElementById('penyedia-custom').value = item.penyedia;
+                document.getElementById('toggle-penyedia').innerText = 'Pilih';
+            } else {
+                showLainnyaPenyedia = false;
+                document.getElementById('penyedia-select-wrapper').classList.remove('hidden');
+                document.getElementById('penyedia-input-wrapper').classList.add('hidden');
+                document.getElementById('toggle-penyedia').innerText = 'Baru';
+                renderPenyediaOptions();
+                document.getElementById('penyedia').value = item.penyedia;
+            }
 
             // Set photos
             photos = [null, null, null, null];
@@ -819,7 +992,6 @@
         let currentPhotoIdx = -1;
         function triggerPhotoUpload(idx) {
             currentPhotoIdx = idx;
-            document.getElementById('file-photo').click();
         }
 
         async function handlePhotoFile(e) {
@@ -828,22 +1000,28 @@
 
             const slot = document.querySelectorAll('.photo-slot')[currentPhotoIdx];
             slot.classList.add('opacity-50');
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', CLOUDINARY_PRESET);
+            setMediaUploadState(1);
 
             try {
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/upload`, {
-                    method: 'POST', body: formData
-                });
-                const data = await res.json();
-                if (data.secure_url) {
-                    photos[currentPhotoIdx] = data.secure_url;
+                photos[currentPhotoIdx] = await uploadToCloudinary(file, 'foto');
+                updatePhotoUI();
+                showToast("Foto berhasil diupload", "success");
+            } catch (err) {
+                console.error(err);
+                try {
+                    photos[currentPhotoIdx] = await fileToDataUrl(file);
                     updatePhotoUI();
+                    showToast("Foto disimpan ke database", "success");
+                } catch (fallbackErr) {
+                    console.error(fallbackErr);
+                    showToast("Gagal upload foto: " + err.message, "error");
                 }
-            } catch (err) { showToast("Gagal upload foto", "error"); }
-            finally { slot.classList.remove('opacity-50'); e.target.value = ''; }
+            }
+            finally {
+                slot.classList.remove('opacity-50');
+                e.target.value = '';
+                setMediaUploadState(-1);
+            }
         }
 
         function updatePhotoUI() {
@@ -867,6 +1045,7 @@
         }
 
         function clearPhoto(e, idx) {
+            e.preventDefault();
             e.stopPropagation();
             photos[idx] = null;
             updatePhotoUI();
@@ -879,22 +1058,28 @@
 
             const box = document.getElementById('pdf-upload-box');
             box.classList.add('opacity-50');
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', CLOUDINARY_PRESET);
+            setMediaUploadState(1);
 
             try {
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/upload`, {
-                    method: 'POST', body: formData
-                });
-                const data = await res.json();
-                if (data.secure_url) {
-                    documentUrl = data.secure_url;
+                documentUrl = await uploadToCloudinary(file, 'PDF');
+                updatePdfUI();
+                showToast("PDF berhasil diupload", "success");
+            } catch (err) {
+                console.error(err);
+                try {
+                    documentUrl = await fileToDataUrl(file);
                     updatePdfUI();
+                    showToast("PDF disimpan ke database", "success");
+                } catch (fallbackErr) {
+                    console.error(fallbackErr);
+                    showToast("Gagal upload PDF: " + err.message, "error");
                 }
-            } catch (err) { showToast("Gagal upload PDF", "error"); }
-            finally { box.classList.remove('opacity-50'); e.target.value = ''; }
+            }
+            finally {
+                box.classList.remove('opacity-50');
+                e.target.value = '';
+                setMediaUploadState(-1);
+            }
         }
 
         function updatePdfUI() {
@@ -1008,6 +1193,72 @@
             }, 3000);
         }
 
+        function togglePenyedia() {
+            showLainnyaPenyedia = !showLainnyaPenyedia;
+            const selectWrapper = document.getElementById('penyedia-select-wrapper');
+            const inputWrapper = document.getElementById('penyedia-input-wrapper');
+            const toggleBtn = document.getElementById('toggle-penyedia');
+            
+            if (showLainnyaPenyedia) {
+                selectWrapper.classList.add('hidden');
+                inputWrapper.classList.remove('hidden');
+                toggleBtn.innerText = 'Pilih';
+                customPenyedia = document.getElementById('penyedia').value || '';
+                document.getElementById('penyedia-custom').value = customPenyedia;
+            } else {
+                selectWrapper.classList.remove('hidden');
+                inputWrapper.classList.add('hidden');
+                toggleBtn.innerText = 'Baru';
+                renderPenyediaOptions();
+            }
+        }
+
+        function renderPenyediaOptions() {
+            const select = document.getElementById('penyedia');
+            const options = getPenyediaOptions();
+            select.innerHTML = '<option value="">Pilih Penyedia...</option>' + 
+                options.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+
+        function setupPenerimaAutocomplete() {
+            const input = document.getElementById('penerima_barang');
+            const dropdown = document.getElementById('penerima-dropdown');
+
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                const filtered = listPegawai.filter(p => 
+                    p.nama.toLowerCase().includes(value)
+                );
+                
+                if (filtered.length > 0) {
+                    dropdown.innerHTML = filtered.map(p => 
+                        `<button type="button" class="w-full text-left px-4 py-2 text-[12px] font-bold text-slate-700 hover:bg-orange-50 transition-all" onclick="selectPenerima('${p.nama}')">${p.nama}</button>`
+                    ).join('');
+                    dropdown.classList.remove('hidden');
+                } else {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            input.addEventListener('focus', () => {
+                if (listPegawai.length > 0) {
+                    dropdown.innerHTML = listPegawai.map(p => 
+                        `<button type="button" class="w-full text-left px-4 py-2 text-[12px] font-bold text-slate-700 hover:bg-orange-50 transition-all" onclick="selectPenerima('${p.nama}')">${p.nama}</button>`
+                    ).join('');
+                    dropdown.classList.remove('hidden');
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            });
+        }
+
+        function selectPenerima(nama) {
+            document.getElementById('penerima_barang').value = nama;
+            document.getElementById('penerima-dropdown').classList.add('hidden');
+        }
+
         function resetForm() {
             document.getElementById('belanja-form').reset();
             document.getElementById('entry-id').value = '';
@@ -1017,6 +1268,14 @@
             documentUrl = null;
             updatePhotoUI();
             updatePdfUI();
+            
+            // Reset penyedia
+            showLainnyaPenyedia = false;
+            customPenyedia = '';
+            document.getElementById('penyedia-select-wrapper').classList.remove('hidden');
+            document.getElementById('penyedia-input-wrapper').classList.add('hidden');
+            document.getElementById('toggle-penyedia').innerText = 'Baru';
+            renderPenyediaOptions();
         }
 
         // --- DATABASE MANAGEMENT ---
@@ -1056,10 +1315,11 @@
                     // Chunking restore
                     for (let i = 0; i < dataToRestore.length; i += 20) {
                         const chunk = dataToRestore.slice(i, i + 20).map(item => {
-                            const { id, created_at, updated_at, ...clean } = item;
+                            const { id, created_at, updated_at, jenis_belanja, ...clean } = item;
                             return { 
                                 ...clean, 
                                 unit_kerja: clean.unit_kerja || clean.unitPelayanan || 'PPSDI Raharjo Sragen',
+                                jenis_pakaian: clean.jenis_pakaian || jenis_belanja || 'UMUM',
                                 updated_at: new Date().toISOString() 
                             };
                         });
@@ -1090,7 +1350,7 @@
                 "Unit": item.unit_kerja,
                 "Tanggal": item.tanggal_belanja,
                 "No BP": item.nomor_bp,
-                "Kategori": item.jenis_belanja,
+                "Kategori": getKategoriBelanja(item),
                 "Uraian": item.uraian,
                 "Penyedia": item.penyedia,
                 "Penerima": item.penerima_barang,
@@ -1151,7 +1411,7 @@
                         <tr><th>Unit Kerja</th><td>: ${item.unit_kerja}</td></tr>
                         <tr><th>Tanggal Belanja</th><td>: ${item.tanggal_belanja}</td></tr>
                         <tr><th>Nomor BP / Bukti</th><td>: ${item.nomor_bp || '-'}</td></tr>
-                        <tr><th>Kategori</th><td>: ${item.jenis_belanja}</td></tr>
+                        <tr><th>Kategori</th><td>: ${getKategoriBelanja(item)}</td></tr>
                         <tr><th>Uraian Detail</th><td>: ${item.uraian}</td></tr>
                         <tr><th>Penyedia / Toko</th><td>: ${item.penyedia}</td></tr>
                         <tr><th>Volume & Harga</th><td>: ${item.volume} ${item.satuan} x Rp ${formatRibuan(item.harga_satuan)}</td></tr>

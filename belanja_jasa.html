@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -142,8 +142,25 @@
                                 <input type="date" id="tanggal_pekerjaan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none" required>
                             </div>
                             <div class="flex flex-col">
-                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Penyedia / Rekanan</label>
-                                <input type="text" id="nama_rekanan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none" placeholder="CV. Maju Jaya" required>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase">Penyedia / Rekanan</label>
+                                    <button type="button" id="toggle-rekanan" onclick="toggleRekanan()" class="text-[9px] font-bold text-emerald-600 hover:underline uppercase">Baru</button>
+                                </div>
+                                <div id="rekanan-select-wrapper">
+                                    <select id="nama_rekanan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" required>
+                                        <option value="">Pilih Penyedia...</option>
+                                    </select>
+                                </div>
+                                <div id="rekanan-input-wrapper" class="hidden">
+                                    <input type="text" id="nama_rekanan_custom" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" placeholder="CV. Maju Jaya" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-col relative">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Penerima</label>
+                                <input type="text" id="penerima_barang" autocomplete="off" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" placeholder="Cari nama pegawai..." required>
+                                <div id="penerima-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl border border-emerald-200 shadow-xl z-50 max-h-48 overflow-y-auto hidden"></div>
                             </div>
                         </div>
 
@@ -155,18 +172,18 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Dokumen SPK/SP (PDF)</label>
-                                <label class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
+                                <label for="file_spk" class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
                                     <i data-lucide="file-up" class="text-slate-300 w-4 h-4"></i>
                                     <span id="spk-label" class="text-[8px] font-bold uppercase text-slate-400 mt-1 max-w-[120px] truncate">Pilih PDF</span>
-                                    <input type="file" id="file_spk" accept="application/pdf" class="hidden">
+                                    <input type="file" id="file_spk" accept="application/pdf,.pdf" class="sr-only">
                                 </label>
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Bukti Pembayaran (PDF)</label>
-                                <label class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
+                                <label for="file_bayar" class="flex-grow border-2 border-dashed border-slate-200 rounded-xl min-h-[70px] flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-50 transition-all">
                                     <i data-lucide="file-up" class="text-slate-300 w-4 h-4"></i>
                                     <span id="bayar-label" class="text-[8px] font-bold uppercase text-slate-400 mt-1 max-w-[120px] truncate">Pilih PDF</span>
-                                    <input type="file" id="file_bayar" accept="application/pdf" class="hidden">
+                                    <input type="file" id="file_bayar" accept="application/pdf,.pdf" class="sr-only">
                                 </label>
                             </div>
                         </div>
@@ -228,6 +245,7 @@
                                 <th class="px-3 py-4">Nomor BP</th>
                                 <th class="px-3 py-4">Pekerjaan</th>
                                 <th class="px-3 py-4">Penyedia</th>
+                                <th class="px-3 py-4">Penerima</th>
                                 <th class="px-3 py-4">Unit</th>
                                 <th class="px-3 py-4 text-center">Dokumen</th>
                                 <th class="px-3 py-4 text-right">Nominal</th>
@@ -288,10 +306,102 @@
 
         let supabaseClient = null;
         let listJasa = [];
+        let listPegawai = [];
         let activeTab = 'history';
         let targetItem = null;
         let pinAction = null;
         let docPoints = [];
+        let showRekananCustom = false;
+        let customRekanan = '';
+
+        const defaultRekanan = ["CV. Renata Citra Mandiri", "CV. Wibowo"];
+
+        function getRekananOptions() {
+            const unique = new Set([...defaultRekanan, ...listJasa.map(item => item.nama_rekanan).filter(Boolean)]);
+            return Array.from(unique).sort();
+        }
+
+        function toggleRekanan() {
+            showRekananCustom = !showRekananCustom;
+            const selectWrapper = document.getElementById('rekanan-select-wrapper');
+            const inputWrapper = document.getElementById('rekanan-input-wrapper');
+            const toggleBtn = document.getElementById('toggle-rekanan');
+            
+            if (showRekananCustom) {
+                selectWrapper.classList.add('hidden');
+                inputWrapper.classList.remove('hidden');
+                toggleBtn.innerText = 'Pilih';
+                customRekanan = document.getElementById('nama_rekanan').value || '';
+                document.getElementById('nama_rekanan_custom').value = customRekanan;
+            } else {
+                selectWrapper.classList.remove('hidden');
+                inputWrapper.classList.add('hidden');
+                toggleBtn.innerText = 'Baru';
+                renderRekananOptions();
+            }
+        }
+
+        function renderRekananOptions() {
+            const select = document.getElementById('nama_rekanan');
+            const options = getRekananOptions();
+            select.innerHTML = '<option value="">Pilih Penyedia...</option>' + 
+                options.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+
+        async function fetchPegawai() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('data_pegawai')
+                    .select('nama')
+                    .order('nama', { ascending: true });
+                if (error) {
+                    console.error("Error fetching pegawai:", error);
+                    return;
+                }
+                listPegawai = data || [];
+            } catch (err) {
+                console.error("Error fetching pegawai:", err);
+            }
+        }
+
+        function setupPenerimaAutocomplete() {
+            const input = document.getElementById('penerima_barang');
+            const dropdown = document.getElementById('penerima-dropdown');
+
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                const filtered = listPegawai.filter(p => 
+                    p.nama.toLowerCase().includes(value)
+                );
+                
+                if (filtered.length > 0) {
+                    dropdown.innerHTML = filtered.map(p => 
+                        `<button type="button" class="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 hover:bg-emerald-50 transition-all" onclick="selectPenerima('${p.nama}')">${p.nama}</button>`
+                    ).join('');
+                    dropdown.classList.remove('hidden');
+                } else {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            input.addEventListener('focus', () => {
+                if (listPegawai.length > 0) {
+                    dropdown.innerHTML = listPegawai.map(p => 
+                        `<button type="button" class="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 hover:bg-emerald-50 transition-all" onclick="selectPenerima('${p.nama}')">${p.nama}</button>`
+                    ).join('');
+                    dropdown.classList.remove('hidden');
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            });
+        }
+
+        function selectPenerima(nama) {
+            document.getElementById('penerima_barang').value = nama;
+            document.getElementById('penerima-dropdown').classList.add('hidden');
+        }
 
         // Initialize Supabase
         function initSupabase() {
@@ -315,6 +425,7 @@
 
                 if (error) throw error;
                 listJasa = data || [];
+                renderRekananOptions();
                 renderTable();
             } catch (err) {
                 console.error(err);
@@ -331,7 +442,11 @@
             const jasa = document.getElementById('filterJasa').value;
 
             let filtered = listJasa.filter(item => {
-                const matchSearch = item.nama_pekerjaan.toLowerCase().includes(search) || item.nama_rekanan.toLowerCase().includes(search);
+                const namaPekerjaan = (item.nama_pekerjaan || '').toLowerCase();
+                const namaRekanan = (item.nama_rekanan || '').toLowerCase();
+                const penerima = (item.penerima_barang || '').toLowerCase();
+                const nomorBp = (item.nomor_bp || '').toLowerCase();
+                const matchSearch = namaPekerjaan.includes(search) || namaRekanan.includes(search) || penerima.includes(search) || nomorBp.includes(search);
                 const matchUnit = unit === 'Semua' || item.unit_pelayanan === unit;
                 const matchJasa = jasa === 'Semua' || item.jenis_jasa === jasa;
                 return matchSearch && matchUnit && matchJasa;
@@ -358,8 +473,21 @@
                 row.className = `hover:bg-slate-50 transition-colors group ${item.is_locked ? 'bg-slate-50/50 opacity-80' : ''}`;
                 
                 row.innerHTML = `
-                    <td class="px-3 py-4 text-center font-bold text-slate-500 whitespace-nowrap">${item.tanggal_pekerjaan.split('-').reverse().join('/')}</td>
-                    <td class="px-3 py-4 text-[10px] font-black text-slate-700">${item.nomor_bp || '-'}</td>
+                    <td class="px-3 py-4 text-center whitespace-nowrap">
+                        <input type="date" 
+                               value="${item.tanggal_pekerjaan}" 
+                               ${item.is_locked ? 'disabled' : ''}
+                               onchange="updateInlineField('${item.id}', 'tanggal_pekerjaan', this.value)"
+                               class="w-full text-center text-[10px] font-bold bg-transparent border border-transparent focus:border-emerald-500 rounded px-1 py-0.5 outline-none ${item.is_locked ? 'text-slate-400' : 'text-slate-700'}">
+                    </td>
+                    <td class="px-3 py-4">
+                        <input type="text" 
+                               value="${item.nomor_bp || ''}" 
+                               ${item.is_locked ? 'disabled' : ''}
+                               placeholder="Nomor BP"
+                               onchange="updateInlineField('${item.id}', 'nomor_bp', this.value)"
+                               class="w-full text-[10px] font-black bg-transparent border border-transparent focus:border-emerald-500 rounded px-1 py-0.5 outline-none ${item.is_locked ? 'text-slate-400' : 'text-slate-700'}">
+                    </td>
                     <td class="px-3 py-4">
                         <div class="flex flex-col">
                             <span class="text-[9px] font-black text-slate-900 leading-tight uppercase flex items-center gap-1">
@@ -370,6 +498,7 @@
                         </div>
                     </td>
                     <td class="px-3 py-4 text-slate-600 font-medium">${item.nama_rekanan || '-'}</td>
+                    <td class="px-3 py-4 text-slate-600 font-medium">${item.penerima_barang || '-'}</td>
                     <td class="px-3 py-4 uppercase font-bold text-[8px] text-indigo-600">${item.unit_pelayanan.split(' ')[0]}</td>
                     <td class="px-3 py-4">
                         <div class="flex flex-col gap-1 items-center">
@@ -381,15 +510,87 @@
                     <td class="px-3 py-4">
                         <div class="flex justify-center gap-1">
                             <button onclick="openPrintModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Cetak"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>
-                            <button onclick="askPin('toggleLock', '${item.id}')" class="p-1.5 transition-colors ${item.is_locked ? 'text-amber-600' : 'text-slate-300 hover:text-amber-500'}"><i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i></button>
-                            <button onclick="${item.is_locked ? '' : `editItem('${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-emerald-600'} transition-colors"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-                            <button onclick="${item.is_locked ? '' : `askPin('delete', '${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-rose-600'} transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="askPin('toggleLock', '${item.id}')" class="p-1.5 transition-colors ${item.is_locked ? 'text-amber-600' : 'text-slate-300 hover:text-amber-500'}" title="Kunci/Buka Kunci"><i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="${item.is_locked ? '' : `duplicateItem('${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-purple-600'} transition-colors" title="Buat Ulang (Duplikat)"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="${item.is_locked ? '' : `editItem('${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-emerald-600'} transition-colors" title="Edit"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="${item.is_locked ? '' : `askPin('delete', '${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-rose-600'} transition-colors" title="Hapus"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
             lucide.createIcons();
+        }
+
+        async function updateInlineField(id, field, value) {
+            try {
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .update({ [field]: value, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                if (error) throw error;
+                showNotif("Data berhasil diperbarui", "success");
+                await syncData();
+            } catch (err) {
+                console.error(err);
+                showNotif("Gagal memperbarui data: " + err.message, "error");
+            }
+        }
+
+        function duplicateItem(id) {
+            const item = listJasa.find(x => x.id === id);
+            if (!item) return;
+
+            // Create a copy without id, created_at, updated_at, and set is_locked to false
+            const { id: _, created_at, updated_at, ...copy } = item;
+            const newItem = {
+                ...copy,
+                id: 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                is_locked: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                nomor_bp: copy.nomor_bp ? copy.nomor_bp + ' (copy)' : ''
+            };
+
+            // Pre-fill the form with the copied data
+            document.getElementById('edit-id').value = '';
+            document.getElementById('unit_pelayanan').value = newItem.unit_pelayanan;
+            document.getElementById('nomor_bp').value = newItem.nomor_bp;
+            document.getElementById('jenis_jasa').value = newItem.jenis_jasa;
+            document.getElementById('nama_pekerjaan').value = newItem.nama_pekerjaan + ' (copy)';
+            document.getElementById('tanggal_pekerjaan').value = newItem.tanggal_pekerjaan;
+            document.getElementById('penerima_barang').value = newItem.penerima_barang;
+            document.getElementById('nominal').value = newItem.nominal.toLocaleString('id-ID');
+
+            // Handle penyedia/rekanan
+            const isCustom = !getRekananOptions().includes(newItem.nama_rekanan);
+            if (isCustom) {
+                showRekananCustom = true;
+                customRekanan = newItem.nama_rekanan;
+                document.getElementById('rekanan-select-wrapper').classList.add('hidden');
+                document.getElementById('rekanan-input-wrapper').classList.remove('hidden');
+                document.getElementById('nama_rekanan_custom').value = newItem.nama_rekanan;
+                document.getElementById('toggle-rekanan').innerText = 'Pilih';
+            } else {
+                showRekananCustom = false;
+                document.getElementById('rekanan-select-wrapper').classList.remove('hidden');
+                document.getElementById('rekanan-input-wrapper').classList.add('hidden');
+                document.getElementById('toggle-rekanan').innerText = 'Baru';
+                renderRekananOptions();
+                document.getElementById('nama_rekanan').value = newItem.nama_rekanan;
+            }
+
+            // Reset doc points (since photos can't be easily duplicated)
+            docPoints = [];
+            addDocPoint();
+            renderDocPoints();
+
+            // Update form title
+            document.getElementById('form-title').innerHTML = '<div class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><i data-lucide="copy" class="w-4 h-4"></i></div> Input Belanja Jasa (Copy)';
+            document.getElementById('btn-text').innerText = 'Simpan Laporan (Copy)';
+
+            // Switch to input tab
+            switchTab('input');
         }
 
         // --- Form Logic ---
@@ -408,7 +609,7 @@
         }
 
         function removeDocPoint(id) {
-            docPoints = docPoints.filter(p => p.id !== id);
+            docPoints = docPoints.filter(p => String(p.id) !== String(id));
             renderDocPoints();
         }
 
@@ -440,10 +641,11 @@
             const hasFile = p[key];
             const hasUrl = p[`${key}Url`];
             const imgSrc = hasFile ? URL.createObjectURL(hasFile) : (hasUrl ? hasUrl : null);
+            const inputId = `doc-file-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '')}-${key}`;
             
             return `
-                <label class="aspect-square bg-white border border-slate-200 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden cursor-pointer relative group hover:bg-indigo-50 transition-all">
-                    <input type="file" accept="image/*" class="hidden" onchange="updatePointFile('${p.id}', '${key}', this.files[0])">
+                <label for="${inputId}" class="aspect-square bg-white border border-slate-200 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden cursor-pointer relative group hover:bg-indigo-50 transition-all">
+                    <input id="${inputId}" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" class="sr-only" onchange="updatePointFile('${p.id}', '${key}', this.files[0]); this.value = '';">
                     ${imgSrc ? `<img src="${imgSrc}" class="w-full h-full object-cover">` : `<i data-lucide="plus" class="text-slate-300 w-4 h-4"></i>`}
                     <div class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold py-1 uppercase text-center backdrop-blur-sm">${label}</div>
                 </label>
@@ -451,39 +653,208 @@
         }
 
         function updatePointKeterangan(id, val) {
-            const p = docPoints.find(x => x.id === id);
+            const p = docPoints.find(x => String(x.id) === String(id));
             if (p) p.keterangan = val;
         }
 
-        function updatePointFile(id, key, file) {
-            const p = docPoints.find(x => x.id === id);
-            if (p) {
-                p[key] = file;
+        async function compressImageForUpload(file) {
+            if (!file || !file.type.startsWith('image/')) return file;
+
+            try {
+                const imageUrl = URL.createObjectURL(file);
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = imageUrl;
+                });
+
+                const maxSide = 1200;
+                const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                const width = Math.round(image.width * scale);
+                const height = Math.round(image.height * scale);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+                URL.revokeObjectURL(imageUrl);
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.78));
+                if (!blob) return file;
+
+                const baseName = file.name ? file.name.replace(/\.[^.]+$/, '') : 'foto';
+                return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+            } catch (err) {
+                console.warn("Foto tidak bisa dikompres, memakai file asli.", err);
+                return file;
+            }
+        }
+
+        async function imageFileToDataUrl(file) {
+            if (!file || !file.type.startsWith('image/')) return null;
+
+            try {
+                const imageUrl = URL.createObjectURL(file);
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = imageUrl;
+                });
+
+                const maxSide = 420;
+                const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                const width = Math.round(image.width * scale);
+                const height = Math.round(image.height * scale);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+                URL.revokeObjectURL(imageUrl);
+
+                return canvas.toDataURL('image/jpeg', 0.5);
+            } catch (err) {
+                console.error("Gagal membuat fallback foto.", err);
+                return null;
+            }
+        }
+
+        async function updatePointFile(id, key, file) {
+            const p = docPoints.find(x => String(x.id) === String(id));
+            if (p && file) {
+                p[key] = await compressImageForUpload(file);
                 renderDocPoints();
             }
         }
 
-        async function uploadToCloudinary(file) {
-            if (!file) return null;
-            const data = new FormData();
-            data.append("file", file);
-            data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-            // Tambahkan resource_type auto agar bisa menerima PDF
-            data.append("resource_type", "auto"); 
-            
+        function getMissingColumnName(error) {
+            const text = [
+                error?.message,
+                error?.details,
+                error?.hint,
+                error?.code
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            const match = text.match(/(?:'|")([a-z0-9_]+)(?:'|")\s+column/) ||
+                text.match(/column\s+(?:'|")?([a-z0-9_]+)(?:'|")?/);
+
+            if (!match || !(
+                text.includes('column') ||
+                text.includes('schema cache') ||
+                text.includes('could not find')
+            )) {
+                return null;
+            }
+
+            return match[1];
+        }
+
+        function stripColumn(data, columnName) {
+            if (Array.isArray(data)) {
+                return data.map(item => stripColumn(item, columnName));
+            }
+            const { [columnName]: _removed, ...rest } = data;
+            return rest;
+        }
+
+        function formatPdfLabel(url, fallbackLabel) {
+            if (!url) return "Pilih PDF";
+
             try {
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: "POST", body: data });
+                const pathname = new URL(url).pathname;
+                const filename = decodeURIComponent(pathname.split('/').pop() || '').split('?')[0];
+                return filename || fallbackLabel;
+            } catch (err) {
+                const filename = decodeURIComponent(String(url).split('/').pop() || '').split('?')[0];
+                return filename || fallbackLabel;
+            }
+        }
+
+        async function ensureBelanjaJasaSchema() {
+            const { error } = await supabaseClient
+                .from(TABLE_NAME)
+                .select('nomor_bp,url_spk,url_bayar,dokumentasi,penerima_barang')
+                .limit(1);
+
+            if (error && getMissingColumnName(error)) {
+                throw new Error("Kolom database belanja_jasa belum lengkap. Jalankan belanja_jasa_schema.sql di Supabase, lalu refresh halaman.");
+            }
+
+            if (error) throw error;
+        }
+
+        async function saveBelanjaJasa(payload, editId = null) {
+            let nextPayload = payload;
+            const strippedColumns = new Set();
+
+            for (let attempt = 0; attempt < 6; attempt++) {
+                const query = editId
+                    ? supabaseClient.from(TABLE_NAME).update(nextPayload).eq('id', editId)
+                    : supabaseClient.from(TABLE_NAME).insert(nextPayload);
+                const result = await query;
+
+                if (!result.error) return result;
+
+                const missingColumn = getMissingColumnName(result.error);
+                if (missingColumn === 'nomor_bp') {
+                    return { error: new Error("Kolom nomor_bp belum terbaca Supabase. Jalankan schema belanja_jasa_schema.sql dan reload schema cache.") };
+                }
+
+                if (!missingColumn || strippedColumns.has(missingColumn)) {
+                    return result;
+                }
+
+                console.warn(`Kolom ${missingColumn} belum ada di database. Mencoba simpan tanpa kolom itu.`, result.error);
+                strippedColumns.add(missingColumn);
+                nextPayload = stripColumn(nextPayload, missingColumn);
+            }
+
+            return { error: new Error("Database menolak beberapa kolom baru. Jalankan ulang schema belanja_jasa_schema.sql di Supabase.") };
+        }
+
+        async function uploadToCloudinary(file, label = 'file') {
+            if (!file) return null;
+            const resourceTypes = file.type && file.type.startsWith('image/') ? ['image', 'auto'] : ['auto', 'raw'];
+            let lastError = null;
+            
+            for (const resourceType of resourceTypes) {
+                const data = new FormData();
+                data.append("file", file);
+                data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, { method: "POST", body: data });
                 const json = await res.json();
                 
                 if (json.secure_url) {
                     return json.secure_url;
-                } else {
-                    console.error("Cloudinary Upload Failed:", json);
-                    return null;
                 }
+
+                lastError = new Error(json.error?.message || `Gagal upload ${label} ke Cloudinary`);
+                console.error(`Cloudinary Upload Failed (${resourceType}):`, json);
+            }
+
+            throw lastError || new Error(`Gagal upload ${label} ke Cloudinary`);
+        }
+
+        async function uploadOptionalPdf(file, label) {
+            if (!file) return null;
+            try {
+                return await uploadToCloudinary(file, label);
             } catch (err) {
-                console.error("Cloudinary Network Error:", err);
+                console.error(`${label} upload failed:`, err);
                 return null;
+            }
+        }
+
+        async function uploadPhotoWithFallback(file, label) {
+            if (!file) return null;
+            try {
+                return await uploadToCloudinary(file, label);
+            } catch (err) {
+                console.warn(`${label} gagal upload ke Cloudinary, memakai fallback database.`, err);
+                return await imageFileToDataUrl(file);
             }
         }
 
@@ -549,6 +920,26 @@
             }
         }
 
+        function stripDokumentasiImages(dokumentasi) {
+            return (dokumentasi || []).map(point => ({
+                ...point,
+                semula: point.semula && point.semula.startsWith('data:') ? null : point.semula,
+                proses: point.proses && point.proses.startsWith('data:') ? null : point.proses,
+                menjadi: point.menjadi && point.menjadi.startsWith('data:') ? null : point.menjadi
+            }));
+        }
+
+        async function saveBelanjaJasaWithMediaFallback(payload, editId = null) {
+            const result = await saveBelanjaJasa(payload, editId);
+            if (!result.error) return result;
+
+            console.warn("Gagal simpan dengan dokumentasi penuh. Mencoba simpan tanpa foto fallback.", result.error);
+            return saveBelanjaJasa({
+                ...payload,
+                dokumentasi: stripDokumentasiImages(payload.dokumentasi)
+            }, editId);
+        }
+
         function resetForm() {
             const form = document.getElementById('form-jasa');
             if (form) form.reset();
@@ -569,6 +960,14 @@
             
             const bayarLabel = document.getElementById('bayar-label');
             if (bayarLabel) bayarLabel.innerText = "Pilih PDF";
+
+            // Reset penyedia/rekanan
+            showRekananCustom = false;
+            customRekanan = '';
+            document.getElementById('rekanan-select-wrapper').classList.remove('hidden');
+            document.getElementById('rekanan-input-wrapper').classList.add('hidden');
+            document.getElementById('toggle-rekanan').innerText = 'Baru';
+            renderRekananOptions();
             
             docPoints = [];
             addDocPoint();
@@ -597,14 +996,34 @@
             document.getElementById('nomor_bp').value = item.nomor_bp || "";
             document.getElementById('nama_pekerjaan').value = item.nama_pekerjaan || "";
             document.getElementById('tanggal_pekerjaan').value = item.tanggal_pekerjaan || "";
-            document.getElementById('nama_rekanan').value = item.nama_rekanan || "";
+            document.getElementById('penerima_barang').value = item.penerima_barang || "";
+
+            // Set penyedia/rekanan
+            const isCustom = !getRekananOptions().includes(item.nama_rekanan);
+            if (isCustom) {
+                showRekananCustom = true;
+                customRekanan = item.nama_rekanan;
+                document.getElementById('rekanan-select-wrapper').classList.add('hidden');
+                document.getElementById('rekanan-input-wrapper').classList.remove('hidden');
+                document.getElementById('nama_rekanan_custom').value = item.nama_rekanan || '';
+                document.getElementById('toggle-rekanan').innerText = 'Pilih';
+            } else {
+                showRekananCustom = false;
+                document.getElementById('rekanan-select-wrapper').classList.remove('hidden');
+                document.getElementById('rekanan-input-wrapper').classList.add('hidden');
+                document.getElementById('toggle-rekanan').innerText = 'Baru';
+                renderRekananOptions();
+                document.getElementById('nama_rekanan').value = item.nama_rekanan || '';
+            }
             
             const nominalVal = item.nominal || 0;
             document.getElementById('nominal').value = nominalVal.toLocaleString('id-ID');
             
             // Update label file
-            document.getElementById('spk-label').innerText = item.url_spk ? "📄 File SPK Tersedia" : "Pilih PDF";
-            document.getElementById('bayar-label').innerText = item.url_bayar ? "📄 File Bayar Tersedia" : "Pilih PDF";
+            document.getElementById('file_spk').value = '';
+            document.getElementById('file_bayar').value = '';
+            document.getElementById('spk-label').innerText = formatPdfLabel(item.url_spk, "File SPK Tersedia");
+            document.getElementById('bayar-label').innerText = formatPdfLabel(item.url_bayar, "File Bayar Tersedia");
 
             // Muat ulang dokumentasi visual
             docPoints = [];
@@ -617,7 +1036,7 @@
                 addDocPoint();
             }
 
-            document.getElementById('form-title').innerHTML = `<div class="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></div> Edit Laporan #${item.id.split('-').pop()}`;
+            document.getElementById('form-title').innerHTML = `<div class="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></div> Edit Laporan ${item.nomor_bp || 'Tanpa Nomor BP'}`;
             document.getElementById('btn-text').innerText = "Update Laporan";
             
             // Gulung halaman ke atas agar form terlihat
@@ -637,12 +1056,14 @@
             lucide.createIcons();
 
             try {
+                await ensureBelanjaJasaSchema();
+
                 const spkFile = document.getElementById('file_spk').files[0];
                 const bayarFile = document.getElementById('file_bayar').files[0];
 
                 const [urlSPK, urlBayar] = await Promise.all([
-                    uploadToCloudinary(spkFile),
-                    uploadToCloudinary(bayarFile)
+                    uploadOptionalPdf(spkFile, 'PDF SPK'),
+                    uploadOptionalPdf(bayarFile, 'PDF pembayaran')
                 ]);
 
                 // Validasi: Jika file dipilih tapi gagal upload (CORS/Network error)
@@ -659,12 +1080,17 @@
                 const finalDocs = [];
                 for (const p of docPoints) {
                     const [semula, proses, menjadi] = await Promise.all([
-                        p.semula ? uploadToCloudinary(p.semula) : Promise.resolve(p.semulaUrl),
-                        p.proses ? uploadToCloudinary(p.proses) : Promise.resolve(p.prosesUrl),
-                        p.menjadi ? uploadToCloudinary(p.menjadi) : Promise.resolve(p.menjadiUrl)
+                        p.semula ? uploadPhotoWithFallback(p.semula, `foto 0% ${p.keterangan || ''}`) : Promise.resolve(p.semulaUrl),
+                        p.proses ? uploadPhotoWithFallback(p.proses, `foto 50% ${p.keterangan || ''}`) : Promise.resolve(p.prosesUrl),
+                        p.menjadi ? uploadPhotoWithFallback(p.menjadi, `foto 100% ${p.keterangan || ''}`) : Promise.resolve(p.menjadiUrl)
                     ]);
                     finalDocs.push({ keterangan: p.keterangan, semula, proses, menjadi });
                 }
+
+                // Get rekanan/penyedia value
+                const rekananValue = showRekananCustom 
+                    ? document.getElementById('nama_rekanan_custom').value 
+                    : document.getElementById('nama_rekanan').value;
 
                 const payload = {
                     unit_pelayanan: document.getElementById('unit_pelayanan').value,
@@ -672,7 +1098,8 @@
                     nomor_bp: document.getElementById('nomor_bp').value,
                     nama_pekerjaan: document.getElementById('nama_pekerjaan').value,
                     tanggal_pekerjaan: document.getElementById('tanggal_pekerjaan').value,
-                    nama_rekanan: document.getElementById('nama_rekanan').value,
+                    nama_rekanan: rekananValue,
+                    penerima_barang: document.getElementById('penerima_barang').value,
                     nominal: parseInt(document.getElementById('nominal').value.replace(/\D/g, '') || 0),
                     url_spk: urlSPK || (editId ? listJasa.find(x => x.id === editId).url_spk : null),
                     url_bayar: urlBayar || (editId ? listJasa.find(x => x.id === editId).url_bayar : null),
@@ -681,11 +1108,11 @@
                 };
 
                 if (editId) {
-                    const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', editId);
+                    const { error } = await saveBelanjaJasaWithMediaFallback(payload, editId);
                     if (error) throw error;
                     showNotif("Laporan Berhasil Diperbarui");
                 } else {
-                    const { error } = await supabaseClient.from(TABLE_NAME).insert({
+                    const { error } = await saveBelanjaJasaWithMediaFallback({
                         ...payload,
                         id: 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
                         is_locked: false,
@@ -699,7 +1126,7 @@
                 switchTab('history');
             } catch (err) {
                 console.error(err);
-                showNotif("Gagal menyimpan laporan", "error");
+                showNotif("Gagal: " + (err.message || "Laporan tidak tersimpan"), "error");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-text">${editId ? 'Update Laporan' : 'Simpan Laporan'}</span>`;
@@ -904,6 +1331,7 @@
                         nama_pekerjaan: v.nama_pekerjaan || v.namaPemeliharaan || v.nama_barang || v.nama || v.keterangan || 'Data Restored',
                         tanggal_pekerjaan: v.tanggal_pekerjaan || v.tanggalPekerjaan || v.tanggal || new Date().toISOString().split('T')[0],
                         nama_rekanan: v.nama_rekanan || v.namaRekanan || '',
+                        penerima_barang: v.penerima_barang || v.penerimaBarang || '',
                         nominal: parseInt(v.nominal) || 0,
                         url_spk: v.url_spk || v.urlSpk || v.spkUrl || null,
                         url_bayar: v.url_bayar || v.urlBayar || v.bayarUrl || null,
@@ -914,7 +1342,7 @@
                         updated_at: new Date().toISOString()
                     }));
                     
-                    const { error } = await supabaseClient.from(TABLE_NAME).insert(chunk);
+                    const { error } = await saveBelanjaJasa(chunk);
                     if (error) throw error;
                 }
                 
@@ -929,7 +1357,13 @@
 
         // Init
         initSupabase();
-        syncData();
+        setupPenerimaAutocomplete();
+        async function initAll() {
+            await syncData();
+            await fetchPegawai();
+            renderRekananOptions();
+        }
+        initAll();
         addDocPoint();
 
         // Search listeners

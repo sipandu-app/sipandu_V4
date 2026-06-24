@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -101,13 +101,17 @@
             const [syncStatus, setSyncStatus] = useState('Menghubungkan...');
             const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
             const [listData, setListData] = useState([]);
+            const [listPegawai, setListPegawai] = useState([]);
             const [editId, setEditId] = useState(null);
             
             // States untuk Filter
             const [searchTerm, setSearchTerm] = useState('');
             const [filterUnit, setFilterUnit] = useState('Semua');
             const [filterMonthStart, setFilterMonthStart] = useState(''); 
-            const [filterMonthEnd, setFilterMonthEnd] = useState('');     
+            const [filterMonthEnd, setFilterMonthEnd] = useState('');
+            // States for Penerima Autocomplete
+            const [penerimaSearch, setPenerimaSearch] = useState('');
+            const [showPenerimaDropdown, setShowPenerimaDropdown] = useState(false);
 
             const [sortConfig] = useState({ key: 'nomor_bp', direction: 'desc' });
             const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,6 +173,34 @@
             const defaultPenyedia = ["CV. Renata Citra Mandiri", "CV. Wibowo"];
             const satuanOptions = ["Pesanan", "Pcs", "Stel", "Pasang", "Paket", "Unit", "Set", "Kodi"];
 
+            const fetchPegawai = async () => {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('data_pegawai')
+                        .select('nama')
+                        .order('nama', { ascending: true });
+                    if (error) {
+                        console.error("Error fetching pegawai:", error);
+                        return;
+                    }
+                    setListPegawai(data || []);
+                } catch (err) {
+                    console.error("Error fetching pegawai:", err);
+                }
+            };
+
+            const penyediaOptions = useMemo(() => {
+                const unique = new Set([...defaultPenyedia, ...listData.map(item => item.penyedia).filter(Boolean)]);
+                return Array.from(unique).sort();
+            }, [listData]);
+
+            const filteredPegawai = useMemo(() => {
+                if (!penerimaSearch) return listPegawai;
+                return listPegawai.filter(p => 
+                    p.nama.toLowerCase().includes(penerimaSearch.toLowerCase())
+                );
+            }, [listPegawai, penerimaSearch]);
+
             const fetchData = async () => {
                 setSyncStatus('Menghubungkan...');
                 try {
@@ -194,6 +226,7 @@
 
             useEffect(() => {
                 fetchData();
+                fetchPegawai();
                 const channel = supabaseClient
                     .channel('schema-db-changes')
                     .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
@@ -372,6 +405,8 @@
                 setCustomPenyedia('');
                 setCustomKategori('');
                 setPhotoRotations([0, 0, 0, 0]);
+                setPenerimaSearch('');
+                setShowPenerimaDropdown(false);
             };
 
             const handleEdit = (item) => {
@@ -397,6 +432,9 @@
                     setShowLainnyaKategori(false);
                     setCustomKategori('');
                 }
+
+                // Set penerima search
+                setPenerimaSearch(item.penerima_barang || '');
 
                 const ph = [...(item.photos || [])];
                 while(ph.length < 4) ph.push(null);
@@ -597,7 +635,7 @@
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <div className="flex justify-between items-center mb-0.5"><span className={labelClass}>Penyedia / Toko</span><button type="button" onClick={()=>setShowLainnyaPenyedia(!showLainnyaPenyedia)} className="text-[7.5px] font-black text-yellow-600 hover:underline uppercase">Baru</button></div>
-                                                {showLainnyaPenyedia ? <input placeholder="Nama Toko Baru" value={customPenyedia} onChange={e=>setCustomPenyedia(e.target.value)} className={inputBase} /> : <select required value={form.penyedia} onChange={e=>setForm({...form, penyedia: e.target.value})} className={inputBase}><option value="">Pilih Penyedia...</option>{defaultPenyedia.map(o=><option key={o} value={o}>{o}</option>)}</select>}
+                                                {showLainnyaPenyedia ? <input placeholder="Nama Toko Baru" value={customPenyedia} onChange={e=>setCustomPenyedia(e.target.value)} className={inputBase} /> : <select required value={form.penyedia} onChange={e=>setForm({...form, penyedia: e.target.value})} className={inputBase}><option value="">Pilih Penyedia...</option>{penyediaOptions.map(o=><option key={o} value={o}>{o}</option>)}</select>}
                                             </div>
                                             <div>
                                                 <div className="flex justify-between items-center mb-0.5"><span className={labelClass}>Kategori Belanja</span><button type="button" onClick={()=>setShowLainnyaKategori(!showLainnyaKategori)} className="text-[7.5px] font-black text-yellow-600 hover:underline uppercase">Baru</button></div>
@@ -611,7 +649,44 @@
                                             <div><span className="text-[8px] font-black uppercase text-black/60 flex items-center gap-1 mb-0.5">Harga Satuan (Rp)</span><input required value={formatRibuan(form.harga_satuan)} onChange={e=>setForm({...form, harga_satuan: e.target.value.replace(/\D/g, "")})} className="w-full p-2 bg-white border border-yellow-200 focus:border-yellow-400 rounded-lg text-[10.5px] font-black text-black outline-none transition-all appearance-none" /></div>
                                             <div className="text-right"><p className="text-[8px] font-black text-yellow-700 uppercase">Total</p><p className="text-base font-black text-black leading-tight">Rp {formatRibuan((parseFloat(form.volume)||0)*(parseFloat(form.harga_satuan)||0))}</p></div>
                                         </div>
-                                        <div><span className={labelClass}>Nama Penerima Barang</span><input required value={form.penerima_barang} onChange={e=>setForm({...form, penerima_barang: e.target.value})} placeholder="" className={inputBase} /></div>
+                                        <div className="relative">
+                                            <span className={labelClass}>Nama Penerima Barang</span>
+                                            <input 
+                                                required 
+                                                value={penerimaSearch} 
+                                                onChange={(e) => {
+                                                    setPenerimaSearch(e.target.value);
+                                                    setForm({...form, penerima_barang: e.target.value});
+                                                    setShowPenerimaDropdown(true);
+                                                }}
+                                                onFocus={() => setShowPenerimaDropdown(true)}
+                                                onBlur={() => setTimeout(() => setShowPenerimaDropdown(false), 200)}
+                                                placeholder="Cari nama pegawai..." 
+                                                className={inputBase} 
+                                            />
+                                            {showPenerimaDropdown && (
+                                                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl border border-yellow-200 shadow-xl z-50 max-h-48 overflow-y-auto">
+                                                    {filteredPegawai.length > 0 ? (
+                                                        filteredPegawai.map((peg, idx) => (
+                                                            <button
+                                                                key={idx}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setPenerimaSearch(peg.nama);
+                                                                    setForm({...form, penerima_barang: peg.nama});
+                                                                    setShowPenerimaDropdown(false);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 text-[10.5px] font-bold text-slate-700 hover:bg-yellow-50 transition-colors"
+                                                            >
+                                                                {peg.nama}
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="px-4 py-2 text-[10px] font-black text-slate-400">Tidak ada pegawai ditemukan</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <span className={labelClass}>Dokumentasi Foto</span>

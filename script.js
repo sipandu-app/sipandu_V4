@@ -256,12 +256,17 @@ function showPage(pageId) {
         `,
         'belanja_jasa': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
-                <iframe src="./belanja_jasa.html" class="w-full h-full border-none"></iframe>
+                <iframe src="./belanja_jasa.html?v=20260623-4" class="w-full h-full border-none"></iframe>
             </div>
         `,
         'belanja_lain': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
                 <iframe src="./belanja_lain.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
+        'jasa_instruktur': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./jasa_instruktur.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
         'bmd': `

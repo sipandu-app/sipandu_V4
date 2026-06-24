@@ -1,0 +1,1337 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jasa Instruktur - SIPANDU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .active-tab { 
+            background-color: #2563eb; 
+            color: white; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
+        }
+        .text-shadow-sm { text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 pb-10 text-[11px]">
+
+    <!-- Notification -->
+    <div id="notification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 text-white rounded-full shadow-lg font-bold text-[9px] uppercase tracking-widest flex items-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center text-white bg-black/50">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p id="loading-text" class="text-xs font-bold uppercase tracking-widest">Menyinkronkan Data...</p>
+    </div>
+
+    <header class="bg-blue-600 border-b border-blue-700 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-2 rounded-md shadow-sm">
+                    <i data-lucide="users" class="text-blue-600 w-[18px] h-[18px]"></i>
+                </div>
+                <div>
+                    <h1 class="text-[11px] font-black text-white tracking-tight leading-none uppercase text-shadow-sm">JASA INSTRUKTUR</h1>
+                    <p class="text-[8px] font-bold text-blue-100 mt-1 uppercase tracking-widest opacity-90">Pengajuan Pembayaran</p>
+                </div>
+            </div>
+            <nav class="flex bg-white/20 p-0.5 rounded-md border border-white/20 backdrop-blur-sm">
+                <button onclick="switchTab('instruktur')" id="tab-instruktur-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab hover:bg-blue-700 hover:text-white">
+                    <i data-lucide="user" class="w-3 h-3"></i> Instruktur
+                </button>
+                <button onclick="switchTab('pembayaran')" id="tab-pembayaran-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
+                    <i data-lucide="credit-card" class="w-3 h-3"></i> Pengajuan Pembayaran
+                </button>
+                <button onclick="switchTab('pajak')" id="tab-pajak-btn" class="px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-white hover:bg-blue-700">
+                    <i data-lucide="file-text" class="w-3 h-3"></i> Laporan Pajak
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-4">
+        <!-- Instruktur Tab -->
+        <div id="tab-instruktur" class="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <!-- Filter Section -->
+            <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama</label>
+                            <input type="text" id="filter-instruktur-nama" oninput="renderInstrukturTable()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Cari Nama">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button type="button" onclick="resetInstrukturFilters()" class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
+                                Reset
+                            </button>
+                            <button id="toggle-instruktur-btn" type="button" onclick="toggleInstrukturForm()" class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Input Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form Section -->
+            <div id="instruktur-form-section" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
+                <div class="px-6 py-5">
+                    <h2 id="form-instruktur-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="user-plus" class="w-4 h-4"></i></div>
+                        Input Instruktur Baru
+                    </h2>
+                    <form id="form-instruktur" class="space-y-4">
+                        <input type="hidden" id="edit-instruktur-id">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Kode</label>
+                                <input type="text" id="instruktur-kode" value="01" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                            </div>
+                            <div class="flex flex-col md:col-span-2">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama</label>
+                                <input type="text" id="instruktur-nama" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nama Instruktur" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">NIK</label>
+                                <input type="text" id="instruktur-nik" maxlength="16" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor Induk Kependudukan" required>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">NPWP (Opsional)</label>
+                                <input type="text" id="instruktur-npwp" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="NPWP">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Alamat</label>
+                            <textarea id="instruktur-alamat" class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none" rows="2" placeholder="Alamat"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nama Bank</label>
+                                <input type="text" id="instruktur-bank" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nama Bank">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor Rekening</label>
+                                <input type="text" id="instruktur-rek" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor Rekening">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Atas Nama</label>
+                                <input type="text" id="instruktur-an" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Atas Nama">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" onclick="resetInstrukturForm()" id="btn-cancel-instruktur" class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
+                            <button type="submit" id="btn-save-instruktur" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
+                                <i data-lucide="save" class="w-4 h-4 inline mr-2"></i> Simpan Instruktur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="instruktur-table-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-blue-500 text-white border-b text-[8px] font-black uppercase tracking-wider">
+                                <th class="px-3 py-3 text-center w-16">Kode</th>
+                                <th class="px-3 py-3 w-64">Nama</th>
+                                <th class="px-3 py-3 w-48">Alamat</th>
+                                <th class="px-3 py-3 w-40">NIK</th>
+                                <th class="px-3 py-3 w-40">NPWP</th>
+                                <th class="px-3 py-3 w-40">Bank</th>
+                                <th class="px-3 py-3 w-40">Rekening</th>
+                                <th class="px-3 py-3 w-40">Atas Nama</th>
+                                <th class="px-3 py-3 text-center w-32">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="instruktur-table" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pembayaran Tab -->
+        <div id="tab-pembayaran" class="hidden space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <!-- Filter Section -->
+            <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Kerja</label>
+                            <select id="filter-unit-kerja" onchange="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                <option value="">Semua</option>
+                                <option value="PPS Raharjo">PPS Raharjo</option>
+                                <option value="RPS Pamardi Siwi">RPS Pamardi Siwi</option>
+                                <option value="RPS Mojomulyo">RPS Mojomulyo</option>
+                                <option value="RPS Gondang">RPS Gondang</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Bulan</label>
+                            <input type="month" id="filter-bulan" onchange="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
+                            <input type="text" id="filter-nomor-bp" oninput="applyFilters()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor BP">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button type="button" onclick="resetFilters()" class="h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-md uppercase text-[9px] transition-all">
+                                Reset
+                            </button>
+                            <button id="toggle-input-btn" type="button" onclick="toggleInputForm()" class="h-10 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md uppercase text-[9px] shadow-lg transition-all flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Input Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form Section -->
+            <div id="input-form-section" class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
+                <div class="px-6 py-5">
+                    <h2 id="form-pembayaran-title" class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="credit-card" class="w-4 h-4"></i></div>
+                        Input Pembayaran Jasa
+                    </h2>
+                    <form id="form-pembayaran" class="space-y-4">
+                        <input type="hidden" id="edit-pembayaran-id">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <div class="flex flex-col hidden">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">No</label>
+                                <input type="text" id="pembayaran-no" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="No">
+                            </div>
+                            <div class="flex flex-col md:col-span-1">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Kerja</label>
+                                <select id="pembayaran-unit" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" required onchange="updateKegiatan()">
+                                    <option value="">Pilih Unit...</option>
+                                    <option value="PPS Raharjo">PPS Raharjo</option>
+                                    <option value="RPS Pamardi Siwi">RPS Pamardi Siwi</option>
+                                    <option value="RPS Mojomulyo">RPS Mojomulyo</option>
+                                    <option value="RPS Gondang">RPS Gondang</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col md:col-span-5">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Kegiatan</label>
+                                <select id="pembayaran-kegiatan" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" required onchange="updateSubKegiatan()">
+                                    <option value="">Pilih Kegiatan...</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col md:col-span-4">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Sub Kegiatan</label>
+                                <select id="pembayaran-subkegiatan" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                    <option value="">Pilih Sub Kegiatan...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Uraian Belanja</label>
+                            <textarea id="pembayaran-uraian" class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 resize-none" rows="2" placeholder="Uraian Belanja"></textarea>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+                            <div class="flex items-center justify-between mb-4">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Rincian Instruktur</label>
+                                <button type="button" onclick="addRincianInstruktur()" class="bg-green-600 text-white px-3 py-1 rounded-md text-[9px] font-bold uppercase hover:bg-green-700 transition-all">
+                                    <i data-lucide="plus" class="w-3 h-3 inline mr-1"></i> Tambah Rincian
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                            <tr class="bg-blue-500 text-white text-[8px] font-black uppercase tracking-wider">
+                                <th class="px-3 py-2 w-48">Nama Instruktur</th>
+                                <th class="px-3 py-2 w-96">Jenis Keterampilan</th>
+                                            <th class="px-3 py-2 text-center w-24">Jam</th>
+                                            <th class="px-3 py-2 text-center w-32">Jam/Lat</th>
+                                            <th class="px-3 py-2 text-center w-32">Jumlah</th>
+                                            <th class="px-3 py-2 text-center w-32">PPh 21 (2.5%)</th>
+                                            <th class="px-3 py-2 text-center w-32">Diterima</th>
+                                            <th class="px-3 py-2 text-center w-16">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rincian-table" class="divide-y divide-slate-100">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="bg-blue-50 border-t-2 border-blue-200">
+                                            <td colspan="4" class="px-3 py-2 text-right font-black text-[10px] text-blue-800 uppercase">TOTAL</td>
+                                            <td id="total-spj" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                            <td id="total-pph" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                            <td id="total-diterima" class="px-3 py-2 text-center font-black text-[11px] text-blue-800">0</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200 pt-4 mt-4">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Input Checker/Verifikator</p>
+                            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                <div class="flex flex-col md:col-span-1">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal</label>
+                                    <input type="date" id="pembayaran-tanggal-form" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500">
+                                </div>
+                                <div class="flex flex-col md:col-span-2">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
+                                    <input type="text" id="pembayaran-nomor-bp-form" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500" placeholder="Nomor BP">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" onclick="resetPembayaranForm()" id="btn-cancel-pembayaran" class="px-6 py-3 bg-gray-100 text-gray-600 rounded-md font-bold text-[10px] uppercase hover:bg-gray-200 transition-all hidden">Batal</button>
+                            <button type="submit" id="btn-save-pembayaran" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all">
+                                <i data-lucide="save" class="w-4 h-4 inline mr-2"></i> Simpan Pembayaran
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="table-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-blue-500 text-white border-b text-[8px] font-black uppercase tracking-wider">
+                                <th class="px-3 py-3 text-center w-12">No</th>
+                                <th class="px-3 py-3 w-40">Unit Kerja</th>
+                                <th class="px-3 py-3 w-64">Kegiatan/Sub Kegiatan</th>
+                                <th class="px-3 py-3 w-80">Uraian Belanja</th>
+                                <th class="px-3 py-3 w-40">Penerima</th>
+                                <th class="px-3 py-3 text-center w-32">Tanggal</th>
+                                <th class="px-3 py-3 text-center w-40">Nomor BP</th>
+                                <th class="px-3 py-3 text-center w-40">Jumlah SPJ</th>
+                                <th class="px-3 py-3 text-center w-56">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pembayaran-table" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pajak Tab -->
+        <div id="tab-pajak" class="hidden space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
+                        <div class="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+                        Laporan Pajak
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal Dari</label>
+                            <input type="date" id="pajak-tanggal-dari" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Tanggal Sampai</label>
+                            <input type="date" id="pajak-tanggal-sampai" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <button onclick="generateLaporanPajak()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-md uppercase text-[10px] shadow-lg transition-all mb-6">
+                        <i data-lucide="printer" class="w-4 h-4 inline mr-2"></i> Generate Laporan
+                    </button>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-blue-500 text-white border-b text-[8px] font-black uppercase tracking-wider">
+                                    <th class="px-3 py-3 text-center">No</th>
+                                    <th class="px-3 py-3">Unit Kerja</th>
+                                    <th class="px-3 py-3">NIK</th>
+                                    <th class="px-3 py-3">Nama</th>
+                                    <th class="px-3 py-3">Uraian Belanja</th>
+                                    <th class="px-3 py-3 text-center">Jumlah Bayar</th>
+                                    <th class="px-3 py-3 text-center">Jumlah Pajak</th>
+                                    <th class="px-3 py-3 text-center">Jumlah Bersih</th>
+                                    <th class="px-3 py-3 text-center">Tanggal</th>
+                                    <th class="px-3 py-3 text-center">Nomor BP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pajak-table" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- CONFIG ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        const TABLE_INSTRUKTUR = "jasa_instruktur";
+        const TABLE_PEMBAYARAN = "jasa_pembayaran";
+        let supabaseClient;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Gagal inisialisasi Supabase:", e);
+        }
+
+        // --- STATE ---
+        let instrukturList = [];
+        let pembayaranList = [];
+        let rincianList = [];
+        let apbdData = []; // Store full apbd data (sipd_main_document.pagu)
+        let kegiatanList = []; // Kegiatan with kode_rekening 5.1.2.2.1.3
+        let activeTab = "instruktur";
+
+        // --- HELPERS ---
+        function showLoading(show, text = "Menyinkronkan Data...") {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                document.getElementById('loading-text').innerText = text;
+                overlay.classList.toggle('hidden', !show);
+            }
+        }
+        
+        // Format number as Indonesian thousand separator (e.g., 75000 → "75.000")
+        function formatNumberID(num) {
+            if (num === null || num === undefined) return "";
+            return new Intl.NumberFormat('id-ID').format(num);
+        }
+        
+        // Parse formatted number (e.g., "75.000" → 75000)
+        function parseNumberID(str) {
+            if (!str) return 0;
+            return parseInt(str.replace(/\./g, ''), 10) || 0;
+        }
+
+        function capitalizeEachWord(str) {
+            if (!str) return str;
+            return str.replace(/\w\S*/g, function(txt) {
+                return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+            });
+        }
+
+        function formatIDR(num) {
+            if (!num) return "0";
+            return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(num);
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            const tabs = ["instruktur", "pembayaran", "pajak"];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}-btn`).classList.toggle('active-tab', t === tab);
+                document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+            });
+        }
+
+        function updateKegiatan() {
+            const unit = document.getElementById("pembayaran-unit").value;
+            const kegiatanSelect = document.getElementById("pembayaran-kegiatan");
+            const subKegiatanSelect = document.getElementById("pembayaran-subkegiatan");
+            kegiatanSelect.innerHTML = '<option value="">Pilih Kegiatan...</option>';
+            subKegiatanSelect.innerHTML = '<option value="">Pilih Sub Kegiatan...</option>';
+            
+            console.log("Updating Kegiatan options, kegiatanList:", kegiatanList, "selected unit:", unit);
+            
+            // Filter kegiatanList to only show type 'kegiatan'
+            const kegiatans = kegiatanList.filter(k => k.type === 'kegiatan');
+            kegiatans.forEach(k => {
+                kegiatanSelect.innerHTML += `<option value="${k.id}">${k.kode} - ${k.uraian}</option>`;
+            });
+            
+            // Map Unit Kerja to Kegiatan index
+            const unitToKegiatanIndex = {
+                'PPS Raharjo': 0,
+                'RPS Pamardi Siwi': 1,
+                'RPS Mojomulyo': 2,
+                'RPS Gondang': 3
+            };
+            
+            if (unit && unitToKegiatanIndex[unit] !== undefined && kegiatans[unitToKegiatanIndex[unit]]) {
+                kegiatanSelect.value = kegiatans[unitToKegiatanIndex[unit]].id;
+                updateSubKegiatan(); // Update sub kegiatan after selecting kegiatan
+            }
+        }
+
+        function updateSubKegiatan() {
+            const kegiatanId = document.getElementById("pembayaran-kegiatan").value;
+            const subKegiatanSelect = document.getElementById("pembayaran-subkegiatan");
+            subKegiatanSelect.innerHTML = '<option value="">Pilih Sub Kegiatan...</option>';
+            
+            if (!kegiatanId) return;
+            
+            // Find the selected kegiatan in kegiatanList
+            const selectedKegiatan = kegiatanList.find(k => k.id === kegiatanId);
+            if (selectedKegiatan && selectedKegiatan.children) {
+                // Reuse hasTargetRekening function
+                function hasTargetRekening(item) {
+                    if (item.type === 'rekening' && item.kode === '5.1.2.2.1.3') {
+                        return true;
+                    }
+                    if (item.children && item.children.length > 0) {
+                        return item.children.some(child => hasTargetRekening(child));
+                    }
+                    return false;
+                }
+                // Filter sub kegiatan that have the target rekening
+                const subKegiatans = selectedKegiatan.children.filter(sk => 
+                    sk.type === 'sub_kegiatan' && hasTargetRekening(sk)
+                );
+                subKegiatans.forEach(sk => {
+                    subKegiatanSelect.innerHTML += `<option value="${sk.id}">${sk.kode} - ${sk.uraian}</option>`;
+                });
+            }
+        }
+
+        function generateNomorBP() {
+            const now = new Date();
+            const tahun = now.getFullYear();
+            const nomor = String(pembayaranList.length + 1).padStart(3, '0');
+            return `BP-${nomor}-${tahun}`;
+        }
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", async () => {
+            lucide.createIcons();
+            await init();
+        });
+
+        async function init() {
+            showLoading(true);
+            try {
+                await Promise.all([loadInstruktur(), loadPembayaran(), loadKegiatan()]);
+                renderInstrukturTable();
+                renderPembayaranTable();
+                // Load kegiatan options
+                updateKegiatan();
+                // Auto-generate nomor BP
+                document.getElementById("pembayaran-no").value = generateNomorBP();
+            } catch (e) {
+                console.error("Error init:", e);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- INSTRUKTUR ---
+        async function loadInstruktur() {
+            try {
+                const { data, error } = await supabaseClient.from(TABLE_INSTRUKTUR).select("*");
+                if (error) throw error;
+                instrukturList = data || [];
+            } catch (e) {
+                console.error("Error load instruktur:", e);
+            }
+        }
+
+        document.getElementById("form-instruktur").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById("edit-instruktur-id").value;
+            const kode = document.getElementById("instruktur-kode").value;
+            const nama = document.getElementById("instruktur-nama").value;
+            const nik = document.getElementById("instruktur-nik").value;
+            const npwp = document.getElementById("instruktur-npwp").value;
+            const alamat = document.getElementById("instruktur-alamat").value;
+            const bank = document.getElementById("instruktur-bank").value;
+            const rek = document.getElementById("instruktur-rek").value;
+            const an = document.getElementById("instruktur-an").value;
+
+            if (!nama || !nik) {
+                alert("Nama dan NIK wajib diisi!");
+                return;
+            }
+            if (nik.length !== 16) {
+                alert("NIK harus 16 digit!");
+                return;
+            }
+            const duplicateNik = instrukturList.some(i => i.nik === nik && i.id !== editId);
+            if (duplicateNik) {
+                alert("NIK sudah terdaftar!");
+                return;
+            }
+
+            const payload = { kode, nama, nik, npwp, alamat, bank, rek, an, updated_at: new Date().toISOString() };
+            showLoading(true, "Menyimpan data...");
+            try {
+                if (editId) {
+                    await supabaseClient.from(TABLE_INSTRUKTUR).update(payload).eq("id", editId);
+                } else {
+                    payload.created_at = new Date().toISOString();
+                    await supabaseClient.from(TABLE_INSTRUKTUR).insert([payload]);
+                }
+                await loadInstruktur();
+                renderInstrukturTable();
+                resetInstrukturForm();
+                alert("Instruktur berhasil disimpan!");
+            } catch (e) {
+                console.error("Error save instruktur:", e);
+                alert("Gagal menyimpan instruktur: " + e.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+
+
+        function renderInstrukturTable() {
+            const tbody = document.getElementById("instruktur-table");
+            const filterNama = document.getElementById("filter-instruktur-nama").value.toLowerCase();
+            
+            // Filter data
+            let filteredList = instrukturList;
+            if (filterNama) {
+                filteredList = instrukturList.filter(i => i.nama.toLowerCase().includes(filterNama));
+            }
+            
+            if (!filteredList.length) {
+                tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data instruktur</td></tr>";
+                return;
+            }
+            
+            tbody.innerHTML = filteredList.map(i => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-3 text-center text-gray-500 font-bold">${i.kode || "-"}</td>
+                    <td class="px-3 py-3 font-bold text-slate-800">${i.nama}</td>
+                    <td class="px-3 py-3 text-slate-600">${i.alamat || "-"}</td>
+                    <td class="px-3 py-3 font-medium text-slate-700">${i.nik}</td>
+                    <td class="px-3 py-3 text-slate-600">${i.npwp || "-"}</td>
+                    <td class="px-3 py-3 text-slate-700 font-medium">${i.bank || "-"}</td>
+                    <td class="px-3 py-3 text-slate-600">${i.rek || "-"}</td>
+                    <td class="px-3 py-3 text-slate-600">${i.an || "-"}</td>
+                    <td class="px-3 py-3 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="editInstruktur('${i.id}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteInstruktur('${i.id}')" class="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join("");
+            lucide.createIcons();
+        }
+
+        function editInstruktur(id) {
+            const i = instrukturList.find(x => x.id === id);
+            if (!i) return;
+            document.getElementById("edit-instruktur-id").value = i.id;
+            document.getElementById("instruktur-kode").value = i.kode || "01";
+            document.getElementById("instruktur-nama").value = i.nama || "";
+            document.getElementById("instruktur-nik").value = i.nik || "";
+            document.getElementById("instruktur-npwp").value = i.npwp || "";
+            document.getElementById("instruktur-alamat").value = i.alamat || "";
+            document.getElementById("instruktur-bank").value = i.bank || "";
+            document.getElementById("instruktur-rek").value = i.rek || "";
+            document.getElementById("instruktur-an").value = i.an || "";
+            document.getElementById("form-instruktur-title").innerHTML = `
+                <div class="p-1.5 bg-amber-100 text-amber-600 rounded-md"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
+                Edit Instruktur
+            `;
+            document.getElementById("btn-cancel-instruktur").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        async function deleteInstruktur(id) {
+            if (!confirm("Yakin ingin menghapus instruktur ini?")) return;
+            showLoading(true, "Menghapus...");
+            try {
+                await supabaseClient.from(TABLE_INSTRUKTUR).delete().eq("id", id);
+                await loadInstruktur();
+                renderInstrukturTable();
+                alert("Instruktur berhasil dihapus!");
+            } catch (e) {
+                console.error("Error delete instruktur:", e);
+                alert("Gagal menghapus instruktur: " + e.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- PEMBAYARAN ---
+        async function loadPembayaran() {
+            try {
+                const { data, error } = await supabaseClient.from(TABLE_PEMBAYARAN).select("*");
+                if (error) throw error;
+                pembayaranList = data || [];
+            } catch (e) {
+                console.error("Error load pembayaran:", e);
+            }
+        }
+
+        async function loadKegiatan() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', 'SIPD_PAGU_ADVANCED_v2')
+                    .maybeSingle();
+                if (error) throw error;
+                
+                apbdData = data?.pagu || [];
+                console.log("APBD Data loaded:", apbdData);
+                
+                // Function to check if any descendant has kode_rekening '5.1.2.2.1.3'
+                function hasTargetRekening(item) {
+                    if (item.type === 'rekening' && item.kode === '5.1.2.2.1.3') {
+                        return true;
+                    }
+                    if (item.children && item.children.length > 0) {
+                        return item.children.some(child => hasTargetRekening(child));
+                    }
+                    return false;
+                }
+                
+                // Collect all Kegiatan that have or contain the target rekening
+                let allKegiatan = [];
+                apbdData.forEach(program => {
+                    if (program.type === 'program' && program.children) {
+                        program.children.forEach(kegiatan => {
+                            if (kegiatan.type === 'kegiatan' && hasTargetRekening(kegiatan)) {
+                                allKegiatan.push(kegiatan);
+                            }
+                        });
+                    }
+                });
+                
+                kegiatanList = allKegiatan;
+                console.log("Filtered Kegiatan List:", kegiatanList);
+            } catch (e) {
+                console.error("Error load kegiatan:", e);
+            }
+        }
+
+        function addRincianInstruktur() {
+            const id = Date.now().toString();
+            rincianList.push({
+                id,
+                instrukturId: "",
+                keterampilan: "",
+                jam: 0,
+                jamLat: 75000,
+                jumlah: 0,
+                pph21: 0,
+                diterima: 0
+            });
+            renderRincianTable();
+        }
+
+        function renderRincianTable() {
+            const tbody = document.getElementById("rincian-table");
+            if (!rincianList.length) {
+                tbody.innerHTML = "<tr><td colspan=\"8\" class=\"px-3 py-6 text-center text-gray-400 font-bold italic\">Belum ada rincian instruktur</td></tr>";
+                updateTotal();
+                return;
+            }
+            tbody.innerHTML = rincianList.map(r => {
+                const options = instrukturList.map(i => `<option value="${i.id}" ${r.instrukturId === i.id ? 'selected' : ''}>${i.nama}</option>`).join("");
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-2">
+                        <select id="rincian-instruktur-${r.id}" onchange="updateRincian('${r.id}', 'instrukturId', this.value)" class="w-full min-w-48 bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 p-1.5">
+                            <option value="">Pilih Instruktur...</option>
+                            ${options}
+                        </select>
+                    </td>
+                    <td class="px-3 py-2">
+                        <textarea id="rincian-keterampilan-${r.id}" onchange="updateRincian('${r.id}', 'keterampilan', this.value)" class="w-full bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 p-1.5" rows="1" placeholder="Jenis Keterampilan">${r.keterampilan || ""}</textarea>
+                    </td>
+                    <td class="px-3 py-2">
+                        <input type="number" id="rincian-jam-${r.id}" value="${r.jam}" onchange="updateRincian('${r.id}', 'jam', this.value)" class="w-full bg-blue-50 border border-blue-200 rounded-md text-[11px] font-bold outline-none focus:border-blue-500 text-center p-1.5">
+                    </td>
+                    <td class="px-3 py-2">
+                        <input type="text" id="rincian-jamlat-${r.id}" value="${formatNumberID(75000)}" readonly class="w-full bg-gray-100 border border-gray-300 rounded-md text-[11px] font-bold outline-none text-center p-1.5 cursor-not-allowed">
+                    </td>
+                    <td class="px-3 py-2 text-center font-bold text-slate-800">${formatIDR(r.jumlah)}</td>
+                    <td class="px-3 py-2 text-center font-bold text-amber-700">${formatIDR(r.pph21)}</td>
+                    <td class="px-3 py-2 text-center font-bold text-green-700">${formatIDR(r.diterima)}</td>
+                    <td class="px-3 py-2 text-center">
+                        <button onclick="removeRincian('${r.id}')" class="p-1 text-red-600 hover:bg-red-50 rounded transition-colors">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                </tr>
+            `}).join("");
+            lucide.createIcons();
+            updateTotal();
+        }
+
+        function updateRincian(id, field, value) {
+            const idx = rincianList.findIndex(r => r.id === id);
+            if (idx === -1) return;
+            if (field === "jam") rincianList[idx].jam = parseInt(value) || 0;
+            if (field === "instrukturId") rincianList[idx].instrukturId = value;
+            if (field === "keterampilan") rincianList[idx].keterampilan = value;
+            // jamLat is fixed at 75000
+            rincianList[idx].jamLat = 75000;
+            rincianList[idx].jumlah = rincianList[idx].jam * rincianList[idx].jamLat;
+            rincianList[idx].pph21 = Math.round(rincianList[idx].jumlah * 0.025);
+            rincianList[idx].diterima = rincianList[idx].jumlah - rincianList[idx].pph21;
+            renderRincianTable();
+        }
+
+        function removeRincian(id) {
+            rincianList = rincianList.filter(r => r.id !== id);
+            renderRincianTable();
+        }
+
+        function updateTotal() {
+            let totalSpj = 0, totalPph = 0, totalDiterima = 0;
+            rincianList.forEach(r => {
+                totalSpj += r.jumlah;
+                totalPph += r.pph21;
+                totalDiterima += r.diterima;
+            });
+            document.getElementById("total-spj").innerText = formatIDR(totalSpj);
+            document.getElementById("total-pph").innerText = formatIDR(totalPph);
+            document.getElementById("total-diterima").innerText = formatIDR(totalDiterima);
+        }
+
+        document.getElementById("form-pembayaran").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById("edit-pembayaran-id").value;
+            let no = document.getElementById("pembayaran-no").value;
+            const unitKerja = document.getElementById("pembayaran-unit").value;
+            const kegiatanId = document.getElementById("pembayaran-kegiatan").value;
+            const subKegiatanId = document.getElementById("pembayaran-subkegiatan").value;
+            const uraian = document.getElementById("pembayaran-uraian").value;
+            const tanggal = document.getElementById("pembayaran-tanggal-form")?.value || new Date().toISOString().split('T')[0];
+            const nomorBPInput = document.getElementById("pembayaran-nomor-bp-form")?.value || no;
+
+            if (!unitKerja || !kegiatanId) {
+                alert("Unit Kerja dan Kegiatan wajib dipilih!");
+                return;
+            }
+            if (!rincianList.length) {
+                alert("Tambahkan minimal 1 rincian instruktur!");
+                return;
+            }
+
+            if (!editId) {
+                no = generateNomorBP();
+            }
+
+            let totalSpj = 0, totalPph = 0;
+            rincianList.forEach(r => {
+                totalSpj += r.jumlah;
+                totalPph += r.pph21;
+            });
+
+            const kegiatan = kegiatanList.find(k => k.id === kegiatanId);
+            const subKegiatan = kegiatan?.children?.find(sk => sk.id === subKegiatanId);
+            
+            const kegiatanNama = kegiatan ? `${kegiatan.kode} - ${kegiatan.uraian}` : "";
+            const subKegiatanNama = subKegiatan ? `${subKegiatan.kode} - ${subKegiatan.uraian}` : "";
+
+            const payload = {
+                no,
+                unit_kerja: unitKerja,
+                kegiatan_id: kegiatanId,
+                kegiatan_nama: kegiatanNama,
+                sub_kegiatan_id: subKegiatanId,
+                sub_kegiatan_nama: subKegiatanNama,
+                uraian,
+                tanggal,
+                nomor_bp: nomorBPInput,
+                rincian: rincianList,
+                total_spj: totalSpj,
+                total_pph: totalPph,
+                total_diterima: totalSpj - totalPph,
+                updated_at: new Date().toISOString()
+            };
+
+            showLoading(true, "Menyimpan data...");
+            try {
+                if (editId) {
+                    await supabaseClient.from(TABLE_PEMBAYARAN).update(payload).eq("id", editId);
+                } else {
+                    payload.created_at = new Date().toISOString();
+                    await supabaseClient.from(TABLE_PEMBAYARAN).insert([payload]);
+                }
+                await loadPembayaran();
+                renderPembayaranTable();
+                resetPembayaranForm();
+                alert("Pembayaran berhasil disimpan!");
+            } catch (e) {
+                console.error("Error save pembayaran:", e);
+                alert("Gagal menyimpan pembayaran: " + e.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        function resetPembayaranForm() {
+            document.getElementById("form-pembayaran").reset();
+            document.getElementById("edit-pembayaran-id").value = "";
+            document.getElementById("pembayaran-no").value = generateNomorBP();
+            if (document.getElementById("pembayaran-tanggal-form")) {
+                document.getElementById("pembayaran-tanggal-form").value = "";
+            }
+            if (document.getElementById("pembayaran-tanggal-sampai")) {
+                document.getElementById("pembayaran-tanggal-sampai").value = "";
+            }
+            if (document.getElementById("pembayaran-nomor-bp-form")) {
+                document.getElementById("pembayaran-nomor-bp-form").value = "";
+            }
+            document.getElementById("form-pembayaran-title").innerHTML = `
+                <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="credit-card" class="w-4 h-4"></i></div>
+                Input Pembayaran Jasa
+            `;
+            document.getElementById("btn-cancel-pembayaran").classList.add("hidden");
+            rincianList = [];
+            renderRincianTable();
+            // Hide the input form and show the table
+            document.getElementById("input-form-section").classList.add("hidden");
+            document.getElementById("table-section").classList.remove("hidden");
+            // Reset the toggle button
+            const toggleBtn = document.getElementById("toggle-input-btn");
+            toggleBtn.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline mr-1"></i> Input Data`;
+            toggleBtn.classList.remove("bg-red-600", "hover:bg-red-700");
+            toggleBtn.classList.add("bg-green-600", "hover:bg-green-700");
+            lucide.createIcons();
+        }
+
+        function toggleInputForm() {
+            const formSection = document.getElementById("input-form-section");
+            const tableSection = document.getElementById("table-section");
+            const toggleBtn = document.getElementById("toggle-input-btn");
+            
+            if (formSection.classList.contains("hidden")) {
+                resetPembayaranForm();
+                formSection.classList.remove("hidden");
+                tableSection.classList.add("hidden");
+                toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+                toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+                toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+                lucide.createIcons();
+            } else {
+                resetPembayaranForm();
+            }
+        }
+
+        function applyFilters() {
+            renderPembayaranTable();
+        }
+
+        function resetFilters() {
+            document.getElementById("filter-unit-kerja").value = "";
+            document.getElementById("filter-bulan").value = "";
+            document.getElementById("filter-nomor-bp").value = "";
+            renderPembayaranTable();
+        }
+
+        function renderPembayaranTable() {
+            const tbody = document.getElementById("pembayaran-table");
+            if (!pembayaranList.length) {
+                tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data pembayaran</td></tr>";
+                return;
+            }
+            
+            // Apply filters
+            const filterUnitKerja = document.getElementById("filter-unit-kerja").value;
+            const filterBulan = document.getElementById("filter-bulan").value;
+            const filterNomorBP = document.getElementById("filter-nomor-bp").value.toLowerCase();
+            
+            let filteredList = [...pembayaranList];
+            
+            // Filter by Unit Kerja
+            if (filterUnitKerja) {
+                filteredList = filteredList.filter(p => p.unit_kerja === filterUnitKerja);
+            }
+            
+            // Filter by Bulan
+            if (filterBulan) {
+                filteredList = filteredList.filter(p => {
+                    if (!p.tanggal) return false;
+                    const itemDate = new Date(p.tanggal);
+                    const itemYearMonth = itemDate.getFullYear() + "-" + String(itemDate.getMonth() + 1).padStart(2, "0");
+                    return itemYearMonth === filterBulan;
+                });
+            }
+            
+            // Filter by Nomor BP
+            if (filterNomorBP) {
+                filteredList = filteredList.filter(p => (p.nomor_bp || "").toLowerCase().includes(filterNomorBP));
+            }
+            
+            // Sort by Tanggal (newest first), then by Nomor BP (newest first)
+            const sortedList = filteredList.sort((a, b) => {
+                // First compare Tanggal (newest first)
+                const dateA = a.tanggal ? new Date(a.tanggal) : new Date(0);
+                const dateB = b.tanggal ? new Date(b.tanggal) : new Date(0);
+                if (dateB - dateA !== 0) {
+                    return dateB - dateA;
+                }
+                // Then compare created_at (newest first) if available
+                const createdAtA = a.created_at ? new Date(a.created_at) : new Date(0);
+                const createdAtB = b.created_at ? new Date(b.created_at) : new Date(0);
+                return createdAtB - createdAtA;
+            });
+            
+            if (!sortedList.length) {
+                tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Tidak ada data yang sesuai filter</td></tr>";
+                return;
+            }
+            
+            tbody.innerHTML = sortedList.map((p, index) => {
+                // Get penerima names from rincian
+                const penerimaNames = (p.rincian || [])
+                    .map(r => {
+                        const instruktur = instrukturList.find(i => i.id === r.instrukturId);
+                        return instruktur ? instruktur.nama : null;
+                    })
+                    .filter(name => name !== null);
+                
+                let penerimaText = "-";
+                if (penerimaNames.length > 0) {
+                    if (penerimaNames.length === 1) {
+                        penerimaText = penerimaNames[0];
+                    } else {
+                        penerimaText = penerimaNames[0] + ", dkk.";
+                    }
+                }
+                
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
+                    <td class="px-3 py-3">
+                        <div class="font-bold text-slate-800">${p.unit_kerja}</div>
+                    </td>
+                    <td class="px-3 py-3 text-slate-700 font-medium">
+                        <div>${capitalizeEachWord(p.kegiatan_nama || "-")}</div>
+                        <div class="text-xs text-slate-500 mt-1">${capitalizeEachWord(p.sub_kegiatan_nama || "-")}</div>
+                    </td>
+                    <td class="px-3 py-3 text-slate-600">${p.uraian || "-"}</td>
+                    <td class="px-3 py-3 text-slate-600">${penerimaText}</td>
+                    <td class="px-3 py-3 text-center text-slate-600">${p.tanggal || "-"}</td>
+                    <td class="px-3 py-3 text-center font-bold text-blue-700">${p.nomor_bp || "-"}</td>
+                    <td class="px-3 py-3 text-center font-black text-slate-800">${formatIDR(p.total_spj)}</td>
+                    <td class="px-3 py-3 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="askPinForLock('${p.id}', ${!!p.is_locked})" 
+                                    class="p-1 ${p.is_locked ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'} rounded hover:bg-amber-600 hover:text-white transition-colors"
+                                    title="${p.is_locked ? 'Buka Kunci' : 'Kunci Data'}">
+                                <i data-lucide="${p.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="duplicatePembayaran('${p.id}')" 
+                                    class="p-1 ${p.is_locked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white'} rounded transition-colors"
+                                    ${p.is_locked ? 'disabled' : ''}
+                                    title="Buat Ulang">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="editPembayaran('${p.id}')" 
+                                    class="p-1 ${p.is_locked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white'} rounded transition-colors"
+                                    ${p.is_locked ? 'disabled' : ''}
+                                    title="Edit">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deletePembayaran('${p.id}')" 
+                                    class="p-1 ${p.is_locked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-red-100 text-red-600 hover:bg-red-600 hover:text-white'} rounded transition-colors"
+                                    ${p.is_locked ? 'disabled' : ''}
+                                    title="Hapus">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join("");
+            lucide.createIcons();
+        }
+
+        function editPembayaran(id) {
+            const p = pembayaranList.find(x => x.id === id);
+            if (!p) return;
+            
+            // Show form and hide table
+            document.getElementById("input-form-section").classList.remove("hidden");
+            document.getElementById("table-section").classList.add("hidden");
+            
+            // Update toggle button
+            const toggleBtn = document.getElementById("toggle-input-btn");
+            toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+            toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+            toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+            
+            document.getElementById("edit-pembayaran-id").value = p.id;
+            document.getElementById("pembayaran-no").value = p.no || "";
+            document.getElementById("pembayaran-unit").value = p.unit_kerja || "";
+            updateKegiatan();
+            setTimeout(() => {
+                document.getElementById("pembayaran-kegiatan").value = p.kegiatan_id || "";
+                updateSubKegiatan();
+                setTimeout(() => {
+                    document.getElementById("pembayaran-subkegiatan").value = p.sub_kegiatan_id || "";
+                }, 50);
+            }, 50);
+            document.getElementById("pembayaran-uraian").value = p.uraian || "";
+            if (document.getElementById("pembayaran-tanggal-form")) {
+                document.getElementById("pembayaran-tanggal-form").value = p.tanggal || "";
+            }
+            if (document.getElementById("pembayaran-nomor-bp-form")) {
+                document.getElementById("pembayaran-nomor-bp-form").value = p.nomor_bp || "";
+            }
+            rincianList = (p.rincian || []).map(r => ({
+                ...r,
+                jamLat: 75000, // Ensure jamLat is fixed at 75000
+                jumlah: r.jam * 75000,
+                pph21: Math.round(r.jam * 75000 * 0.025),
+                diterima: r.jam * 75000 - Math.round(r.jam * 75000 * 0.025)
+            }));
+            renderRincianTable();
+            document.getElementById("form-pembayaran-title").innerHTML = `
+                <div class="p-1.5 bg-amber-100 text-amber-600 rounded-md"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
+                Edit Pembayaran
+            `;
+            document.getElementById("btn-cancel-pembayaran").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        async function deletePembayaran(id) {
+            if (!confirm("Yakin ingin menghapus pembayaran ini?")) return;
+            showLoading(true, "Menghapus...");
+            try {
+                await supabaseClient.from(TABLE_PEMBAYARAN).delete().eq("id", id);
+                await loadPembayaran();
+                renderPembayaranTable();
+                alert("Pembayaran berhasil dihapus!");
+            } catch (e) {
+                console.error("Error delete pembayaran:", e);
+                alert("Gagal menghapus pembayaran: " + e.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function updateInlineField(id, field, value) {
+            try {
+                const { error } = await supabaseClient
+                    .from(TABLE_PEMBAYARAN)
+                    .update({ [field]: value, updated_at: new Date().toISOString() })
+                    .eq("id", id);
+                if (error) throw error;
+                await loadPembayaran();
+                renderPembayaranTable();
+            } catch (e) {
+                console.error("Error update inline:", e);
+                alert("Gagal memperbarui data: " + e.message);
+            }
+        }
+
+        function askPinForLock(id, currentLockStatus) {
+            const pin = prompt("Masukkan PIN untuk " + (currentLockStatus ? "membuka kunci" : "mengunci") + " data:");
+            if (pin === "888") {
+                toggleLock(id, !currentLockStatus);
+            } else if (pin !== null) {
+                alert("PIN Salah!");
+            }
+        }
+
+        async function toggleLock(id, newLockStatus) {
+            try {
+                const { error } = await supabaseClient
+                    .from(TABLE_PEMBAYARAN)
+                    .update({ is_locked: newLockStatus, updated_at: new Date().toISOString() })
+                    .eq("id", id);
+                if (error) throw error;
+                await loadPembayaran();
+                renderPembayaranTable();
+            } catch (e) {
+                console.error("Error toggle lock:", e);
+                alert("Gagal " + (newLockStatus ? "mengunci" : "membuka kunci") + " data: " + e.message);
+            }
+        }
+
+        function duplicatePembayaran(id) {
+            const p = pembayaranList.find(x => x.id === id);
+            if (!p) return;
+            if (!confirm("Buat duplikat data ini?")) return;
+            
+            const newItem = {
+                ...p,
+                id: Date.now().toString(),
+                is_locked: false,
+                no: generateNomorBP(),
+                nomor_bp: p.nomor_bp ? p.nomor_bp + " (copy)" : "",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            saveDuplicateToDB(newItem);
+        }
+
+        async function saveDuplicateToDB(newItem) {
+            showLoading(true, "Menyimpan duplikat...");
+            try {
+                await supabaseClient.from(TABLE_PEMBAYARAN).insert([newItem]);
+                await loadPembayaran();
+                renderPembayaranTable();
+                alert("Data berhasil dibuat ulang!");
+            } catch (e) {
+                console.error("Error duplicate:", e);
+                alert("Gagal membuat duplikat: " + e.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function toggleInstrukturForm() {
+            const formSection = document.getElementById("instruktur-form-section");
+            const tableSection = document.getElementById("instruktur-table-section");
+            const toggleBtn = document.getElementById("toggle-instruktur-btn");
+            
+            if (formSection.classList.contains("hidden")) {
+                resetInstrukturForm();
+                formSection.classList.remove("hidden");
+                tableSection.classList.add("hidden");
+                toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+                toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+                toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+                lucide.createIcons();
+            } else {
+                resetInstrukturForm();
+            }
+        }
+
+        function resetInstrukturForm() {
+            document.getElementById("form-instruktur").reset();
+            document.getElementById("edit-instruktur-id").value = "";
+            document.getElementById("instruktur-kode").value = "01";
+            document.getElementById("form-instruktur-title").innerHTML = `
+                <div class="p-1.5 bg-blue-100 text-blue-600 rounded-md"><i data-lucide="user-plus" class="w-4 h-4"></i></div>
+                Input Instruktur Baru
+            `;
+            document.getElementById("btn-cancel-instruktur").classList.add("hidden");
+            
+            // Hide form, show table
+            document.getElementById("instruktur-form-section").classList.add("hidden");
+            document.getElementById("instruktur-table-section").classList.remove("hidden");
+            
+            // Reset toggle button
+            const toggleBtn = document.getElementById("toggle-instruktur-btn");
+            toggleBtn.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline mr-1"></i> Input Data`;
+            toggleBtn.classList.remove("bg-red-600", "hover:bg-red-700");
+            toggleBtn.classList.add("bg-green-600", "hover:bg-green-700");
+            lucide.createIcons();
+        }
+
+        function resetInstrukturFilters() {
+            document.getElementById("filter-instruktur-nama").value = "";
+            renderInstrukturTable();
+        }
+
+        function editInstruktur(id) {
+            const i = instrukturList.find(x => x.id === id);
+            if (!i) return;
+            
+            // Show form, hide table
+            document.getElementById("instruktur-form-section").classList.remove("hidden");
+            document.getElementById("instruktur-table-section").classList.add("hidden");
+            
+            // Update toggle button
+            const toggleBtn = document.getElementById("toggle-instruktur-btn");
+            toggleBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Tutup`;
+            toggleBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+            toggleBtn.classList.add("bg-red-600", "hover:bg-red-700");
+            
+            document.getElementById("edit-instruktur-id").value = i.id;
+            document.getElementById("instruktur-kode").value = i.kode || "";
+            document.getElementById("instruktur-nama").value = i.nama || "";
+            document.getElementById("instruktur-nik").value = i.nik || "";
+            document.getElementById("instruktur-npwp").value = i.npwp || "";
+            document.getElementById("instruktur-alamat").value = i.alamat || "";
+            document.getElementById("instruktur-bank").value = i.bank || "";
+            document.getElementById("instruktur-rek").value = i.rekening || "";
+            document.getElementById("instruktur-an").value = i.atasNama || "";
+            
+            document.getElementById("form-instruktur-title").innerHTML = `
+                <div class="p-1.5 bg-amber-100 text-amber-600 rounded-md"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
+                Edit Instruktur
+            `;
+            document.getElementById("btn-cancel-instruktur").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        // --- LAPORAN PAJAK ---
+        function generateLaporanPajak() {
+            const tbody = document.getElementById("pajak-table");
+            if (!pembayaranList.length) {
+                tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada data pembayaran</td></tr>";
+                return;
+            }
+
+            const tanggalDari = document.getElementById("pajak-tanggal-dari").value;
+            const tanggalSampai = document.getElementById("pajak-tanggal-sampai").value;
+            
+            // Filter by date range
+            let filteredPembayaran = pembayaranList;
+            if (tanggalDari) {
+                filteredPembayaran = filteredPembayaran.filter(p => p.tanggal && p.tanggal >= tanggalDari);
+            }
+            if (tanggalSampai) {
+                filteredPembayaran = filteredPembayaran.filter(p => p.tanggal && p.tanggal <= tanggalSampai);
+            }
+
+            if (!filteredPembayaran.length) {
+                tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Tidak ada data untuk rentang tanggal tersebut</td></tr>";
+                return;
+            }
+            
+            // Group by BP number
+            const groupedByBP = {};
+            filteredPembayaran.forEach(p => {
+                const key = p.nomor_bp || p.no || "Tanpa BP";
+                if (!groupedByBP[key]) {
+                    groupedByBP[key] = [];
+                }
+                groupedByBP[key].push(p);
+            });
+            
+            let rows = [];
+            let no = 1;
+            
+            Object.keys(groupedByBP).forEach(nomorBP => {
+                const payments = groupedByBP[nomorBP];
+                payments.forEach(p => {
+                    (p.rincian || []).forEach(r => {
+                        const instruktur = instrukturList.find(i => i.id === r.instrukturId);
+                        rows.push(`
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-3 py-3 text-center text-gray-500 font-bold">${no++}</td>
+                                <td class="px-3 py-3 font-medium text-slate-700">${p.unit_kerja}</td>
+                                <td class="px-3 py-3 text-slate-600">${instruktur ? instruktur.nik : "-"}</td>
+                                <td class="px-3 py-3 font-bold text-slate-800">${instruktur ? instruktur.nama : "-"}</td>
+                                <td class="px-3 py-3 text-slate-600">${p.uraian || "-"}</td>
+                                <td class="px-3 py-3 text-center font-bold text-slate-800">${formatIDR(r.jumlah)}</td>
+                                <td class="px-3 py-3 text-center font-bold text-amber-700">${formatIDR(r.pph21)}</td>
+                                <td class="px-3 py-3 text-center font-bold text-green-700">${formatIDR(r.diterima)}</td>
+                                <td class="px-3 py-3 text-center text-slate-600">${p.tanggal || "-"}</td>
+                                <td class="px-3 py-3 text-center font-bold text-blue-700">${nomorBP}</td>
+                            </tr>
+                        `);
+                    });
+                });
+            });
+            
+            if (rows.length === 0) {
+                tbody.innerHTML = "<tr><td colspan=\"9\" class=\"px-3 py-10 text-center text-gray-400 font-bold italic\">Belum ada rincian instruktur di data pembayaran</td></tr>";
+            } else {
+                tbody.innerHTML = rows.join("");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -77,7 +77,7 @@
         <div id="content-dashboard" class="tab-content">
             <!-- Filter Bar -->
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 space-y-4">
-                <div class="flex flex-wrap items-center gap-4">
+                <div class="flex flex-wrap items-end gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bulan</label>
                         <select id="filter-bulan" onchange="handleFilterChange()" class="bg-slate-50 text-slate-900 text-[11px] font-bold px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 transition-all">
@@ -1363,8 +1363,14 @@
 
                 Object.keys(rekeningGroups).forEach((rekeningId) => {
                     if (rekeningId === 'none') return;
+                    // Sort each group by noBp ascending
+                    const sortedItems = [...rekeningGroups[rekeningId]].sort((a, b) => {
+                        const noA = (a.noBp || '').toString();
+                        const noB = (b.noBp || '').toString();
+                        return noA.localeCompare(noB, 'en', { numeric: true });
+                    });
                     fullHTML += `<div style="position: relative; page-break-after: always; min-height: 31cm;">
-                        ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
+                        ${generateBend23HTML(unitKey, rekeningId, sortedItems)}
                         <div class="watermark">Printed By Sipandu</div>
                     </div>`;
                 });
@@ -1414,8 +1420,15 @@
         }
 
         function generateBend23HTML(unitKey, rekeningId, items) {
+            // Sort items by noBp ascending (smallest first)
+            const sortedItems = [...items].sort((a, b) => {
+                const noA = (a.noBp || '').toString();
+                const noB = (b.noBp || '').toString();
+                return noA.localeCompare(noB, 'en', { numeric: true });
+            });
+            
             const unit = subUkMap[unitKey] || { name: 'TANPA UNIT' };
-            const path = findHierarchy(state.data.pagu, items[0].rekeningId);
+            const path = findHierarchy(state.data.pagu, sortedItems[0].rekeningId);
             const programName = path ? path[0].uraian : '';
             const kegiatanName = path ? path[1].uraian : '';
 
@@ -1451,7 +1464,7 @@
             let totalNilai = 0;
             let totalPPN = 0;
             let totalPPH = 0;
-            items.forEach((r, idx) => {
+            sortedItems.forEach((r, idx) => {
                 const nilai = parseInt(r.nilai) || 0;
                 const ppn = parseInt(r.ppn) || 0;
                 const pph = parseInt(r.pph) || 0;
@@ -1577,7 +1590,14 @@
                 return gId === groupId;
             });
 
-            if (items.length === 0) return;
+            // Sort items by noBp ascending (smallest first)
+            const sortedItems = [...items].sort((a, b) => {
+                const noA = (a.noBp || '').toString();
+                const noB = (b.noBp || '').toString();
+                return noA.localeCompare(noB, 'en', { numeric: true });
+            });
+
+            if (sortedItems.length === 0) return;
 
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
@@ -1615,7 +1635,7 @@
                 </head>
                 <body>
                     <div style="position: relative; min-height: 31cm;">
-                        ${generateBend23HTML(unitKey, groupId, items)}
+                        ${generateBend23HTML(unitKey, groupId, sortedItems)}
                         <div class="watermark">Printed By Sipandu</div>
                     </div>
                     <script>
