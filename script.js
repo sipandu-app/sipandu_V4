@@ -874,8 +874,8 @@ function applyMenuPermissionsByData(userData) {
         // Normalisasi ID (Menghilangkan suffix jika ada)
         if (pageId.includes('restore-json')) pageId = 'restore-json';
         
-        // Pengecualian: Ganti Password, Dashboard, APBD, Form Informasi Sipandu, dan Statistik Pengunjung selalu aktif
-        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd' || pageId === 'form-informasi-sipandu' || pageId === 'statistik-pengunjung') return;
+        // Pengecualian: Ganti Password, Dashboard, APBD, Form Informasi Sipandu, Statistik Pengunjung, dan Jasa Instruktur selalu aktif
+        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd' || pageId === 'form-informasi-sipandu' || pageId === 'statistik-pengunjung' || pageId === 'jasa_instruktur') return;
 
         // Jika ID halaman TIDAK ada dalam daftar 'access' di database (tidak dicentang)
         // Atau jika user belum login (Guest)
