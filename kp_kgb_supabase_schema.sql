@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS data_kp_kgb (
     kk_data TEXT,  -- Base64 atau URL gambar
     order_index INTEGER DEFAULT 0,
     is_locked BOOLEAN DEFAULT false,
+    is_fungsional BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );

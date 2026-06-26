@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -105,6 +105,16 @@
             return date;
         };
 
+        const calculateRetirementDate = (dateString, years) => {
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return null;
+            date.setFullYear(date.getFullYear() + years);
+            date.setMonth(date.getMonth() + 1);
+            date.setDate(1);
+            return date;
+        };
+
         const isNearDate = (targetDate, isRetirement = false) => {
             if (!targetDate) return false;
             const today = new Date();
@@ -183,10 +193,10 @@
                     
                     if (kgbError) throw kgbError;
 
-                    // 2. Ambil referensi dari data_pegawai
+                    // 2. Ambil referensi dari data_pegawai (termasuk order_index)
                     const { data: pegData, error: pegError } = await supabaseClient
                         .from('data_pegawai')
-                        .select('nama, nip, pangkat, tanggal_lahir');
+                        .select('nama, nip, pangkat, tanggal_lahir, order_index, pendidikan');
                     
                     if (!pegError && pegData) {
                         setMasterPegawai(pegData);
@@ -195,9 +205,15 @@
                             const refPegawai = pegData.find(p => p.nip === item.nip);
                             return {
                                 ...item,
-                                tanggal_lahir: refPegawai?.tanggal_lahir || item.tanggal_lahir
+                                tanggal_lahir: refPegawai?.tanggal_lahir || item.tanggal_lahir,
+                                pendidikan: refPegawai?.pendidikan || null,
+                                pangkat: refPegawai?.pangkat || item.pangkat,
+                                peg_order_index: refPegawai?.order_index !== undefined ? refPegawai.order_index : 999999
                             };
                         });
+                        
+                        // Urutkan berdasarkan order_index di data_pegawai
+                        enrichedData.sort((a, b) => a.peg_order_index - b.peg_order_index);
                         setListPegawai(enrichedData);
                     } else {
                         setListPegawai(kgbData || []);
@@ -282,6 +298,7 @@
                         pangkat: form.pangkat || '',
                         tmt_pangkat: form.tmt_pangkat || null,
                         tanggal_lahir: form.tanggal_lahir || null,
+                        is_fungsional: form.is_fungsional || false,
                         gaji_berkala: parseRibuan(form.gaji_berkala || '0'),
                         tmt_gaji: form.tmt_gaji || null,
                         npwp: form.npwp || '',
@@ -461,17 +478,17 @@
                  if (filterPurnaTugas) {
                      data = data.filter(p => {
                          if (!p.tanggal_lahir) return false;
-                         const purnaDate = calculateNextSchedule(p.tanggal_lahir, 58);
+                         const purnaDate = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
                          return isNearDate(purnaDate, true);
                      });
                      // Urutkan otomatis dari yang terdekat saat filter Purna aktif
                      data.sort((a, b) => {
-                         const dateA = calculateNextSchedule(a.tanggal_lahir, 58);
-                         const dateB = calculateNextSchedule(b.tanggal_lahir, 58);
+                         const dateA = calculateRetirementDate(a.tanggal_lahir, a.is_fungsional ? 60 : 58);
+                         const dateB = calculateRetirementDate(b.tanggal_lahir, b.is_fungsional ? 60 : 58);
                          if (!dateA) return 1;
                          if (!dateB) return -1;
  
-                         // Prioritaskan yang sudah lewat (lebih 58 tahun) paling atas
+                         // Prioritaskan yang sudah lewat paling atas
                          const isPastA = dateA < today;
                          const isPastB = dateB < today;
                          if (isPastA && !isPastB) return -1;
@@ -529,20 +546,20 @@
                          return dateA - dateB;
                      });
                  } else if (sortBy === 'purna') {
-                     data.sort((a, b) => {
-                         const dateA = calculateNextSchedule(a.tanggal_lahir, 58);
-                         const dateB = calculateNextSchedule(b.tanggal_lahir, 58);
-                         if (!dateA) return 1;
-                         if (!dateB) return -1;
-
-                         // Prioritaskan yang sudah lewat (lebih 58 tahun) paling atas
-                         const isPastA = dateA < today;
-                         const isPastB = dateB < today;
-                         if (isPastA && !isPastB) return -1;
-                         if (!isPastA && isPastB) return 1;
-
-                         return dateA - dateB;
-                     });
+                      data.sort((a, b) => {
+                          const dateA = calculateRetirementDate(a.tanggal_lahir, a.is_fungsional ? 60 : 58);
+                          const dateB = calculateRetirementDate(b.tanggal_lahir, b.is_fungsional ? 60 : 58);
+                          if (!dateA) return 1;
+                          if (!dateB) return -1;
+ 
+                          // Prioritaskan yang sudah lewat paling atas
+                          const isPastA = dateA < today;
+                          const isPastB = dateB < today;
+                          if (isPastA && !isPastB) return -1;
+                          if (!isPastA && isPastB) return 1;
+ 
+                          return dateA - dateB;
+                      });
                  }
  
                  return data;
@@ -628,7 +645,7 @@
                                             className={`px-3 py-1 rounded-lg font-black uppercase text-[9px] transition-all ${filterPurnaTugas ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                             title="Filter Purna Tugas dalam 90 hari"
                                         >
-                                            Purna (58)
+                                            Purna Tugas
                                         </button>
                                        {(filterKP || filterKGB || filterPurnaTugas || sortBy !== 'default' || searchTerm !== '') && (
                                            <button 
@@ -679,7 +696,7 @@
                                         {filteredData.map((p, i) => {
                                             const nextPangkat = calculateNextSchedule(p.tmt_pangkat, 4);
                                             const nextGaji = calculateNextSchedule(p.tmt_gaji, 2);
-                                            const purnaTugas = calculateNextSchedule(p.tanggal_lahir, 58);
+                                            const purnaTugas = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
                                             const age = calculateAge(p.tanggal_lahir);
                                             
                                             const isWithinOneYearPurna = purnaTugas && (Math.ceil((purnaTugas - new Date()) / (1000 * 60 * 60 * 24)) <= 365);
@@ -707,9 +724,9 @@
                                                                          <div className={`flex items-center gap-2 text-[8px] font-black uppercase p-1.5 rounded-lg w-fit ${purnaNear ? (purnaBlink ? 'bg-orange-500 text-white animate-pulse' : 'bg-orange-500 text-white') : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
                                                                              <Calendar size={10} /> PURNA: {formatIDDate(purnaTugas)}
                                                                          </div>
-                                                                         {age >= 58 && (
-                                                                            <div className={`flex items-center gap-1.5 px-2 py-1 bg-orange-500 text-white rounded text-[7px] font-black uppercase w-fit ${age === 58 && purnaBlink ? 'animate-pulse' : ''}`}>
-                                                                                <AlertTriangle size={10} /> Purna tugas fungsional
+                                                                         {age >= (p.is_fungsional ? 60 : 58) && (
+                                                                            <div className={`flex items-center gap-1.5 px-2 py-1 bg-orange-500 text-white rounded text-[7px] font-black uppercase w-fit ${age === (p.is_fungsional ? 60 : 58) && purnaBlink ? 'animate-pulse' : ''}`}>
+                                                                                <AlertTriangle size={10} /> {p.is_fungsional ? "Purna tugas fungsional" : "Purna tugas"}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -723,18 +740,56 @@
                                                         <p className="font-black text-slate-950 uppercase">{p.pangkat || "-"}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold tracking-tighter italic">TMT: {p.tmt_pangkat || "-"}</p>
                                                         {nextPangkat && (
-                                                            <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kpNear ? (kpBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                                                                <AlertCircle size={10} /> ESTIMASI KP: {formatIDDate(nextPangkat)}
-                                                            </div>
+                                                            nextPangkat < new Date() ? (
+                                                                (() => {
+                                                                    const isS1 = p.pendidikan && p.pendidikan.toUpperCase() === 'S1';
+                                                                    let isBelum3D = false;
+                                                                    if (isS1) {
+                                                                        const pangkat = p.pangkat || "";
+                                                                        const match = pangkat.match(/^(I|II|III|IV)\/[a-e]/i);
+                                                                        if (!match) {
+                                                                            isBelum3D = true;
+                                                                        } else {
+                                                                            const rankPrefix = match[0].toUpperCase();
+                                                                            const rankValues = {
+                                                                                "I/A": 1, "I/B": 2, "I/C": 3, "I/D": 4,
+                                                                                "II/A": 5, "II/B": 6, "II/C": 7, "II/D": 8,
+                                                                                "III/A": 9, "III/B": 10, "III/C": 11,
+                                                                                "III/D": 12,
+                                                                                "IV/A": 13, "IV/B": 14, "IV/C": 15, "IV/D": 16, "IV/E": 17
+                                                                            };
+                                                                            const val = rankValues[rankPrefix] || 0;
+                                                                            isBelum3D = val < 12;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    const labelText = isBelum3D ? "Belum Naik Pangkat" : "Pangkat Tertinggi : Peraturan Kepegawaian";
+                                                                    return (
+                                                                        <div className="mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                                                                            <AlertCircle size={10} /> {labelText}
+                                                                        </div>
+                                                                    );
+                                                                })()
+                                                            ) : (
+                                                                <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kpNear ? (kpBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                                    <AlertCircle size={10} /> ESTIMASI KP: {formatIDDate(nextPangkat)}
+                                                                </div>
+                                                            )
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-6">
                                                         <p className="font-black text-slate-950 uppercase">{p.gaji_berkala > 0 ? 'Rp. Terinput' : 'Kosong'}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold tracking-tighter italic">TMT: {p.tmt_gaji || "-"}</p>
                                                         {nextGaji && (
-                                                            <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kgbNear ? (kgbBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                                                                <Clock size={10} /> ESTIMASI KGB: {formatIDDate(nextGaji)}
-                                                            </div>
+                                                            nextGaji < new Date() ? (
+                                                                <div className="mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg bg-blue-600 text-white animate-pulse">
+                                                                    <Clock size={10} /> Belum di perbaharui
+                                                                </div>
+                                                            ) : (
+                                                                <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kgbNear ? (kgbBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                                    <Clock size={10} /> ESTIMASI KGB: {formatIDDate(nextGaji)}
+                                                                </div>
+                                                            )
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-6">
@@ -836,9 +891,20 @@
                                                 <input type="text" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold uppercase border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.nama || ''} onChange={e => setForm({...form, nama: e.target.value.toUpperCase()})} />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase px-1">Tgl Lahir</label>
-                                                <input type="date" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.tanggal_lahir || ''} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} />
-                                            </div>
+                                                 <label className="text-[10px] font-black text-slate-400 uppercase px-1">Tgl Lahir</label>
+                                                 <input type="date" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.tanggal_lahir || ''} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} />
+                                             </div>
+                                             <div className="space-y-1.5 flex flex-col justify-end pb-3">
+                                                 <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                     <input 
+                                                         type="checkbox" 
+                                                         className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                                         checked={form.is_fungsional || false}
+                                                         onChange={e => setForm({...form, is_fungsional: e.target.checked})}
+                                                     />
+                                                     <span className="text-[10px] font-black text-slate-600 uppercase">Masa Kerja Fungsional (60 Th)</span>
+                                                 </label>
+                                             </div>
                                         </div>
                                     </div>
 

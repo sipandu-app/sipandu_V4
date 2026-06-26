@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -79,6 +79,7 @@
         const Unlock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>} />;
         const FileSpreadsheet = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></>} />;
         const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+        const Calendar = (props) => <Icon {...props} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />;
 
         // --- APP CONSTANTS ---
         const MASTER_PIN = '888';
@@ -103,6 +104,21 @@
             const m = today.getMonth() - birth.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
             return age;
+        };
+
+        const calculateRetirementDate = (dateString, years) => {
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return null;
+            date.setFullYear(date.getFullYear() + years);
+            date.setMonth(date.getMonth() + 1);
+            date.setDate(1);
+            return date;
+        };
+
+        const formatIDDate = (date) => {
+            if (!date) return "-";
+            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
         };
 
         // Convert base64 to File object
@@ -179,6 +195,69 @@
             const videoRef = useRef(null);
             const fileInputRef = useRef(null);
             const restoreInputRef = useRef(null);
+            const fetchSessionRef = useRef(0);
+            const [draggedId, setDraggedId] = useState(null);
+
+            const handleDragStart = (e, id) => {
+                const item = listPegawai.find(p => p.id === id);
+                if (item?.is_locked) {
+                    e.preventDefault();
+                    return;
+                }
+                setDraggedId(id);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = async (e, targetId) => {
+                e.preventDefault();
+                if (!draggedId || draggedId === targetId) return;
+
+                const targetItem = listPegawai.find(p => p.id === targetId);
+                if (targetItem?.is_locked) {
+                    showNotif("Gagal: Baris target sedang terkunci", "error");
+                    return;
+                }
+
+                const draggedIndex = listPegawai.findIndex(p => p.id === draggedId);
+                const targetIndex = listPegawai.findIndex(p => p.id === targetId);
+                if (draggedIndex === -1 || targetIndex === -1) return;
+
+                const newList = [...listPegawai];
+                const draggedItem = newList[draggedIndex];
+                newList.splice(draggedIndex, 1);
+                newList.splice(targetIndex, 0, draggedItem);
+
+                const updatedList = newList.map((item, idx) => ({
+                    ...item,
+                    order_index: idx
+                }));
+
+                setListPegawai(updatedList);
+                setDraggedId(null);
+
+                showNotif("Menyimpan urutan...", "info");
+                try {
+                    const updates = updatedList.map(item => 
+                        supabaseClient
+                            .from('data_pegawai')
+                            .update({ order_index: item.order_index })
+                            .eq('id', item.id)
+                    );
+                    await Promise.all(updates);
+                    showNotif("Urutan pegawai berhasil diperbarui");
+                } catch (err) {
+                    console.error("Error saving new order:", err);
+                    showNotif("Gagal menyimpan urutan baru", "error");
+                }
+            };
+
+            const handleDragEnd = () => {
+                setDraggedId(null);
+            };
 
             const showNotif = (message, type = 'success') => {
                 setNotification({ show: true, message, type });
@@ -186,20 +265,85 @@
             };
 
             const fetchData = async () => {
+                const currentSession = ++fetchSessionRef.current;
                 setLoading(true);
                 try {
-                    const { data, error } = await supabaseClient
+                    // 1. Fetch text data first (extremely fast - excludes the photo column)
+                    const { data: textData, error: textError } = await supabaseClient
                         .from('data_pegawai')
-                        .select('id, nama, nip, nik, tempat_lahir, tanggal_lahir, usia, jenis_kelamin, agama, pangkat, jabatan, status_kepegawaian, pendidikan, unit_kerja, alamat, no_hp, photo, order_index, is_locked')
+                        .select('id, nama, nip, nik, tempat_lahir, tanggal_lahir, usia, jenis_kelamin, agama, pangkat, jabatan, status_kepegawaian, pendidikan, unit_kerja, alamat, no_hp, order_index, is_locked')
                         .order('order_index', { ascending: true });
                     
-                    if (error) throw error;
-                    setListPegawai(data || []);
-                } catch (error) {
-                    showNotif("Gagal Memuat Data: " + error.message, "error");
-                    console.error("Fetch Error:", error);
-                } finally {
+                    if (textError) throw textError;
+                    
+                    if (currentSession !== fetchSessionRef.current) return;
+
+                    // Ambil status is_fungsional dari data_kp_kgb untuk menyamakan logika umur pensiun (60 vs 58)
+                    let enrichedData = textData || [];
+                    try {
+                        const { data: kgbData } = await supabaseClient
+                            .from('data_kp_kgb')
+                            .select('nip, is_fungsional');
+                        if (kgbData) {
+                            enrichedData = enrichedData.map(p => {
+                                const kgbItem = kgbData.find(k => k.nip === p.nip);
+                                return {
+                                    ...p,
+                                    is_fungsional: kgbItem ? kgbItem.is_fungsional : false
+                                };
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Error fetching is_fungsional from data_kp_kgb:", e);
+                    }
+                    
+                    // Populate list without photos to unblock the UI immediately
+                    setListPegawai(enrichedData);
                     setLoading(false);
+
+                    // 2. Fetch photo data asynchronously in batches of 5 for instant visual feedback
+                    if (textData && textData.length > 0) {
+                        const ids = textData.map(p => p.id);
+                        const batchSize = 5;
+                        
+                        for (let i = 0; i < ids.length; i += batchSize) {
+                            if (currentSession !== fetchSessionRef.current) return;
+                            const batchIds = ids.slice(i, i + batchSize);
+                            
+                            const { data: photoBatch, error: photoError } = await supabaseClient
+                                .from('data_pegawai')
+                                .select('id, photo')
+                                .in('id', batchIds);
+                            
+                            if (photoError) {
+                                console.error("Error fetching photo batch:", photoError);
+                                continue;
+                            }
+                            
+                            if (currentSession !== fetchSessionRef.current) return;
+
+                            if (photoBatch && photoBatch.length > 0) {
+                                setListPegawai(prevList => {
+                                    const photoMap = new Map(photoBatch.map(item => [item.id, item.photo]));
+                                    return prevList.map(p => {
+                                        if (photoMap.has(p.id)) {
+                                            return {
+                                                ...p,
+                                                photo: photoMap.get(p.id) || ''
+                                            };
+                                        }
+                                        return p;
+                                    });
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (currentSession === fetchSessionRef.current) {
+                        showNotif("Gagal Memuat Data: " + error.message, "error");
+                        console.error("Fetch Error:", error);
+                        setLoading(false);
+                    }
                 }
             };
 
@@ -568,10 +712,7 @@
                 if (filterPurnaTugas) {
                     data = data.filter(p => {
                         if (!p.tanggal_lahir) return false;
-                        const birth = new Date(p.tanggal_lahir);
-                        const purnaDate = new Date(birth);
-                        purnaDate.setFullYear(birth.getFullYear() + 58);
-                        
+                        const purnaDate = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
                         const today = new Date();
                         const diffTime = purnaDate - today;
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -583,8 +724,8 @@
                     data.sort((a, b) => {
                         if (!a.tanggal_lahir) return 1;
                         if (!b.tanggal_lahir) return -1;
-                        const dateA = new Date(a.tanggal_lahir);
-                        const dateB = new Date(b.tanggal_lahir);
+                        const dateA = calculateRetirementDate(a.tanggal_lahir, a.is_fungsional ? 60 : 58);
+                        const dateB = calculateRetirementDate(b.tanggal_lahir, b.is_fungsional ? 60 : 58);
                         return dateA - dateB;
                     });
                 } else if (sortBy === 'usia') {
@@ -808,7 +949,7 @@
                                                     onClick={() => setFilterPurnaTugas(!filterPurnaTugas)}
                                                     className={`px-3 py-1.5 rounded-lg font-black uppercase text-[9px] transition-all ${filterPurnaTugas ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                                 >
-                                                    Purna Tugas
+                                                    Purna (-3 Bulan)
                                                 </button>
                                             </div>
                                             {filteredData.length === listPegawai.length && (
@@ -840,13 +981,20 @@
                                                 <option value="">Semua Pendidikan</option>
                                                 {PENDIDIKAN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                             </select>
-                                            {(filterUnit || filterStatus || filterPendidikan) && (
+                                            {(filterUnit || filterStatus || filterPendidikan || filterPurnaTugas || sortBy !== 'default' || searchTerm !== '') && (
                                                 <button 
-                                                    onClick={() => { setFilterUnit(''); setFilterStatus(''); setFilterPendidikan(''); }}
-                                                    className="p-2.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                                                    title="Reset Filter"
+                                                    onClick={() => { 
+                                                        setFilterUnit(''); 
+                                                        setFilterStatus(''); 
+                                                        setFilterPendidikan(''); 
+                                                        setFilterPurnaTugas(false);
+                                                        setSortBy('default');
+                                                        setSearchTerm('');
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-100"
+                                                    title="Reset Semua Filter"
                                                 >
-                                                    <X size={18} />
+                                                    <X size={14} /> RESET
                                                 </button>
                                             )}
                                              <button 
@@ -872,8 +1020,36 @@
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {filteredData.map((p, i) => (
-                                                    <tr key={p.id} className={`hover:bg-slate-50 transition-colors group ${p.is_locked ? 'bg-slate-50/50' : ''}`}>
-                                                        <td className="px-6 py-4 text-center font-bold text-slate-400">{i + 1}</td>
+                                                    <tr 
+                                                        key={p.id} 
+                                                        draggable={!p.is_locked}
+                                                        onDragStart={(e) => handleDragStart(e, p.id)}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, p.id)}
+                                                        onDragEnd={handleDragEnd}
+                                                        className={`hover:bg-slate-50 transition-colors group ${p.is_locked ? 'bg-slate-50/50' : 'cursor-grab active:cursor-grabbing'} ${draggedId === p.id ? 'opacity-40 bg-slate-100' : ''}`}
+                                                    >
+                                                        <td className="px-6 py-4 text-center font-bold text-slate-400 select-none">
+                                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                                                {!p.is_locked && (
+                                                                    <div className="flex flex-col gap-0.5 opacity-20 group-hover:opacity-60 transition-opacity">
+                                                                        <div className="flex gap-0.5">
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                        </div>
+                                                                        <div className="flex gap-0.5">
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                        </div>
+                                                                        <div className="flex gap-0.5">
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                            <span className="w-0.5 h-0.5 bg-slate-600 rounded-full"></span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                <span>{i + 1}</span>
+                                                            </div>
+                                                        </td>
                                                         <td className="px-4 py-4">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 relative">
@@ -901,11 +1077,20 @@
                                                                     <span className="text-[8px] font-black px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded uppercase">{p.usia} Th</span>
                                                                     <span className="text-[8px] font-black px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded uppercase">{p.pendidikan}</span>
                                                                 </div>
-                                                                {p.usia >= 58 && (
-                                                                    <span className="text-[7px] font-black px-2 py-1 bg-orange-500 text-white rounded uppercase w-fit animate-pulse">
-                                                                        Purna tugas fungsional
-                                                                    </span>
-                                                                )}
+                                                                {(() => {
+                                                                    if (!p.tanggal_lahir) return null;
+                                                                    const purnaDate = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
+                                                                    const today = new Date();
+                                                                    const diffDays = Math.ceil((purnaDate - today) / (1000 * 60 * 60 * 24));
+                                                                    if (diffDays <= 90) {
+                                                                        return (
+                                                                            <span className="text-[7px] font-black px-2 py-1 bg-orange-500 text-white rounded uppercase w-fit animate-pulse flex items-center gap-1">
+                                                                                <Calendar size={9} /> {p.is_fungsional ? "Purna tugas fungsional" : "Purna tugas"} ({formatIDDate(purnaDate)})
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
