@@ -345,10 +345,25 @@
         async function init() {
             try {
                 lucide.createIcons();
+                
+                // Tunggu sampai library Supabase termuat (maksimal 5 detik)
+                let retries = 0;
+                while (typeof supabase === 'undefined' && retries < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    retries++;
+                }
+
+                if (typeof supabase === 'undefined') {
+                    throw new Error("Library Supabase tidak terdeteksi.");
+                }
+
                 supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 await loadData();
             } catch (error) {
                 console.error("Init error:", error);
+                // Fallback menampilkan data demo jika gagal inisialisasi
+                renderDemoPMData();
+                renderDemoAPBDCharts();
             }
         }
 
@@ -439,7 +454,7 @@
 
             renderPieCharts(demoLatest);
             renderLineChart(demoMonthly);
-            renderDemoAPBDCharts();
+            // Jangan memanggil renderDemoAPBDCharts() di sini agar tidak menimpa data APBD riil yang berhasil dimuat
             scheduleParentIframeHeight();
         }
 
@@ -1054,13 +1069,16 @@
             }
         }
 
-        function renderDemoAPBDCharts() {
+        function renderDemoProgramChart() {
             const demoPrograms = [
                 { kode: "PROG-01", uraian: "Program Pelayanan Sosial Dasar", target: 100, realisasi: 85 },
                 { kode: "PROG-02", uraian: "Program Rehabilitasi Sosial", target: 100, realisasi: 72 },
                 { kode: "PROG-03", uraian: "Program Perlindungan Anak", target: 100, realisasi: 95 }
             ];
+            renderBarChart('programChart', demoPrograms, 'blue', false);
+        }
 
+        function renderDemoKegiatanChart() {
             const demoKegiatan = [
                 { kode: "KEG-01", uraian: "Kegiatan Bantuan Langsung", target: 100, realisasi: 88 },
                 { kode: "KEG-02", uraian: "Kegiatan Pendampingan", target: 100, realisasi: 65 },
@@ -1071,16 +1089,19 @@
                 { kode: "KEG-07", uraian: "Kegiatan Monitoring Evaluasi", target: 100, realisasi: 95 },
                 { kode: "KEG-08", uraian: "Kegiatan Koordinasi", target: 100, realisasi: 80 }
             ];
-
-            renderBarChart('programChart', demoPrograms, 'blue', false);
             renderBarChart('kegiatanChart', demoKegiatan, 'indigo', false);
+        }
+
+        function renderDemoAPBDCharts() {
+            renderDemoProgramChart();
+            renderDemoKegiatanChart();
         }
 
         function renderProgramChart() {
             const programs = state.data.pagu.filter(item => item.type === 'program');
             
             if (programs.length === 0) {
-                renderDemoAPBDCharts();
+                renderDemoProgramChart();
                 return;
             }
 
@@ -1125,7 +1146,7 @@
             findAllKegiatan(state.data.pagu);
             
             if (allKegiatan.length === 0) {
-                renderDemoAPBDCharts();
+                renderDemoKegiatanChart();
                 return;
             }
 

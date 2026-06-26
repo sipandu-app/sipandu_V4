@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -679,6 +679,9 @@
             const item = listMutasi.find(i => i.id === id);
             if (!item) return;
 
+            // Pindah tab terlebih dahulu agar resetForm() dijalankan sebelum pengisian data
+            switchTab('input');
+
             document.getElementById('edit-id').value = item.id;
             document.getElementById('unitPelayanan').value = item.unit_pelayanan;
             document.getElementById('bulanTahun').value = item.bulan_tahun;
@@ -691,7 +694,6 @@
 
             document.getElementById('form-title').innerText = 'Perbarui Laporan';
             document.getElementById('btn-text').innerText = 'Perbarui Laporan';
-            switchTab('input');
         }
 
         function openNoteModal(id) {
