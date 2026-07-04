@@ -217,6 +217,7 @@
                     <option value="Pemeliharaan Sarana dan Prasarana Gedung Kantor">Sarana/Prasarana Gedung</option>
                     <option value="Jasa Lainnya">Jasa Lainnya</option>
                 </select>
+                <button onclick="resetFilters()" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-bold uppercase transition-all">Reset Filter</button>
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -246,6 +247,33 @@
                 <div id="empty-state" class="p-10 text-center text-slate-400 hidden">
                     <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 opacity-20"></i>
                     <p class="text-[10px] font-black uppercase tracking-widest">Tidak ada data ditemukan</p>
+                </div>
+                
+                <!-- Pagination -->
+                <div id="pagination" class="flex flex-wrap items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase">Tampilkan:</label>
+                        <select id="itemsPerPage" onchange="changeItemsPerPage(this.value)" class="h-7 px-2 bg-white border border-slate-300 rounded text-[9px] font-bold outline-none focus:ring-1 focus:ring-emerald-400">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase">Baris</span>
+                    </div>
+                    
+                    <div id="pagination-info" class="text-[9px] font-bold text-slate-600">
+                        Menampilkan 0-0 dari 0 data
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <button onclick="prevPage()" id="prev-btn" class="px-3 py-1 bg-white border border-slate-300 rounded text-[9px] font-bold text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            Sebelumnya
+                        </button>
+                        <button onclick="nextPage()" id="next-btn" class="px-3 py-1 bg-white border border-slate-300 rounded text-[9px] font-bold text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            Selanjutnya
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -299,6 +327,8 @@
         let targetItem = null;
         let pinAction = null;
         let docPoints = [];
+        let currentPage = 1;
+        let itemsPerPage = 10;
 
         // Initialize Supabase
         function initSupabase() {
@@ -365,10 +395,36 @@
                 return (b.tanggal_pekerjaan || '').localeCompare(a.tanggal_pekerjaan || '');
             });
 
-            tbody.innerHTML = '';
-            document.getElementById('empty-state').classList.toggle('hidden', filtered.length > 0);
+            // Pagination
+            const totalItems = filtered.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            
+            // Reset to page 1 if current page is out of bounds
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = 1;
+            }
+            
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+            const paginatedItems = filtered.slice(startIndex, endIndex);
 
-            filtered.forEach(item => {
+            // Update pagination info
+            document.getElementById('pagination-info').textContent = totalItems > 0 
+                ? `Menampilkan ${startIndex + 1}-${endIndex} dari ${totalItems} data` 
+                : `Menampilkan 0-0 dari 0 data`;
+
+            // Update buttons state
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages;
+
+            // Update items per page select
+            document.getElementById('itemsPerPage').value = itemsPerPage;
+
+            // Render table
+            tbody.innerHTML = '';
+            document.getElementById('empty-state').classList.toggle('hidden', totalItems > 0);
+
+            paginatedItems.forEach(item => {
                 const row = document.createElement('tr');
                 row.className = `hover:bg-slate-50 transition-colors group ${item.is_locked ? 'bg-slate-50/50 opacity-80' : ''}`;
                 
@@ -405,6 +461,44 @@
                 tbody.appendChild(row);
             });
             lucide.createIcons();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-box').value = '';
+            document.getElementById('filterUnit').value = 'Semua';
+            document.getElementById('filterJasa').value = 'Semua';
+            currentPage = 1;
+            renderTable();
+        }
+
+        function changeItemsPerPage(value) {
+            itemsPerPage = parseInt(value);
+            currentPage = 1;
+            renderTable();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            const search = document.getElementById('search-box').value.toLowerCase();
+            const unit = document.getElementById('filterUnit').value;
+            const jasa = document.getElementById('filterJasa').value;
+            const filtered = listJasa.filter(item => {
+                const matchSearch = item.nama_pekerjaan.toLowerCase().includes(search) || item.nama_rekanan.toLowerCase().includes(search);
+                const matchUnit = unit === 'Semua' || item.unit_pelayanan === unit;
+                const matchJasa = jasa === 'Semua' || item.jenis_jasa === jasa;
+                return matchSearch && matchUnit && matchJasa;
+            });
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
         }
 
         // --- Form Logic ---
