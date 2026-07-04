@@ -410,7 +410,7 @@
         // --- Form Logic ---
 
         function addDocPoint(data = null) {
-            const id = Date.now() + Math.random();
+            const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
             const point = {
                 id,
                 keterangan: data ? data.keterangan : '',
@@ -419,6 +419,7 @@
                 menjadi: null, menjadiUrl: data ? data.menjadi : null
             };
             docPoints.push(point);
+            console.log('Added doc point:', point);
             renderDocPoints();
         }
 
@@ -471,9 +472,12 @@
         }
 
         function updatePointFile(id, key, file) {
+            console.log('updatePointFile called:', { id, key, file });
             const p = docPoints.find(x => x.id === id);
+            console.log('Found point:', p);
             if (p) {
                 p[key] = file;
+                console.log('Updated point:', p);
                 renderDocPoints();
             }
         }
