@@ -480,24 +480,30 @@
 
         async function uploadToCloudinary(file) {
             if (!file) return null;
+            console.log('Uploading file to Cloudinary:', file.name, file.type, file.size);
+            
             const data = new FormData();
             data.append("file", file);
             data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-            // Tambahkan resource_type auto agar bisa menerima PDF
             data.append("resource_type", "auto"); 
             
             try {
                 const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: "POST", body: data });
                 const json = await res.json();
                 
+                console.log('Cloudinary response:', json);
+                
                 if (json.secure_url) {
+                    console.log('File uploaded successfully:', json.secure_url);
                     return json.secure_url;
                 } else {
                     console.error("Cloudinary Upload Failed:", json);
+                    showNotif("Gagal upload file: " + (json.error?.message || "Kesalahan tidak diketahui"), "error");
                     return null;
                 }
             } catch (err) {
                 console.error("Cloudinary Network Error:", err);
+                showNotif("Gagal upload file: " + err.message, "error");
                 return null;
             }
         }
@@ -658,10 +664,35 @@
             try {
                 console.log('Starting save process...', { editId });
                 
-                // Dapatkan existing item untuk edit
+                const spkFile = document.getElementById('file_spk').files[0];
+                const bayarFile = document.getElementById('file_bayar').files[0];
                 const existingItem = editId ? listJasa.find(x => x.id === editId) : null;
 
-                // Siapkan payload tanpa upload file terlebih dahulu untuk testing
+                // Upload file PDF jika ada
+                console.log('Uploading PDF files...');
+                let urlSPK = existingItem ? existingItem.url_spk : null;
+                let urlBayar = existingItem ? existingItem.url_bayar : null;
+                
+                if (spkFile) {
+                    const uploadedSPK = await uploadToCloudinary(spkFile);
+                    if (uploadedSPK) urlSPK = uploadedSPK;
+                }
+                
+                if (bayarFile) {
+                    const uploadedBayar = await uploadToCloudinary(bayarFile);
+                    if (uploadedBayar) urlBayar = uploadedBayar;
+                }
+
+                // Proses dokumentasi visual
+                console.log('Processing documentation points...');
+                const finalDocs = [];
+                for (const p of docPoints) {
+                    const semula = p.semula ? await uploadToCloudinary(p.semula) : p.semulaUrl;
+                    const proses = p.proses ? await uploadToCloudinary(p.proses) : p.prosesUrl;
+                    const menjadi = p.menjadi ? await uploadToCloudinary(p.menjadi) : p.menjadiUrl;
+                    finalDocs.push({ keterangan: p.keterangan, semula, proses, menjadi });
+                }
+
                 const payload = {
                     unit_pelayanan: document.getElementById('unit_pelayanan').value,
                     jenis_jasa: document.getElementById('jenis_jasa').value,
@@ -670,13 +701,13 @@
                     tanggal_pekerjaan: document.getElementById('tanggal_pekerjaan').value,
                     nama_rekanan: document.getElementById('nama_rekanan').value,
                     nominal: parseInt(document.getElementById('nominal').value.replace(/\D/g, '') || 0),
-                    url_spk: existingItem ? existingItem.url_spk : null,
-                    url_bayar: existingItem ? existingItem.url_bayar : null,
-                    dokumentasi: existingItem ? existingItem.dokumentasi : [],
+                    url_spk: urlSPK,
+                    url_bayar: urlBayar,
+                    dokumentasi: finalDocs,
                     updated_at: new Date().toISOString()
                 };
 
-                console.log('Payload:', payload);
+                console.log('Final Payload:', payload);
 
                 if (editId) {
                     console.log('Updating existing item...');
