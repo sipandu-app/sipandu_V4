@@ -218,6 +218,10 @@
                     <option value="Jasa Lainnya">Jasa Lainnya</option>
                 </select>
                 <button onclick="resetFilters()" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-bold uppercase transition-all">Reset Filter</button>
+                <div class="flex items-center gap-2 bg-emerald-100 px-3 py-1.5 rounded-lg ml-auto">
+                    <span class="text-[8px] font-bold text-emerald-800 uppercase">Total:</span>
+                    <span id="total-nominal" class="text-[10px] font-black text-emerald-900">Rp0</span>
+                </div>
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -394,6 +398,10 @@
                 // Fallback: jika tidak ada nomor_bp, urutkan tanggal_pekerjaan descending
                 return (b.tanggal_pekerjaan || '').localeCompare(a.tanggal_pekerjaan || '');
             });
+
+            // Hitung total nominal
+            const totalNominal = filtered.reduce((sum, item) => sum + item.nominal, 0);
+            document.getElementById('total-nominal').textContent = `Rp${totalNominal.toLocaleString('id-ID')}`;
 
             // Pagination
             const totalItems = filtered.length;
