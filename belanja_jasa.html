@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -65,6 +66,36 @@
         </div>
     </div>
 
+    <!-- Lock Options Modal -->
+    <div id="modal-lock" class="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-600 p-2 rounded-xl text-white shadow-sm"><i data-lucide="lock" class="w-4 h-4"></i></div>
+                    <h2 class="text-[10px] font-black uppercase tracking-wider text-amber-900">Opsi Kunci</h2>
+                </div>
+                <button onclick="closeLockModal()" class="h-8 w-8 flex items-center justify-center bg-white border border-amber-200 rounded-full text-amber-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="p-6 space-y-3">
+                <div id="lock-single-section">
+                    <h3 class="text-[9px] font-bold text-slate-500 uppercase mb-2">Untuk Item Ini</h3>
+                    <div id="single-button-container">
+                        <button onclick="lockSingleItem()" id="btn-lock-single" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-[9px] uppercase tracking-wider">Tutup (Kunci)</button>
+                        <button onclick="unlockSingleItem()" id="btn-unlock-single" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[9px] uppercase tracking-wider">Buka</button>
+                    </div>
+                </div>
+                <div class="border-t border-slate-100 pt-3">
+                    <h3 class="text-[9px] font-bold text-slate-500 uppercase mb-2">Untuk Semua Item</h3>
+                    <div id="all-button-container">
+                        <button onclick="lockAllItems()" id="btn-lock-all" class="w-full py-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl font-bold text-[9px] uppercase tracking-wider border border-amber-200">Tutup Semua</button>
+                        <button onclick="unlockAllItems()" id="btn-unlock-all" class="w-full py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl font-bold text-[9px] uppercase tracking-wider border border-emerald-200">Buka Semua</button>
+                    </div>
+                </div>
+                <button onclick="closeLockModal()" class="w-full py-2 bg-slate-100 text-slate-500 rounded-xl font-bold text-[9px] uppercase tracking-wider mt-2">Batal</button>
+            </div>
+        </div>
+    </div>
+
     <header class="bg-emerald-600 border-b border-emerald-700 sticky top-0 z-50 shadow-md">
         <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -119,13 +150,21 @@
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Jenis Jasa</label>
-                                <select id="jenis_jasa" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" required>
+                                <select id="jenis_jasa" onchange="handleJenisJasaChange()" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500">
                                     <option value="">Pilih Jenis...</option>
-                                    <option value="Pemeliharaan Kendaraan">Pemeliharaan Kendaraan</option>
-                                    <option value="Pemeliharaan Peralatan dan Mesin">Pemeliharaan Peralatan dan Mesin</option>
-                                    <option value="Pemeliharaan Gedung Bangunan Kantor">Pemeliharaan Gedung Bangunan Kantor</option>
-                                    <option value="Pemeliharaan Gedung Bangunan Asrama">Pemeliharaan Gedung Bangunan Asrama</option>
-                                    <option value="Pemeliharaan Sarana dan Prasarana Gedung Kantor">Pemeliharaan Sarana dan Prasarana Gedung Kantor</option>
+                                    <option value="5.1.2.3.2.36">5.1.2.3.2.36 - Pemeliharaan Kendaraan Bermotor Penumpang</option>
+                                    <option value="5.1.2.3.2.39">5.1.2.3.2.39 - Pemeliharaan Kendaraan Bermotor Roda Tiga</option>
+                                    <option value="5.1.2.2.1.30">5.1.2.2.1.30 - Jasa Tenaga Kebersihan</option>
+                                    <option value="5.1.2.2.1.41">5.1.2.2.1.41 - Jasa Pemasangan Instalasi Telepon, Air, & Listrik</option>
+                                    <option value="5.1.2.3.3.1">5.1.2.3.3.1 - Pemeliharaan Gedung Kantor</option>
+                                    <option value="5.1.2.3.3.42">5.1.2.3.3.42 - Pemeliharaan Gedung Asrama</option>
+                                    <option value="5.1.2.3.2.405">5.1.2.3.2.405 - Pemeliharaan Komputer PC</option>
+                                    <option value="5.1.2.3.2.409">5.1.2.3.2.409 - Pemeliharaan Peralatan Komputer PC</option>
+                                    <option value="5.1.2.3.2.22">5.1.2.3.2.22 - Pemeliharaan Genset</option>
+                                    <option value="5.1.2.3.2.117">5.1.2.3.2.117 - Pemeliharaan Alat Kantor Lainnya</option>
+                                    <option value="5.1.2.3.2.118">5.1.2.3.2.118 - Pemeliharaan Mebel</option>
+                                    <option value="5.1.2.3.2.120">5.1.2.3.2.120 - Pemeliharaan Alat Pembersih</option>
+                                    <option value="5.1.2.3.2.121">5.1.2.3.2.121 - Pemeliharaan Alat Pendingin</option>
                                     <option value="Jasa Lainnya">Jasa Lainnya</option>
                                 </select>
                             </div>
@@ -210,14 +249,26 @@
                 </select>
                 <select id="filterJasa" class="h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[9px] font-bold uppercase outline-none focus:ring-1 focus:ring-emerald-400">
                     <option value="Semua">Semua Jenis Jasa</option>
-                    <option value="Pemeliharaan Kendaraan">Pemeliharaan Kendaraan</option>
-                    <option value="Pemeliharaan Peralatan dan Mesin">Pemeliharaan Peralatan dan Mesin</option>
-                    <option value="Pemeliharaan Gedung Bangunan Kantor">Pemeliharaan Gedung Bangunan Kantor</option>
-                    <option value="Pemeliharaan Gedung Bangunan Asrama">Pemeliharaan Gedung Bangunan Asrama</option>
-                    <option value="Pemeliharaan Sarana dan Prasarana Gedung Kantor">Sarana/Prasarana Gedung</option>
+                    <option value="5.1.2.3.2.36">5.1.2.3.2.36 - Kendaraan Bermotor Penumpang</option>
+                    <option value="5.1.2.3.2.39">5.1.2.3.2.39 - Kendaraan Bermotor Roda Tiga</option>
+                    <option value="5.1.2.2.1.30">5.1.2.2.1.30 - Tenaga Kebersihan</option>
+                    <option value="5.1.2.2.1.41">5.1.2.2.1.41 - Pemasangan Instalasi</option>
+                    <option value="5.1.2.3.3.1">5.1.2.3.3.1 - Gedung Kantor</option>
+                    <option value="5.1.2.3.3.42">5.1.2.3.3.42 - Gedung Asrama</option>
+                    <option value="5.1.2.3.2.405">5.1.2.3.2.405 - Komputer PC</option>
+                    <option value="5.1.2.3.2.409">5.1.2.3.2.409 - Peralatan Komputer PC</option>
+                    <option value="5.1.2.3.2.22">5.1.2.3.2.22 - Genset</option>
+                    <option value="5.1.2.3.2.117">5.1.2.3.2.117 - Alat Kantor Lainnya</option>
+                    <option value="5.1.2.3.2.118">5.1.2.3.2.118 - Mebel</option>
+                    <option value="5.1.2.3.2.120">5.1.2.3.2.120 - Alat Pembersih</option>
+                    <option value="5.1.2.3.2.121">5.1.2.3.2.121 - Alat Pendingin (AC)</option>
                     <option value="Jasa Lainnya">Jasa Lainnya</option>
                 </select>
                 <button onclick="resetFilters()" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-bold uppercase transition-all">Reset Filter</button>
+                <button onclick="exportExcel()" class="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold uppercase transition-all flex items-center gap-1">
+                    <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                    Export Excel
+                </button>
                 <div class="flex items-center gap-2 bg-emerald-100 px-3 py-1.5 rounded-lg ml-auto">
                     <span class="text-[8px] font-bold text-emerald-800 uppercase">Total:</span>
                     <span id="total-nominal" class="text-[10px] font-black text-emerald-900">Rp0</span>
@@ -334,12 +385,225 @@
         let currentPage = 1;
         let itemsPerPage = 10;
 
+        // Data APBD
+        let apbdData = {
+            pagu: [],
+            realisasi: []
+        };
+        let rekeningMap = {}; // key: kode_rekening, value: { id, kode, uraian }
+        let rekeningIdToRealisasiMap = {}; // key: rekeningId, value: array of realisasi items
+        let allPemeliharaanRealisasi = []; // Semua realisasi pada kategori Pemeliharaan Barang Milik Daerah
+        // Map kode rekening ke nama pendek untuk ditampilkan di tabel
+        let kodeToNamaPendek = {
+            "5.1.2.3.2.36": "5.1.2.3.2.36 - Kendaraan Bermotor Penumpang",
+            "5.1.2.3.2.39": "5.1.2.3.2.39 - Kendaraan Bermotor Roda Tiga",
+            "5.1.2.2.1.30": "5.1.2.2.1.30 - Tenaga Kebersihan",
+            "5.1.2.2.1.41": "5.1.2.2.1.41 - Pemasangan Instalasi",
+            "5.1.2.3.3.1": "5.1.2.3.3.1 - Gedung Kantor",
+            "5.1.2.3.3.42": "5.1.2.3.3.42 - Gedung Asrama",
+            "5.1.2.3.2.405": "5.1.2.3.2.405 - Komputer PC",
+            "5.1.2.3.2.409": "5.1.2.3.2.409 - Peralatan Komputer PC",
+            "5.1.2.3.2.22": "5.1.2.3.2.22 - Genset",
+            "5.1.2.3.2.117": "5.1.2.3.2.117 - Alat Kantor Lainnya",
+            "5.1.2.3.2.118": "5.1.2.3.2.118 - Mebel",
+            "5.1.2.3.2.120": "5.1.2.3.2.120 - Alat Pembersih",
+            "5.1.2.3.2.121": "5.1.2.3.2.121 - Alat Pendingin (AC)",
+            "Jasa Lainnya": "Jasa Lainnya"
+        };
+
         // Initialize Supabase
         function initSupabase() {
             // Langsung menggunakan kredensial agar aman dari SecurityError (Cross-Origin)
             const url = 'https://yewkffbatvrbtfliikia.supabase.co';
             const key = 'sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg';
             supabaseClient = supabase.createClient(url, key);
+
+            // Dynamically add the Pilih Realisasi dropdown after the jenis_jasa grid
+            const jenisJasaDiv = document.getElementById('jenis_jasa').closest('div').parentElement;
+            if (jenisJasaDiv) {
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'flex flex-col';
+                containerDiv.id = 'container-pilih-realisasi';
+                containerDiv.style.display = 'none';
+                containerDiv.innerHTML = `
+                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Pilih Realisasi APBD</label>
+                    <select id="pilih_realisasi" onchange="handleRealisasiChange()" class="h-10 px-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] font-bold outline-none focus:border-blue-500">
+                        <option value="">Pilih Realisasi...</option>
+                    </select>
+                `;
+                jenisJasaDiv.after(containerDiv);
+                console.log('Added realisasi dropdown dynamically');
+            }
+
+            fetchAPBDData();
+        }
+
+        // Fetch APBD Data (Pagu & Realisasi)
+        async function fetchAPBDData() {
+            try {
+                console.log('Fetching APBD data from Supabase...');
+                const { data, error } = await supabaseClient
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', 'SIPD_PAGU_ADVANCED_v2')
+                    .maybeSingle();
+
+                if (error) {
+                    console.error('Error fetching APBD data:', error);
+                    return;
+                }
+
+                if (data) {
+                    apbdData.pagu = data.pagu || [];
+                    apbdData.realisasi = data.realisasi || [];
+                    console.log('APBD data loaded:', apbdData);
+
+                    // 13 kode rekening yang ingin ditampilkan
+                    const targetKodeRekening = [
+                        "5.1.2.3.2.36", 
+                        "5.1.2.3.2.39", 
+                        "5.1.2.2.1.30", 
+                        "5.1.2.2.1.41", 
+                        "5.1.2.3.3.1", 
+                        "5.1.2.3.3.42", 
+                        "5.1.2.3.2.405", 
+                        "5.1.2.3.2.409", 
+                        "5.1.2.3.2.22", 
+                        "5.1.2.3.2.117", 
+                        "5.1.2.3.2.118", 
+                        "5.1.2.3.2.120", 
+                        "5.1.2.3.2.121"
+                    ];
+
+                    // Build rekening map: kode -> rekening object
+                    rekeningMap = {};
+                    let kodeToRekeningIdMap = {}; // Map kode -> rekeningId
+                    
+                    function traversePagu(items) {
+                        for (const item of items) {
+                            if (item.type === 'rekening') {
+                                rekeningMap[item.kode] = item;
+                                kodeToRekeningIdMap[item.kode] = item.id;
+                            }
+                            if (item.children) {
+                                traversePagu(item.children);
+                            }
+                        }
+                    }
+                    traversePagu(apbdData.pagu);
+
+                    // Build realisasi map: rekeningId -> array realisasi
+                    rekeningIdToRealisasiMap = {};
+                    allPemeliharaanRealisasi = [];
+                    
+                    // Dapatkan semua rekeningId yang sesuai dengan 13 kode target
+                    const targetRekeningIds = targetKodeRekening
+                        .map(kode => kodeToRekeningIdMap[kode])
+                        .filter(id => id); // Hapus yang undefined
+
+                    for (const r of apbdData.realisasi) {
+                        if (!rekeningIdToRealisasiMap[r.rekeningId]) {
+                            rekeningIdToRealisasiMap[r.rekeningId] = [];
+                        }
+                        rekeningIdToRealisasiMap[r.rekeningId].push(r);
+                        
+                        // Hanya masukkan realisasi yang memiliki rekeningId di daftar target
+                        if (targetRekeningIds.includes(r.rekeningId)) {
+                            allPemeliharaanRealisasi.push(r);
+                        }
+                    }
+
+                    console.log('Rekening map built with', Object.keys(rekeningMap).length, 'rekenings');
+                    console.log('Target rekening IDs:', targetRekeningIds);
+                    console.log('Total pemeliharaan realisasi collected:', allPemeliharaanRealisasi.length);
+                }
+            } catch (err) {
+                console.error('Error fetching APBD data:', err);
+            }
+        }
+
+        // Handler: when Jenis Jasa is selected
+        function handleJenisJasaChange() {
+            const jenisJasaValue = document.getElementById('jenis_jasa').value;
+            const containerRealisasi = document.getElementById('container-pilih-realisasi');
+            const selectRealisasi = document.getElementById('pilih_realisasi');
+
+            console.log('Jenis Jasa selected:', jenisJasaValue);
+
+            // Reset select realisasi
+            selectRealisasi.innerHTML = '<option value="">Pilih Realisasi...</option>';
+            containerRealisasi.style.display = 'none';
+
+            if (!jenisJasaValue || jenisJasaValue === 'Jasa Lainnya') {
+                return;
+            }
+
+            // Extract kode rekening from value (format: "kode - uraian")
+            const kodeRekening = jenisJasaValue.split(' - ')[0];
+            console.log('Extracted kode rekening:', kodeRekening);
+
+            // Find rekening object
+            const rekening = rekeningMap[kodeRekening];
+            if (!rekening) {
+                console.log('Rekening not found in map');
+                return;
+            }
+
+            console.log('Found rekening:', rekening);
+
+            // Get realisasi for this rekening
+            const realisasiList = rekeningIdToRealisasiMap[rekening.id] || [];
+            console.log('Realisasi list for this rekening:', realisasiList);
+
+            if (realisasiList.length === 0) {
+                showNotif('Tidak ada realisasi untuk jenis jasa ini', 'info');
+                return;
+            }
+
+            // Populate select realisasi
+            for (const r of realisasiList) {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(r);
+                option.textContent = `${r.noBp} - ${r.penerima} (Rp${r.nilai.toLocaleString('id-ID')})`;
+                selectRealisasi.appendChild(option);
+            }
+
+            containerRealisasi.style.display = 'flex';
+        }
+
+        // Handler: when Realisasi is selected
+        function handleRealisasiChange() {
+            const selectRealisasi = document.getElementById('pilih_realisasi');
+            const value = selectRealisasi.value;
+
+            if (!value) {
+                return;
+            }
+
+            try {
+                const realisasi = JSON.parse(value);
+                console.log('Selected realisasi:', realisasi);
+
+                // Fill the form
+                document.getElementById('nomor_bp').value = realisasi.noBp || '';
+                document.getElementById('nama_pekerjaan').value = realisasi.keterangan || '';
+                document.getElementById('nama_rekanan').value = realisasi.penerima || '';
+                document.getElementById('nominal').value = realisasi.nilai ? realisasi.nilai.toLocaleString('id-ID') : '';
+
+                // Handle tanggal: format from "DD/MM/YYYY" to "YYYY-MM-DD" for input type date
+                if (realisasi.tanggal) {
+                    const parts = realisasi.tanggal.split('/');
+                    if (parts.length === 3) {
+                        const [day, month, year] = parts;
+                        document.getElementById('tanggal_pekerjaan').value = `${year}-${month}-${day}`;
+                    }
+                }
+
+                showNotif('Form diisi otomatis dari realisasi APBD!', 'success');
+            } catch (err) {
+                console.error('Error parsing realisasi:', err);
+                showNotif('Gagal memuat data realisasi', 'error');
+            }
         }
 
         // --- Core Functions ---
@@ -354,7 +618,8 @@
             
             try {
                 console.log('Syncing data from Supabase...');
-                const { data, error } = await supabaseClient
+                // Pertama, fetch data belanja_jasa yang sudah ada
+                const { data: belanjaJasaData, error } = await supabaseClient
                     .from(TABLE_NAME)
                     .select('*');
 
@@ -362,8 +627,69 @@
                     console.error('Supabase query error:', error);
                     throw error;
                 }
-                console.log('Data received:', data);
-                listJasa = data || [];
+                console.log('Belanja jasa data received:', belanjaJasaData);
+                
+                // Pastikan apbd data sudah di-fetch
+                if (allPemeliharaanRealisasi.length === 0) {
+                    await fetchAPBDData();
+                }
+                
+                // Gabungkan data APBD realisasi dengan belanja jasa
+                // Buat map untuk cepat mencari belanja jasa by realisasiId
+                const belanjaJasaByRealisasiId = {};
+                if (belanjaJasaData) {
+                    for (const item of belanjaJasaData) {
+                        if (item.realisasiId) {
+                            belanjaJasaByRealisasiId[item.realisasiId] = item;
+                        }
+                    }
+                }
+                
+                // Buat list gabungan
+                    listJasa = [];
+                    for (const realisasi of allPemeliharaanRealisasi) {
+                        const existingBelanjaJasa = belanjaJasaByRealisasiId[realisasi.id];
+                        
+                        if (existingBelanjaJasa) {
+                            // Gunakan data yang sudah ada di belanja_jasa
+                            listJasa.push(existingBelanjaJasa);
+                        } else {
+                            // Buat item baru dari realisasi APBD
+                            // Dapatkan informasi rekening
+                            const rekening = Object.values(rekeningMap).find(r => r.id === realisasi.rekeningId);
+                            const jenisJasa = rekening ? rekening.kode : 'Jasa Lainnya';
+                            
+                            // Parse tanggal
+                            let tanggalPekerjaan = new Date().toISOString().split('T')[0];
+                            if (realisasi.tanggal) {
+                                const parts = realisasi.tanggal.split('/');
+                                if (parts.length === 3) {
+                                    tanggalPekerjaan = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                            }
+                            
+                            listJasa.push({
+                                id: `apbd-${realisasi.id}`, // id sementara dari APBD
+                                realisasiId: realisasi.id, // simpan ID realisasi asli
+                                unit_pelayanan: 'PPSDI Raharjo Sragen', // default, bisa diubah
+                                jenis_jasa: jenisJasa,
+                                nomor_bp: realisasi.noBp || '',
+                                nama_pekerjaan: realisasi.keterangan || 'Pekerjaan',
+                                tanggal_pekerjaan: tanggalPekerjaan,
+                                nama_rekanan: realisasi.penerima || '',
+                                nominal: realisasi.nilai || 0,
+                                url_spk: null,
+                                url_bayar: null,
+                                dokumentasi: [],
+                                is_locked: false,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                isFromAPBD: true // tanda bahwa ini dari APBD
+                            });
+                        }
+                    }
+                
+                console.log('Combined listJasa:', listJasa);
                 renderTable();
             } catch (err) {
                 console.error('Sync error:', err);
@@ -445,7 +771,7 @@
                                 ${item.nama_pekerjaan}
                                 ${item.is_locked ? '<i data-lucide="lock" class="w-2 h-2 text-amber-500"></i>' : ''}
                             </span>
-                            <span class="text-[8px] text-emerald-600 font-bold uppercase mt-0.5">${item.jenis_jasa}</span>
+                            <span class="text-[8px] text-emerald-600 font-bold uppercase mt-0.5">${kodeToNamaPendek[item.jenis_jasa] || item.jenis_jasa}</span>
                         </div>
                     </td>
                     <td class="px-3 py-4 text-slate-600 font-medium">${item.nama_rekanan || '-'}</td>
@@ -460,7 +786,7 @@
                     <td class="px-3 py-4">
                         <div class="flex justify-center gap-1">
                             <button onclick="openPrintModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Cetak"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>
-                            <button onclick="askPin('toggleLock', '${item.id}')" class="p-1.5 transition-colors ${item.is_locked ? 'text-amber-600' : 'text-slate-300 hover:text-amber-500'}"><i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="openLockModal('${item.id}')" class="p-1.5 transition-colors ${item.is_locked ? 'text-amber-600' : 'text-slate-300 hover:text-amber-500'}"><i data-lucide="${item.is_locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i></button>
                             <button onclick="${item.is_locked ? '' : `editItem('${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-emerald-600'} transition-colors"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
                             <button onclick="${item.is_locked ? '' : `askPin('delete', '${item.id}')`}" class="p-1.5 ${item.is_locked ? 'text-slate-100 cursor-not-allowed' : 'text-slate-300 hover:text-rose-600'} transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </div>
@@ -649,6 +975,72 @@
             document.getElementById('modal-pin').classList.add('hidden');
         }
 
+        // --- Lock Modal Functions ---
+        let lockTargetItem = null;
+        let lockAction = null;
+
+        function openLockModal(id) {
+            lockTargetItem = listJasa.find(x => x.id === id);
+            
+            // Show/hide buttons based on item's current state
+            const btnLockSingle = document.getElementById('btn-lock-single');
+            const btnUnlockSingle = document.getElementById('btn-unlock-single');
+            const btnLockAll = document.getElementById('btn-lock-all');
+            const btnUnlockAll = document.getElementById('btn-unlock-all');
+            
+            if (lockTargetItem && lockTargetItem.is_locked) {
+                // Item is locked: show unlock options
+                btnLockSingle.style.display = 'none';
+                btnUnlockSingle.style.display = 'block';
+                btnLockAll.style.display = 'none';
+                btnUnlockAll.style.display = 'block';
+            } else {
+                // Item is unlocked: show lock options
+                btnLockSingle.style.display = 'block';
+                btnUnlockSingle.style.display = 'none';
+                btnLockAll.style.display = 'block';
+                btnUnlockAll.style.display = 'none';
+            }
+            
+            document.getElementById('modal-lock').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeLockModal() {
+            document.getElementById('modal-lock').classList.add('hidden');
+            lockTargetItem = null;
+            lockAction = null;
+        }
+
+        function lockSingleItem() {
+            if (lockTargetItem) {
+                lockAction = 'lockSingle';
+                askPin('lockSingle', lockTargetItem.id);
+                closeLockModal();
+            }
+        }
+
+        function unlockSingleItem() {
+            if (lockTargetItem) {
+                lockAction = 'unlockSingle';
+                askPin('unlockSingle', lockTargetItem.id);
+                closeLockModal();
+            }
+        }
+
+        function lockAllItems() {
+            lockAction = 'lockAll';
+            askPin('lockAll', null);
+            closeLockModal();
+        }
+
+        function unlockAllItems() {
+            lockAction = 'unlockAll';
+            askPin('unlockAll', null);
+            closeLockModal();
+        }
+
+        // Update processPinAction to handle new lock actions
         async function processPinAction() {
             const pin = document.getElementById('pin-input').value;
             if (pin !== PIN_ADMIN) {
@@ -668,6 +1060,28 @@
                     showNotif(newState ? "Data Terkunci" : "Data Terbuka");
                 } else if (pinAction === 'restore') {
                     await performRestore(targetItem);
+                } else if (pinAction === 'lockSingle') {
+                    const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: true }).eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif("Item Berhasil Dikunci");
+                } else if (pinAction === 'unlockSingle') {
+                    const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: false }).eq('id', targetItem.id);
+                    if (error) throw error;
+                    showNotif("Item Berhasil Dibuka");
+                } else if (pinAction === 'lockAll') {
+                    // Update all items (only from belanja_jasa, not APBD temporary items)
+                    const itemsToUpdate = listJasa.filter(item => !item.isFromAPBD);
+                    for (const item of itemsToUpdate) {
+                        await supabaseClient.from(TABLE_NAME).update({ is_locked: true }).eq('id', item.id);
+                    }
+                    showNotif(`Berhasil mengunci ${itemsToUpdate.length} item`);
+                } else if (pinAction === 'unlockAll') {
+                    // Update all items (only from belanja_jasa, not APBD temporary items)
+                    const itemsToUpdate = listJasa.filter(item => !item.isFromAPBD);
+                    for (const item of itemsToUpdate) {
+                        await supabaseClient.from(TABLE_NAME).update({ is_locked: false }).eq('id', item.id);
+                    }
+                    showNotif(`Berhasil membuka ${itemsToUpdate.length} item`);
                 }
                 syncData();
                 closePinModal();
@@ -696,6 +1110,17 @@
             
             const bayarLabel = document.getElementById('bayar-label');
             if (bayarLabel) bayarLabel.innerText = "Pilih PDF";
+            
+            // Aktifkan kembali semua field
+            const unitSelect = document.getElementById('unit_pelayanan');
+            const jenisSelect = document.getElementById('jenis_jasa');
+            unitSelect.disabled = false;
+            jenisSelect.disabled = false;
+            document.getElementById('nomor_bp').disabled = false;
+            document.getElementById('nama_pekerjaan').disabled = false;
+            document.getElementById('tanggal_pekerjaan').disabled = false;
+            document.getElementById('nama_rekanan').disabled = false;
+            document.getElementById('nominal').disabled = false;
             
             docPoints = [];
             addDocPoint();
@@ -732,6 +1157,15 @@
             const nominalVal = item.nominal || 0;
             document.getElementById('nominal').value = nominalVal.toLocaleString('id-ID');
             
+            // Nonaktifkan field yang tidak bisa diubah (hanya baca)
+            unitSelect.disabled = true;
+            jenisSelect.disabled = true;
+            document.getElementById('nomor_bp').disabled = true;
+            document.getElementById('nama_pekerjaan').disabled = true;
+            document.getElementById('tanggal_pekerjaan').disabled = true;
+            document.getElementById('nama_rekanan').disabled = true;
+            document.getElementById('nominal').disabled = true;
+            
             // Update label file
             document.getElementById('spk-label').innerText = item.url_spk ? "📄 File SPK Tersedia" : "Pilih PDF";
             document.getElementById('bayar-label').innerText = item.url_bayar ? "📄 File Bayar Tersedia" : "Pilih PDF";
@@ -748,8 +1182,8 @@
                 addDocPoint();
             }
 
-            document.getElementById('form-title').innerHTML = `<div class="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></div> Edit Laporan #${item.id.split('-').pop()}`;
-            document.getElementById('btn-text').innerText = "Update Laporan";
+            document.getElementById('form-title').innerHTML = `<div class="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><i data-lucide="upload" class="w-4 h-4"></i></div> Upload Dokumentasi`;
+            document.getElementById('btn-text').innerText = "Simpan Dokumentasi";
             
             // Gulung halaman ke atas agar form terlihat
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -799,7 +1233,8 @@
                     finalDocs.push({ keterangan: p.keterangan, semula, proses, menjadi });
                 }
 
-                const payload = {
+                // Buat payload dasar
+                const basePayload = {
                     unit_pelayanan: document.getElementById('unit_pelayanan').value,
                     jenis_jasa: document.getElementById('jenis_jasa').value,
                     nomor_bp: document.getElementById('nomor_bp').value,
@@ -813,25 +1248,47 @@
                     updated_at: new Date().toISOString()
                 };
 
-                console.log('Final Payload:', payload);
+                let payload;
 
                 if (editId) {
-                    console.log('Updating existing item...');
-                    const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', editId);
-                    if (error) {
-                        console.error('Update error:', error);
-                        throw error;
+                    if (existingItem && existingItem.isFromAPBD) {
+                        // Ini item baru dari APBD, perlu di-INSERT
+                        console.log('Inserting new item from APBD...');
+                        const newId = 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                        payload = {
+                            ...basePayload,
+                            id: newId,
+                            realisasiId: existingItem.realisasiId,
+                            is_locked: false,
+                            created_at: new Date().toISOString()
+                        };
+                        const { error } = await supabaseClient.from(TABLE_NAME).insert(payload);
+                        if (error) {
+                            console.error('Insert error:', error);
+                            throw error;
+                        }
+                        showNotif("Dokumentasi Berhasil Disimpan!");
+                    } else {
+                        // Item sudah ada di database, UPDATE
+                        console.log('Updating existing item...');
+                        payload = basePayload;
+                        const { error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', editId);
+                        if (error) {
+                            console.error('Update error:', error);
+                            throw error;
+                        }
+                        showNotif("Dokumentasi Berhasil Diperbarui!");
                     }
-                    showNotif("Laporan Berhasil Diperbarui");
                 } else {
                     console.log('Inserting new item...');
                     const newId = 'JASA-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-                    const { error } = await supabaseClient.from(TABLE_NAME).insert({
-                        ...payload,
+                    payload = {
+                        ...basePayload,
                         id: newId,
                         is_locked: false,
                         created_at: new Date().toISOString()
-                    });
+                    };
+                    const { error } = await supabaseClient.from(TABLE_NAME).insert(payload);
                     if (error) {
                         console.error('Insert error:', error);
                         throw error;
@@ -847,7 +1304,7 @@
                 showNotif("Gagal menyimpan laporan: " + (err.message || "Kesalahan tidak diketahui"), "error");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-text">${document.getElementById('edit-id').value ? 'Update Laporan' : 'Simpan Laporan'}</span>`;
+                btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span id="btn-text">${document.getElementById('edit-id').value ? 'Simpan Dokumentasi' : 'Simpan Laporan'}</span>`;
                 lucide.createIcons();
             }
         });
@@ -1106,6 +1563,97 @@
             } catch (err) {
                 console.error("Restore Error:", err);
                 showNotif("Gagal: " + (err.message || "Kesalahan Database"), "error");
+            }
+        }
+
+        // --- Export Excel ---
+        function exportExcel() {
+            try {
+                console.log('Starting Excel export...');
+                
+                // Dapatkan semua data (tidak hanya yang di-filter)
+                const allData = listJasa;
+                
+                if (allData.length === 0) {
+                    showNotif("Tidak ada data untuk diekspor!", "error");
+                    return;
+                }
+                
+                // Siapkan data untuk Excel dengan semua field
+                const excelData = allData.map(item => {
+                    // Format dokumentasi visual menjadi string yang mudah dibaca
+                    let docVisualStr = '';
+                    if (item.dokumentasi && Array.isArray(item.dokumentasi) && item.dokumentasi.length > 0) {
+                        item.dokumentasi.forEach((doc, index) => {
+                            docVisualStr += `[${index + 1}] ${doc.keterangan || ''}\n`;
+                            docVisualStr += `  Semula: ${doc.semula || '-'}\n`;
+                            docVisualStr += `  Proses: ${doc.proses || '-'}\n`;
+                            docVisualStr += `  Menjadi: ${doc.menjadi || '-'}\n\n`;
+                        });
+                    }
+                    
+                    return {
+                        'ID': item.id || '',
+                        'Realisasi ID': item.realisasiId || '',
+                        'Unit Pelayanan': item.unit_pelayanan || '',
+                        'Jenis Jasa': kodeToNamaPendek[item.jenis_jasa] || item.jenis_jasa || '',
+                        'Kode Rekening': item.jenis_jasa || '',
+                        'Nomor BP': item.nomor_bp || '',
+                        'Nama Pekerjaan': item.nama_pekerjaan || '',
+                        'Tanggal Pekerjaan': item.tanggal_pekerjaan || '',
+                        'Nama Rekanan': item.nama_rekanan || '',
+                        'Nominal (Rp)': item.nominal || 0,
+                        'URL SPK': item.url_spk || '',
+                        'URL Bukti Bayar': item.url_bayar || '',
+                        'Dokumentasi Visual': docVisualStr,
+                        'Terkunci': item.is_locked ? 'Ya' : 'Tidak',
+                        'Dibuat Pada': item.created_at || '',
+                        'Diperbarui Pada': item.updated_at || '',
+                        'Dari APBD': item.isFromAPBD ? 'Ya' : 'Tidak'
+                    };
+                });
+                
+                // Buat workbook dan worksheet
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                
+                // Atur lebar kolom agar mudah dibaca
+                const wsCols = [
+                    { wch: 15 }, // ID
+                    { wch: 15 }, // Realisasi ID
+                    { wch: 25 }, // Unit Pelayanan
+                    { wch: 40 }, // Jenis Jasa
+                    { wch: 20 }, // Kode Rekening
+                    { wch: 15 }, // Nomor BP
+                    { wch: 40 }, // Nama Pekerjaan
+                    { wch: 15 }, // Tanggal Pekerjaan
+                    { wch: 30 }, // Nama Rekanan
+                    { wch: 15 }, // Nominal
+                    { wch: 50 }, // URL SPK
+                    { wch: 50 }, // URL Bukti Bayar
+                    { wch: 60 }, // Dokumentasi Visual
+                    { wch: 10 }, // Terkunci
+                    { wch: 20 }, // Dibuat Pada
+                    { wch: 20 }, // Diperbarui Pada
+                    { wch: 10 }  // Dari APBD
+                ];
+                ws['!cols'] = wsCols;
+                
+                // Tambahkan worksheet ke workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Data Belanja Jasa');
+                
+                // Generate nama file dengan tanggal
+                const today = new Date().toISOString().split('T')[0];
+                const fileName = `Belanja_Jasa_${today}.xlsx`;
+                
+                // Download file
+                XLSX.writeFile(wb, fileName);
+                
+                console.log('Excel export successful!');
+                showNotif("Data berhasil diekspor ke Excel!");
+            } catch (err) {
+                console.error('Excel export error:', err);
+                showNotif("Gagal mengekspor Excel: " + (err.message || "Kesalahan tidak diketahui"), "error");
             }
         }
 
