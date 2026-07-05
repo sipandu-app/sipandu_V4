@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -341,14 +341,7 @@
                     Manajemen Database
                 </h2>
                 <div class="grid grid-cols-1 gap-4">
-                    <button onclick="testInsert()" class="p-6 bg-blue-500/20 rounded-3xl border border-blue-500/30 hover:bg-blue-500/30 flex items-center justify-between group transition-all">
-                        <div class="text-left">
-                            <span class="block font-black uppercase text-[10px] group-hover:text-blue-400">Test Insert Data</span>
-                            <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Coba simpan data test sederhana</span>
-                        </div>
-                        <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>
-                    </button>
-                    <button onclick="backupData()" class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group transition-all">
+                    <button onclick="askPin('backup', null)" class="p-6 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 flex items-center justify-between group transition-all">
                         <div class="text-left">
                             <span class="block font-black uppercase text-[10px] group-hover:text-emerald-400">Unduh Backup (JSON)</span>
                             <span class="text-[8px] text-slate-500 font-bold uppercase mt-1">Ekspor semua arsip belanja jasa</span>
@@ -635,12 +628,16 @@
                 }
                 
                 // Gabungkan data APBD realisasi dengan belanja jasa
-                // Buat map untuk cepat mencari belanja jasa by realisasiId
+                // Buat map untuk cepat mencari belanja jasa by realisasiId dan nama_pekerjaan
                 const belanjaJasaByRealisasiId = {};
+                const belanjaJasaByNama = {};
                 if (belanjaJasaData) {
                     for (const item of belanjaJasaData) {
                         if (item.realisasiId) {
                             belanjaJasaByRealisasiId[item.realisasiId] = item;
+                        }
+                        if (item.nama_pekerjaan) {
+                            belanjaJasaByNama[item.nama_pekerjaan.toLowerCase()] = item;
                         }
                     }
                 }
@@ -654,6 +651,10 @@
                             // Gunakan data yang sudah ada di belanja_jasa
                             listJasa.push(existingBelanjaJasa);
                         } else {
+                            // Coba cari kecocokan dari nama pekerjaan (untuk fallback file url)
+                            const ketLowerCase = (realisasi.keterangan || '').toLowerCase();
+                            const matchedByName = belanjaJasaByNama[ketLowerCase];
+                            
                             // Buat item baru dari realisasi APBD
                             // Dapatkan informasi rekening
                             const rekening = Object.values(rekeningMap).find(r => r.id === realisasi.rekeningId);
@@ -678,9 +679,9 @@
                                 tanggal_pekerjaan: tanggalPekerjaan,
                                 nama_rekanan: realisasi.penerima || '',
                                 nominal: realisasi.nilai || 0,
-                                url_spk: null,
-                                url_bayar: null,
-                                dokumentasi: [],
+                                url_spk: matchedByName ? matchedByName.url_spk : null,
+                                url_bayar: matchedByName ? matchedByName.url_bayar : null,
+                                dokumentasi: matchedByName ? matchedByName.dokumentasi : [],
                                 is_locked: false,
                                 created_at: new Date().toISOString(),
                                 updated_at: new Date().toISOString(),
@@ -920,7 +921,7 @@
             data.append("resource_type", "auto"); 
             
             try {
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: "POST", body: data });
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: "POST", body: data });
                 const json = await res.json();
                 
                 console.log('Cloudinary response:', json);
@@ -946,13 +947,65 @@
             activeTab = tab;
             document.getElementById('tab-input').classList.toggle('hidden', tab !== 'input');
             document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history');
+            document.getElementById('tab-olddata').classList.toggle('hidden', tab !== 'olddata');
             document.getElementById('tab-database').classList.toggle('hidden', tab !== 'database');
             
             document.getElementById('tab-input-btn').className = tab === 'input' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
             document.getElementById('tab-history-btn').className = tab === 'history' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
+            document.getElementById('tab-olddata-btn').className = tab === 'olddata' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
             document.getElementById('tab-database-btn').className = tab === 'database' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
 
             if (tab === 'history') syncData();
+            if (tab === 'olddata') syncOldData();
+        }
+
+        async function syncOldData() {
+            if (!supabaseClient) return;
+            document.getElementById('loading-state-olddata').classList.remove('hidden');
+            document.getElementById('table-olddata-body').innerHTML = '';
+            document.getElementById('empty-state-olddata').classList.add('hidden');
+            
+            try {
+                const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                
+                const tbody = document.getElementById('table-olddata-body');
+                if (!data || data.length === 0) {
+                    document.getElementById('empty-state-olddata').classList.remove('hidden');
+                } else {
+                    let html = '';
+                    data.forEach(item => {
+                        const dateStr = item.tanggal_pekerjaan ? new Date(item.tanggal_pekerjaan).toLocaleDateString('id-ID') : '-';
+                        const nominal = item.nominal ? `Rp${parseInt(item.nominal).toLocaleString('id-ID')}` : 'Rp0';
+                        html += `
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="px-3 py-3 text-center">
+                                    <div class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold font-mono">
+                                        <i data-lucide="calendar" class="w-3 h-3"></i> ${dateStr}
+                                    </div>
+                                </td>
+                                <td class="px-3 py-3"><span class="font-bold text-slate-900 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[10px]">${item.nomor_bp || '-'}</span></td>
+                                <td class="px-3 py-3">
+                                    <div class="font-bold text-slate-800 text-[10px] leading-tight">${item.nama_pekerjaan || '-'}</div>
+                                    <div class="text-[8px] text-slate-400 font-bold uppercase mt-0.5">${item.jenis_jasa || 'Jasa Lainnya'}</div>
+                                </td>
+                                <td class="px-3 py-3 font-bold text-slate-600 text-[10px]">${item.nama_rekanan || '-'}</td>
+                                <td class="px-3 py-3 font-bold text-slate-500 text-[9px]">${item.unit_pelayanan || '-'}</td>
+                                <td class="px-3 py-3 text-right">
+                                    <span class="font-black text-emerald-600 text-[11px] font-mono">${nominal}</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error(err);
+                showNotif("Gagal memuat data lama: " + err.message, "error");
+            } finally {
+                document.getElementById('loading-state-olddata').classList.add('hidden');
+            }
         }
 
         function showNotif(message, type = 'success') {
@@ -1060,10 +1113,12 @@
                     showNotif(newState ? "Data Terkunci" : "Data Terbuka");
                 } else if (pinAction === 'restore') {
                     await performRestore(targetItem);
+                } else if (pinAction === 'backup') {
+                    performBackup();
                 } else if (pinAction === 'lockSingle') {
                     const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: true }).eq('id', targetItem.id);
                     if (error) throw error;
-                    showNotif("Item Berhasil Dikunci");
+                    showNotif("Laporan Terkunci");
                 } else if (pinAction === 'unlockSingle') {
                     const { error } = await supabaseClient.from(TABLE_NAME).update({ is_locked: false }).eq('id', targetItem.id);
                     if (error) throw error;
@@ -1425,46 +1480,13 @@
             closePrintModal();
         }
 
-        // --- Test Function ---
-
-        async function testInsert() {
-            try {
-                console.log('Testing simple insert...');
-                const testId = 'JASA-TEST-' + Date.now();
-                const testData = {
-                    id: testId,
-                    unit_pelayanan: 'PPSDI Raharjo Sragen',
-                    jenis_jasa: 'Jasa Lainnya',
-                    nama_pekerjaan: 'Test Data ' + new Date().toLocaleTimeString(),
-                    tanggal_pekerjaan: new Date().toISOString().split('T')[0],
-                    nama_rekanan: 'Test Rekanan',
-                    nominal: 100000,
-                    url_spk: null,
-                    url_bayar: null,
-                    dokumentasi: [],
-                    is_locked: false,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                };
-                console.log('Test payload:', testData);
-                const { error } = await supabaseClient.from(TABLE_NAME).insert(testData);
-                if (error) {
-                    console.error('Test insert error:', error);
-                    showNotif('Test insert gagal: ' + error.message, 'error');
-                } else {
-                    console.log('Test insert successful!');
-                    showNotif('Test insert berhasil!', 'success');
-                    syncData();
-                }
-            } catch (err) {
-                console.error('Test insert exception:', err);
-                showNotif('Test insert gagal: ' + err.message, 'error');
-            }
-        }
-
         // --- Backup & Restore ---
 
         function backupData() {
+            askPin('backup', null);
+        }
+
+        async function performBackup() {
             if (listJasa.length === 0) {
                 showNotif("Tidak ada data untuk backup", "error");
                 return;

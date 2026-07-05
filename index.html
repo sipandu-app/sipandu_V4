@@ -377,23 +377,28 @@
             <img src="maskot-sipandu.png" alt="Logo Sipandu" class="w-24 h-24 mx-auto mb-2">
             <div class="space-y-1">
                 <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">SIPANDU Login</h2>
-                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sistem Informasi Penyimpanan Data Terpadu</p>
+                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sistem Informasi Penyimpanan
+                    Data Terpadu</p>
             </div>
-            
+
             <div class="space-y-4 text-left">
                 <div class="space-y-1.5">
-                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Username (NIP)</label>
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Username
+                        (NIP)</label>
                     <div class="relative group">
-                        <i data-lucide="user" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <i data-lucide="user"
+                            class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
                         <input type="text" id="username-input" placeholder="Masukkan NIP"
                             class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
                     </div>
                 </div>
 
                 <div class="space-y-1.5">
-                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Role / Jabatan</label>
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Role /
+                        Jabatan</label>
                     <div class="relative">
-                        <i data-lucide="shield" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <i data-lucide="shield"
+                            class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="text" id="role-display" placeholder="Role Terdeteksi Otomatis" readonly
                             class="w-full pl-11 pr-4 py-3.5 bg-slate-100 border-2 border-slate-100 rounded-2xl font-black text-xs text-sky-600 uppercase outline-none cursor-default">
                     </div>
@@ -402,7 +407,8 @@
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Password</label>
                     <div class="relative group">
-                        <i data-lucide="key" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <i data-lucide="key"
+                            class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
                         <input type="password" id="password-input" placeholder="Masukkan Password"
                             class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
                     </div>
@@ -416,11 +422,12 @@
             </button>
 
             <div class="pt-2">
-                <button onclick="showForgotPassword()" class="text-[10px] font-black text-slate-400 hover:text-sky-500 uppercase tracking-widest transition-colors">
+                <button onclick="showForgotPassword()"
+                    class="text-[10px] font-black text-slate-400 hover:text-sky-500 uppercase tracking-widest transition-colors">
                     Ganti Password
                 </button>
             </div>
-            
+
             <p id="login-error" class="text-rose-500 text-[10px] font-bold uppercase tracking-wider hidden"></p>
         </div>
     </div>
@@ -504,7 +511,7 @@
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
-<div class="flex items-center justify-between py-1 pr-4">
+                        <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('data_keluarga')" id="menu-data_keluarga"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="award" class="w-4 h-4"></i>
@@ -514,7 +521,7 @@
                         </div>
 
 
-                        
+
                     </div>
                 </div>
 
@@ -600,15 +607,6 @@
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
-
-                        <div class="flex items-center justify-between py-1 pr-4">
-                            <button onclick="showPage('belanja_jasa')" id="menu-belanja_jasa"
-                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
-                                <i data-lucide="wrench" class="w-4 h-4"></i>
-                                <span class="font-bold text-xs">Belanja Jasa</span>
-                            </button>
-                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
-                        </div>
                         <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('belanja_modal')" id="menu-belanja_modal"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
@@ -626,10 +624,20 @@
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
                         <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('belanja_jasa')" id="menu-belanja_jasa"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="wrench" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Belanja Jasa Pemeliharaan</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+
+
+                        <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('jasa_instruktur')" id="menu-jasa_instruktur"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                                <span class="font-bold text-xs">Jasa Instruktur</span>
+                                <span class="font-bold text-xs">Belanja Jasa Instruktur</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
@@ -651,7 +659,7 @@
                             <button onclick="showPage('sppd')" id="menu-sppd"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="car" class="w-4 h-4"></i>
-                                <span class="font-bold text-xs">SPPD</span>
+                                <span class="font-bold text-xs">Perjalanan Dinas</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
@@ -659,7 +667,7 @@
                             <button onclick="showPage('bbm')" id="menu-bbm"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="fuel" class="w-4 h-4"></i>
-                                <span class="font-bold text-xs">Pencatatan Voucer BBM</span>
+                                <span class="font-bold text-xs">Voucer BBM</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
@@ -718,11 +726,11 @@
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
                         <div class="flex items-center justify-between py-1 pr-4">
-                           <button onclick="showPage('bmd')" id="menu-bmd"
+                            <button onclick="showPage('bmd')" id="menu-bmd"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="database" class="w-4 h-4"></i>
                                 <span class="font-bold text-xs">Laporan BMD</span>
-                           </button>
+                            </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
                     </div>
@@ -792,22 +800,22 @@
                         <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
                     </button>
                     <div id="sub-database" class="submenu-container pl-11 space-y-0">
-                          <div class="flex items-center justify-between py-1 pr-4">
-                              <button onclick="showPage('setting-akses')" id="menu-setting-akses"
-                                  class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
-                                  <i data-lucide="shield-check" class="w-4 h-4"></i>
-                                  <span class="font-bold text-xs">Setting Akses</span>
-                              </button>
-                              <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
-                          </div>
-                          <div class="flex items-center justify-between py-1 pr-4">
-                              <button onclick="showPage('form-informasi-sipandu')" id="menu-form-informasi-sipandu"
-                                  class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
-                                  <i data-lucide="info" class="w-4 h-4"></i>
-                                  <span class="font-bold text-xs">Pengaturan Informasi SIPANDU</span>
-                              </button>
-                              <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
-                          </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('setting-akses')" id="menu-setting-akses"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Setting Akses</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('form-informasi-sipandu')" id="menu-form-informasi-sipandu"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Pengaturan Informasi SIPANDU</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
                         <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('restore-json')" id="menu-restore-json-main"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
@@ -1163,21 +1171,24 @@
             <div class="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
                 <!-- Wave Animation Overlay -->
                 <div class="absolute inset-0 animate-wave pointer-events-none"></div>
-                
+
                 <div class="relative p-4 space-y-3">
                     <!-- Close Button -->
-                    <button onclick="closeSipanduInfoModal()" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all">
+                    <button onclick="closeSipanduInfoModal()"
+                        class="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
-                    
+
                     <!-- Header -->
                     <div class="flex items-center gap-2 pb-2">
-                        <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg shrink-0">
+                        <div
+                            class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg shrink-0">
                             <img src="maskot-sipandu.png" alt="Sipandu" class="w-8 h-8 object-contain">
                         </div>
                         <div>
                             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight">SIPANDU</h3>
-                            <p class="text-[10px] text-slate-500 font-bold">Sistem Informasi Penyimpanan Data Terpadu</p>
+                            <p class="text-[10px] text-slate-500 font-bold">Sistem Informasi Penyimpanan Data Terpadu
+                            </p>
                         </div>
                     </div>
 
@@ -1185,19 +1196,23 @@
                     <div id="sipandu-info-content" class="space-y-2">
                         <!-- Photo Section -->
                         <div id="sipandu-info-photo" class="hidden">
-                            <img id="sipandu-photo-img" src="" alt="Informasi" class="w-full h-56 object-cover rounded-xl border border-slate-200">
+                            <img id="sipandu-photo-img" src="" alt="Informasi"
+                                class="w-full h-56 object-cover rounded-xl border border-slate-200">
                         </div>
 
                         <!-- Text Section -->
                         <div id="sipandu-info-text" class="hidden">
-                            <p class="text-xs font-black text-yellow-600 uppercase tracking-widest mb-1.5">NOTIFIKASI :</p>
-                            <pre id="sipandu-text-content" class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans whitespace-pre-wrap"></pre>
+                            <p class="text-xs font-black text-yellow-600 uppercase tracking-widest mb-1.5">NOTIFIKASI :
+                            </p>
+                            <pre id="sipandu-text-content"
+                                class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 font-sans whitespace-pre-wrap"></pre>
                         </div>
                     </div>
 
                     <!-- Footer -->
                     <div class="flex items-center justify-end pt-1">
-                        <button onclick="closeSipanduInfoModal()" class="px-5 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 font-black text-[11px] uppercase tracking-widest rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-200">
+                        <button onclick="closeSipanduInfoModal()"
+                            class="px-5 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 font-black text-[11px] uppercase tracking-widest rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-200">
                             Tutup & Lanjutkan
                         </button>
                     </div>
