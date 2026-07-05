@@ -1,0 +1,765 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc,
+  writeBatch,
+  serverTimestamp,
+  query,
+  orderBy
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInWithCustomToken, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  Trash2, 
+  Edit3, 
+  Loader2, 
+  ShoppingBag,
+  FileSpreadsheet,
+  LayoutGrid,
+  Search,
+  Save,
+  Download,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  Settings,
+  UploadCloud,
+  AlertCircle,
+  SortAsc,
+  SortDesc,
+  Database,
+  CheckCircle2,
+  TrendingUp,
+  PieChart,
+  X,
+  Calculator,
+  RotateCcw,
+  Info
+} from 'lucide-react';
+
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'belanja-sosh-v1';
+const COLLECTION_NAME = 'belanja_items';
+const MASTER_PIN = '888';
+const HARGA_SATUAN_PM = 23000;
+
+const formatToRupiah = (value) => {
+  if (!value && value !== 0) return "0";
+  const numberString = Math.floor(value).toString().replace(/[^0-9]/g, "");
+  return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const formatBulanIndo = (bulanTahun) => {
+    if (!bulanTahun) return "-";
+    if (!bulanTahun.includes('-')) return bulanTahun;
+    const [year, month] = bulanTahun.split('-');
+    if (!month) return bulanTahun;
+    const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const monthName = namaBulan[parseInt(month) - 1];
+    return monthName ? `${monthName} ${year}` : bulanTahun;
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('history');
+  const [user, setUser] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+  const [listBelanja, setListBelanja] = useState([]);
+  const [editId, setEditId] = useState(null);
+  
+  const [showSummary, setShowSummary] = useState(false);
+  const [showPMAlert, setShowPMAlert] = useState(false);
+  const [showDaysInput, setShowDaysInput] = useState(false);
+  const [totalDaysInput, setTotalDaysInput] = useState(30);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterUnit, setFilterUnit] = useState('Semua');
+  const [filterBulan, setFilterBulan] = useState('');
+  const [filterPeriode, setFilterPeriode] = useState('Semua');
+  const [sortOrder, setSortOrder] = useState('desc'); 
+  
+  const [pinModal, setPinModal] = useState({ show: false, type: '', dataId: null, targetLockState: null, payload: null });
+  const [pinInput, setPinInput] = useState('');
+  
+  const itemsPerPage = 100;
+  const [currentPage, setCurrentPage] = useState(1);
+  const fileInputRef = useRef(null);
+
+  const [showTokoSuggestions, setShowTokoSuggestions] = useState(false);
+  const masterToko = [
+    "TOKO MAKANAN JOKO", "UD. SUMBER MAKMUR", "TOKO MIRAH JAYA", "UD. DODO JAYA",
+    "DAGING AYAM & SAPI \"BU TARMI\"", "KIOS IKAN SEGAR \"YANTI\""
+  ];
+  
+  const [form, setForm] = useState({
+    unitPelayanan: '',
+    bulanTahun: '',
+    periodeLaporan: '',
+    uraianBelanja: '',
+    nominal: '',
+    penyediaToko: '',
+    noBP: '',
+    recBayar: '',
+    suratPesanan: ''
+  });
+
+  const unitOptions = ["PPSDI Raharjo", "RPSLU Mojomulyo", "RPS PMKS Gondang", "RPSA Pamardi Siwi"];
+  const periodeOptions = ["1 (Satu)", "2 (Dua)", "3 (Tiga)"];
+
+  const showNotif = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  const handleResetFilter = () => {
+    setSearchTerm('');
+    setFilterUnit('Semua');
+    setFilterBulan('');
+    setFilterPeriode('Semua');
+    setSortOrder('desc');
+    showNotif("Filter telah direset", "success");
+  };
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) { setIsAuthReady(true); }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setIsAuthReady(true);
+      if (u) setLoading(false);
+    });
+    return () => {
+      unsubscribe();
+      if (document.body.contains(script)) document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || !user) return;
+    const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', COLLECTION_NAME);
+    const q = query(colRef, orderBy('createdAt', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setListBelanja(data);
+      setLoading(false);
+    }, (error) => {
+      showNotif("Gagal Memuat Data", "error");
+    });
+    return () => unsubscribe();
+  }, [user, isAuthReady]);
+
+  const handleNominalInput = (e) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, "");
+    const formatted = formatToRupiah(rawValue);
+    setForm(prev => ({ ...prev, nominal: formatted }));
+  };
+
+  const handleInlineUpdate = async (id, field, value) => {
+    try {
+      const docRef = doc(db, 'artifacts', APP_ID, 'public', 'data', COLLECTION_NAME, id);
+      await updateDoc(docRef, { [field]: value, updatedAt: serverTimestamp() });
+    } catch (err) {
+      showNotif("Gagal memperbarui data", "error");
+    }
+  };
+
+  const filteredData = useMemo(() => {
+    return listBelanja.filter(item => {
+      const matchSearch = (item.uraianBelanja?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+                          (item.penyediaToko?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          (item.noBP?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          (item.suratPesanan?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const matchUnit = filterUnit === 'Semua' || item.unitPelayanan === filterUnit;
+      const matchBulan = filterBulan === '' || item.bulanTahun === filterBulan;
+      const matchPeriode = filterPeriode === 'Semua' || item.periodeLaporan?.includes(filterPeriode);
+      return matchSearch && matchUnit && matchBulan && matchPeriode;
+    });
+  }, [listBelanja, searchTerm, filterUnit, filterBulan, filterPeriode]);
+
+  const sortedAndFilteredData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      if (a.isLocked !== b.isLocked) return a.isLocked ? 1 : -1;
+      const bulanA = a.bulanTahun || '0000-00';
+      const bulanB = b.bulanTahun || '0000-00';
+      if (bulanA !== bulanB) return sortOrder === 'asc' ? bulanA.localeCompare(bulanB) : bulanB.localeCompare(bulanA);
+      const periodA = parseInt(a.periodeLaporan?.split(' ')[0] || '0');
+      const periodB = parseInt(b.periodeLaporan?.split(' ')[0] || '0');
+      if (periodA !== periodB) return sortOrder === 'asc' ? periodA - periodB : periodB - periodA;
+      return 0;
+    });
+  }, [filteredData, sortOrder]);
+
+  const totalNominal = useMemo(() => {
+    return sortedAndFilteredData.reduce((acc, item) => {
+      const val = item.nominal?.toString().replace(/\./g, '') || '0';
+      return acc + parseInt(val, 10);
+    }, 0);
+  }, [sortedAndFilteredData]);
+
+  const summaryData = useMemo(() => {
+    const groups = {};
+    filteredData.forEach(item => {
+      const key = `${item.unitPelayanan}|${item.periodeLaporan}`;
+      if (!groups[key]) {
+        groups[key] = {
+          unit: item.unitPelayanan,
+          periode: item.periodeLaporan,
+          totalNominal: 0
+        };
+      }
+      groups[key].totalNominal += parseInt(item.nominal?.toString().replace(/\./g, '') || '0', 10);
+    });
+    
+    return Object.values(groups).sort((a, b) => {
+      if (a.unit !== b.unit) return a.unit.localeCompare(b.unit);
+      return a.periode.localeCompare(b.periode);
+    });
+  }, [filteredData]);
+
+  const unitTotals = useMemo(() => {
+    const totals = {};
+    summaryData.forEach(item => {
+      if (!totals[item.unit]) totals[item.unit] = 0;
+      totals[item.unit] += item.totalNominal;
+    });
+    return totals;
+  }, [summaryData]);
+
+  const grandTotal = useMemo(() => {
+    return summaryData.reduce((acc, item) => acc + item.totalNominal, 0);
+  }, [summaryData]);
+
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedAndFilteredData.slice(start, start + itemsPerPage);
+  }, [sortedAndFilteredData, currentPage]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return; 
+    setIsSubmitting(true);
+    try {
+      const cleanToko = form.penyediaToko?.toUpperCase().trim() || '-';
+      const payload = { 
+        ...form, 
+        penyediaToko: cleanToko, 
+        updatedBy: user.uid, 
+        updatedAt: serverTimestamp() 
+      };
+      const docPath = ['artifacts', APP_ID, 'public', 'data', COLLECTION_NAME];
+      if (editId) {
+        await updateDoc(doc(db, ...docPath, editId), payload);
+        showNotif("Berhasil Diperbarui");
+      } else {
+        await addDoc(collection(db, ...docPath), { 
+          ...payload, 
+          isLocked: false, 
+          createdAt: serverTimestamp() 
+        });
+        showNotif("Berhasil Disimpan");
+      }
+      setEditId(null);
+      setForm({ unitPelayanan: '', bulanTahun: '', periodeLaporan: '', uraianBelanja: '', nominal: '', penyediaToko: '', noBP: '', recBayar: '', suratPesanan: '' });
+      setActiveTab('history');
+    } catch (err) { showNotif("Gagal simpan data", "error"); } finally { setIsSubmitting(false); }
+  };
+
+  // FUNGSI EDIT TANPA PIN
+  const handleEditWithoutPin = (item) => {
+    setForm(item);
+    setEditId(item.id);
+    setActiveTab('input');
+    showNotif("Mode Edit Aktif");
+  };
+
+  const handleActionWithPin = async () => {
+    if (pinInput !== MASTER_PIN) { showNotif("PIN Salah", "error"); setPinInput(''); return; }
+    setLoading(true);
+    const docRef = pinModal.dataId ? doc(db, 'artifacts', APP_ID, 'public', 'data', COLLECTION_NAME, pinModal.dataId) : null;
+    try {
+        if (pinModal.type === 'delete' && docRef) {
+            await deleteDoc(docRef);
+            showNotif("Data Berhasil Dihapus");
+        } else if (pinModal.type === 'lock_toggle' && docRef) {
+            await updateDoc(docRef, { isLocked: pinModal.targetLockState });
+            showNotif(pinModal.targetLockState ? "Data Berhasil Dikunci" : "Kunci Berhasil Dibuka");
+        } else if (pinModal.type === 'restore' && pinModal.payload) {
+            const batch = writeBatch(db);
+            const colRef = collection(db, 'artifacts', APP_ID, 'public', 'data', COLLECTION_NAME);
+            pinModal.payload.forEach(item => {
+                const { id, ...cleanData } = item;
+                const newDocRef = id ? doc(colRef, id) : doc(colRef);
+                batch.set(newDocRef, { ...cleanData, updatedAt: serverTimestamp() }, { merge: true });
+            });
+            await batch.commit();
+            showNotif("Database Berhasil Direstore");
+        }
+    } catch (error) { 
+        showNotif("Aksi Gagal Dilakukan", "error"); 
+    } finally { 
+        setLoading(false); 
+        setPinModal({ show: false, type: '', dataId: null, targetLockState: null, payload: null }); 
+        setPinInput('');
+    }
+  };
+
+  const handleBackup = () => {
+    const dataStr = JSON.stringify(listBelanja, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Backup_SOSH_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showNotif("Backup File Berhasil Diunduh");
+  };
+
+  const handleExportExcel = () => {
+    if (!window.XLSX) { showNotif("Sistem Export Belum Siap", "error"); return; }
+    if (sortedAndFilteredData.length === 0) { showNotif("Tidak ada data untuk diexport", "error"); return; }
+    const dataToExport = sortedAndFilteredData.map((item, index) => ({
+      'No': sortedAndFilteredData.length - index,
+      'Unit Pelayanan': item.unitPelayanan,
+      'Bulan': formatBulanIndo(item.bulanTahun),
+      'Periode': item.periodeLaporan,
+      'Uraian Belanja': item.uraianBelanja,
+      'Penyedia/Toko': item.penyediaToko || '-',
+      'Nominal (Rp)': parseInt(item.nominal?.toString().replace(/\./g, '') || '0', 10),
+      'Surat Pesanan': item.suratPesanan || '-',
+      'No BP': item.noBP || '-',
+      'Rec Bayar': item.recBayar || '-',
+      'Status': item.isLocked ? 'TERKUNCI' : 'TERBUKA'
+    }));
+    const worksheet = window.XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Belanja");
+    window.XLSX.writeFile(workbook, `Laporan_SOSH_${new Date().getTime()}.xlsx`);
+    showNotif("Laporan Excel Berhasil Dibuat");
+  };
+
+  const calculatePM = (item) => {
+    const nominal = item.totalNominal;
+    const periodeIdx = parseInt(item.periode?.split(' ')[0] || '1');
+    let targetHari = 10;
+    if (periodeIdx === 3) {
+      targetHari = Math.max(1, totalDaysInput - 20);
+    }
+    return (nominal / HARGA_SATUAN_PM) / targetHari;
+  };
+
+  const getUnitColor = (unit) => {
+    const colors = {
+        "PPSDI Raharjo": "bg-blue-600 text-white",
+        "RPSLU Mojomulyo": "bg-emerald-600 text-white",
+        "RPS PMKS Gondang": "bg-amber-600 text-white",
+        "RPSA Pamardi Siwi": "bg-indigo-600 text-white"
+    };
+    return colors[unit] || "bg-slate-700 text-white";
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 text-[11px] leading-tight pb-10">
+      <input type="file" ref={fileInputRef} onChange={e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const jsonData = JSON.parse(event.target.result);
+            if (Array.isArray(jsonData)) setPinModal({ show: true, type: 'restore', payload: jsonData });
+          } catch (err) { showNotif("Gagal Membaca File", "error"); }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      }} accept=".json" className="hidden" />
+      
+      {notification.show && (
+        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-2xl shadow-2xl font-black uppercase text-[11px] flex items-center gap-4 text-white animate-in slide-in-from-top-8 ${notification.type === 'error' ? 'bg-red-600' : 'bg-blue-700'}`}>
+           {notification.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+           <span className="tracking-wide">{notification.message}</span>
+        </div>
+      )}
+
+      {/* MODAL PM & SUMMARY */}
+      {showPMAlert && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
+          <div className="bg-white w-full max-w-[340px] rounded-[2.5rem] shadow-2xl border-t-8 border-orange-500 overflow-hidden animate-in zoom-in-95">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Info size={32} />
+              </div>
+              <h3 className="font-black text-slate-900 uppercase text-[12px] mb-2">Kalkulasi Usulan SOSH</h3>
+              <p className="text-[10px] text-slate-500 font-bold leading-relaxed mb-6 uppercase">
+                Berdasarkan {sortedAndFilteredData.length} data terpilih:<br/>
+                <span className="text-blue-600 text-[13px] block my-2">Rp {formatToRupiah(totalNominal)}</span>
+                {/*<span className="text-slate-400">Dibagi {HARGA_SATUAN_PM.toLocaleString()} =</span>*/}
+                <span className="text-orange-600 text-[20px] block mt-1 font-black">{(totalNominal / HARGA_SATUAN_PM).toLocaleString('id-ID', { maximumFractionDigits: 1 })} PM</span>
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowPMAlert(false)} className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-slate-200 transition-all">Tutup</button>
+                <button onClick={() => { setShowPMAlert(false); setShowDaysInput(true); }} className="flex-[1.5] py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all">Lanjut Buat Laporan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDaysInput && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+           <div className="bg-white w-full max-w-[320px] rounded-[2rem] p-8 shadow-2xl border-t-8 border-blue-600 text-center animate-in zoom-in-95">
+              <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-blue-50 text-blue-600">
+                  <Calculator size={24} />
+              </div>
+              <h3 className="font-black uppercase mb-1 text-[11px] text-slate-900">Input Jumlah Hari</h3>
+              <p className="text-[9px] text-slate-400 mb-6 uppercase font-bold tracking-tight">Total hari efektif dalam 1 bulan / Periode</p>
+              <div className="relative mb-6">
+                <input 
+                  type="number" 
+                  autoFocus 
+                  value={totalDaysInput} 
+                  onChange={e=>setTotalDaysInput(parseInt(e.target.value) || 0)} 
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-100 rounded-2xl text-center font-black outline-none text-3xl transition-all" 
+                  min={21}
+                  max={31}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setShowDaysInput(false)} className="flex-1 py-3.5 bg-slate-100 rounded-xl font-black text-[9px] uppercase text-slate-400">Batal</button>
+                <button onClick={() => { setShowDaysInput(false); setShowSummary(true); }} className="flex-1 py-3.5 bg-blue-600 text-white rounded-xl font-black text-[9px] uppercase shadow-md hover:bg-blue-700">Tampilkan Tabel</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {showSummary && (
+        <div className="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 overflow-hidden my-8">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 text-white rounded-lg shadow-md shadow-blue-600/20"><PieChart size={16} /></div>
+                <div>
+                   <h3 className="font-black uppercase text-slate-900 text-[11px] leading-none tracking-tight">Ringkasan SOSH</h3>
+                   <p className="text-[7px] font-bold text-slate-400 uppercase mt-1 tracking-widest">Berdasarkan {totalDaysInput} Hari Kerja</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSummary(false)} className="p-1.5 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 rounded-lg text-slate-400 transition-all"><X size={16}/></button>
+            </div>
+            <div className="p-4">
+              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-900 text-[7.5px] font-black uppercase text-slate-400 tracking-[0.2em]">
+                      <th className="px-4 py-2.5 border-r border-slate-800">Unit Pelayanan</th>
+                      <th className="px-4 py-2.5 text-center border-r border-slate-800">Prd</th>
+                      <th className="px-4 py-2.5 text-right border-r border-slate-800">Nominal</th>
+                      <th className="px-4 py-2.5 text-center bg-blue-900 text-white">PM</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {summaryData.length > 0 ? summaryData.map((item, idx) => {
+                      const pmValue = calculatePM(item);
+                      const isLastOfUnit = idx === summaryData.length - 1 || summaryData[idx + 1].unit !== item.unit;
+                      const unitStyle = getUnitColor(item.unit);
+                      return (
+                        <React.Fragment key={idx}>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-2 font-black text-slate-900 text-[9.5px] border-r border-slate-100">{item.unit}</td>
+                            <td className="px-4 py-2 text-center font-black text-slate-500 text-[9px] border-r border-slate-100">{item.periode?.split(' ')[0]}</td>
+                            <td className="px-4 py-2 text-right font-black text-slate-900 text-[10px] border-r border-slate-100">Rp {formatToRupiah(item.totalNominal)}</td>
+                            <td className="px-4 py-2 text-center font-black text-blue-600 text-[10px] bg-blue-50/30">
+                              {pmValue.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            </td>
+                          </tr>
+                          {isLastOfUnit && (
+                            <tr className={`${unitStyle} shadow-inner`}>
+                              <td colSpan="2" className="px-4 py-3 text-right font-black uppercase text-[9px] tracking-widest italic opacity-90 border-r border-white/10">SUB-TOTAL {item.unit}</td>
+                              <td className="px-4 py-3 text-right font-black text-[12px] border-r border-white/10">Rp {formatToRupiah(unitTotals[item.unit])}</td>
+                              <td className="px-4 py-3 bg-black/10"></td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    }) : (
+                      <tr><td colSpan="4" className="py-8 text-center font-bold text-slate-300 italic">Data belum tersedia...</td></tr>
+                    )}
+                  </tbody>
+                  {summaryData.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-slate-900 text-white border-t-4 border-white">
+                        <td colSpan="2" className="px-4 py-4 text-right font-black uppercase text-[10px] tracking-[0.3em]">GRAND TOTAL</td>
+                        <td className="px-4 py-4 text-right font-black text-[14px] border-l border-slate-700 bg-slate-950">Rp {formatToRupiah(grandTotal)}</td>
+                        <td className="px-4 py-4 bg-blue-600"></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+              <button onClick={() => setShowSummary(false)} className="w-full mt-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-black uppercase text-[9px] transition-all tracking-widest border border-slate-200">Tutup Laporan Ringkas</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pinModal.show && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+           <div className={`bg-white w-full max-w-[280px] rounded-[2rem] p-8 shadow-2xl border-t-8 ${pinModal.type === 'delete' ? 'border-red-500' : 'border-blue-500'} text-center animate-in zoom-in-95`}>
+              <div className={`w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center ${pinModal.type === 'delete' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
+                  {pinModal.type === 'delete' ? <Trash2 size={24} /> : <ShieldCheck size={24} />}
+              </div>
+              <h3 className="font-black uppercase mb-1 text-[11px] text-slate-900">Verifikasi PIN</h3>
+              <p className="text-[9px] text-slate-400 mb-6 uppercase font-bold tracking-tight">Input PIN untuk melanjutkan</p>
+              <div className="relative mb-6">
+                <input type="password" autoFocus value={pinInput} onChange={e=>setPinInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleActionWithPin()} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-100 rounded-2xl text-center font-black outline-none text-2xl tracking-[0.6em] transition-all" placeholder="••••" maxLength={4} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setPinModal({show:false})} className="flex-1 py-3.5 bg-slate-100 rounded-xl font-black text-[9px] uppercase text-slate-400">Batal</button>
+                <button onClick={handleActionWithPin} className={`flex-1 py-3.5 text-white rounded-xl font-black text-[9px] uppercase shadow-md ${pinModal.type === 'delete' ? 'bg-red-500' : 'bg-blue-600'}`}>Kirim</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-6 py-2 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-2.5 rounded-2xl text-white shadow-lg"><ShoppingBag size={14} /></div>
+          <div>
+            <h1 className="font-black uppercase text-slate-900 text-[11px] leading-none tracking-tight">BELANJA SOSH</h1>
+            <span className="text-[7px] font-bold uppercase text-slate-400">Pengajuan Belanja SOSH Per Periode</span>
+          </div>
+        </div>
+        <div className="flex bg-slate-100 p-1 rounded-2xl">
+          <button onClick={()=>{setEditId(null); setActiveTab('input'); setForm({ unitPelayanan: '', bulanTahun: '', periodeLaporan: '', uraianBelanja: '', nominal: '', penyediaToko: '', noBP: '', recBayar: '', suratPesanan: '' });}} className={`px-4 py-2 rounded-xl font-black uppercase text-[8px] flex items-center gap-2 transition-all ${activeTab === 'input' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><LayoutGrid size={11} /> Input</button>
+          <button onClick={()=>setActiveTab('history')} className={`px-4 py-2 rounded-xl font-black uppercase text-[8px] flex items-center gap-2 transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><FileSpreadsheet size={11} /> Riwayat</button>
+          <button onClick={()=>setActiveTab('backup')} className={`px-4 py-2 rounded-xl font-black uppercase text-[8px] flex items-center gap-2 transition-all ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><Settings size={11} /></button>
+        </div>
+      </header>
+
+      <main className="p-4 max-w-[1600px] mx-auto">
+        {activeTab === 'input' && (
+          <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-300">
+              <h2 className="font-black text-slate-900 text-[14px] uppercase mb-8 flex items-center gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Edit3 size={18} /></div>
+                {editId ? 'Edit Belanja' : 'Input Belanja Baru'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Unit Pelayanan</label>
+                    <select value={form.unitPelayanan} onChange={e=>setForm({...form, unitPelayanan: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-50 focus:bg-white rounded-2xl font-black text-[10px] text-slate-900 outline-none transition-all" required>
+                      <option value="">-- Pilih Unit --</option>
+                      {unitOptions.map(o=><option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Bulan Tahun</label>
+                      <input type="month" value={form.bulanTahun} onChange={e=>setForm({...form, bulanTahun: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-50 focus:bg-white rounded-2xl font-black text-[10px] text-slate-900 outline-none transition-all" required />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Periode</label>
+                      <select value={form.periodeLaporan} onChange={e=>setForm({...form, periodeLaporan: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-50 focus:bg-white rounded-2xl font-black text-[10px] text-slate-900 outline-none transition-all" required>
+                        <option value="">Pilih</option>
+                        {periodeOptions.map(o=><option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Uraian Belanja</label>
+                  <textarea value={form.uraianBelanja} onChange={e=>setForm({...form, uraianBelanja: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-50 focus:bg-white rounded-2xl font-black h-24 outline-none text-[10px] text-slate-900 resize-none transition-all" placeholder="Detail Belanja..." required />
+                  <p className="text-[7px] text-slate-400 font-bold uppercase tracking-tight italic">Contoh : "Belanja Bahan Makan dan Minum Penerima Manfaat berupa Beras untuk memenuhi kebutuhan Tanggal 1 S/D 10 Bulan Januari 2026 Panti Pelayanan Sosial Disabilitas Intelektual (PPSDI) Raharjo Sragen"</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2 relative">
+                    <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Nominal (Rp)</label>
+                    <input type="text" value={form.nominal} onChange={handleNominalInput} placeholder="0" className="w-full p-4 bg-blue-50 border-2 border-transparent focus:border-blue-100 focus:bg-white rounded-2xl font-black text-blue-700 outline-none text-[13px] transition-all" required />
+                  </div>
+                  <div className="space-y-2 relative">
+                    <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Penyedia / Toko</label>
+                    <input type="text" value={form.penyediaToko} onChange={e=>{setForm({...form, penyediaToko: e.target.value}); setShowTokoSuggestions(true);}} onFocus={()=>setShowTokoSuggestions(true)} placeholder="Cari atau Ketik..." className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-50 focus:bg-white rounded-2xl font-black text-[10px] text-slate-900 outline-none uppercase transition-all" />
+                    {showTokoSuggestions && (
+                      <div className="absolute z-50 left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-white border border-slate-100 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-2">
+                        {masterToko.filter(t=>t.toLowerCase().includes(form.penyediaToko?.toLowerCase() || '')).slice(0, 10).map((toko, idx) => (
+                          <button key={idx} type="button" onClick={()=>{setForm({...form, penyediaToko: toko}); setShowTokoSuggestions(false);}} className="w-full text-left px-5 py-3 hover:bg-blue-50 text-[10px] font-black uppercase text-slate-900 border-b border-slate-50 last:border-0 transition-colors">{toko}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={()=>{setEditId(null); setActiveTab('history');}} className="flex-1 py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-400 hover:bg-slate-200 transition-colors">Batal</button>
+                  <button type="submit" disabled={isSubmitting} className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 active:scale-95 transition-all">
+                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>} 
+                    {editId ? 'Perbarui ' : 'Simpan '}
+                  </button>
+                </div>
+              </form>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div className="space-y-4 animate-in fade-in duration-500">
+            {/* FILTER SECTION */}
+            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[150px]">
+                <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                <input type="text" value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl font-black outline-none text-[9px] text-slate-900 focus:ring-1 ring-blue-100" placeholder="Cari data..." />
+              </div>
+              <select value={filterUnit} onChange={e=>setFilterUnit(e.target.value)} className="px-4 py-2.5 bg-slate-50 border-none rounded-xl font-black uppercase text-[7.5px] outline-none cursor-pointer text-slate-900 min-w-[130px]">
+                <option value="Semua">Semua Unit</option>
+                {unitOptions.map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+              <input type="month" value={filterBulan} onChange={e=>setFilterBulan(e.target.value)} className="px-4 py-2.5 bg-slate-50 border-none rounded-xl font-black uppercase text-[7.5px] outline-none text-slate-900" />
+              <select value={filterPeriode} onChange={e=>setFilterPeriode(e.target.value)} className="px-4 py-2.5 bg-slate-50 border-none rounded-xl font-black uppercase text-[7.5px] outline-none cursor-pointer text-slate-900">
+                <option value="Semua">Semua Prd</option>
+                <option value="1">Prd 1</option>
+                <option value="2">Prd 2</option>
+                <option value="3">Prd 3</option>
+              </select>
+              <div className="flex bg-slate-100 rounded-xl p-0.5">
+                <button onClick={() => setSortOrder('asc')} className={`p-2 rounded-lg ${sortOrder === 'asc' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><SortAsc size={12}/></button>
+                <button onClick={() => setSortOrder('desc')} className={`p-2 rounded-lg ${sortOrder === 'desc' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><SortDesc size={12}/></button>
+                <div className="w-[1px] h-4 bg-slate-200 self-center mx-1"></div>
+                <button onClick={handleResetFilter} className="p-2 text-slate-400 hover:text-red-500 rounded-lg"><RotateCcw size={12} /></button>
+              </div>
+              <div className="flex items-center gap-1.5 ml-auto">
+                <button onClick={() => { if (sortedAndFilteredData.length === 0) return; setShowPMAlert(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-black uppercase text-[7.5px] hover:bg-blue-100 transition-all shadow-sm"><PieChart size={12} /> Ringkasan</button>
+                <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase text-[7.5px] hover:bg-emerald-700 transition-all shadow-sm"><Download size={12} /> Excel</button>
+              </div>
+            </div>
+
+            {/* TOTALS */}
+            <div className="flex items-center gap-4 px-2">
+              <div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-full shadow-sm">
+                <Database size={10} className="text-slate-400"/>
+                <span className="text-[10px] font-black tracking-tight">{sortedAndFilteredData.length} RECORD</span>
+              </div>
+              <div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-full shadow-lg shadow-blue-600/10">
+                <TrendingUp size={10} className="text-blue-100"/>
+                <span className="text-[10px] font-black tracking-tight">TOTAL: Rp {formatToRupiah(totalNominal)}</span>
+              </div>
+            </div>
+
+            {/* DATA TABLE */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse table-auto min-w-[1550px]">
+                  <thead>
+                    <tr className="bg-blue-700 text-slate-400 border-b border-slate-800">
+                      <th className="w-[50px] pl-6 py-4 text-[8px] font-black uppercase text-center tracking-widest">No</th>
+                      <th className="w-[160px] px-3 py-4 text-[8px] font-black uppercase tracking-widest">Unit Pelayanan</th>
+                      <th className="w-[120px] px-3 py-4 text-[8px] font-black uppercase text-center tracking-widest">Bulan</th>
+                      <th className="w-[40px] px-1 py-4 text-[8px] font-black uppercase text-center tracking-widest">P</th>
+                      <th className="px-3 py-4 text-[8px] font-black uppercase tracking-widest">Uraian Belanja</th>
+                      <th className="w-[180px] px-3 py-4 text-[8px] font-black uppercase text-center tracking-widest">Penyedia</th>
+                      <th className="w-[140px] px-3 py-4 text-[8px] font-black uppercase text-right tracking-widest">Nominal</th>
+                      <th className="w-[110px] px-3 py-4 text-[8px] font-black uppercase text-center tracking-widest text-orange-400">Pesanan</th>
+                      <th className="w-[110px] px-3 py-4 text-[8px] font-black uppercase text-center tracking-widest text-blue-400">No BP</th>
+                      <th className="w-[110px] px-3 py-4 text-[8px] font-black uppercase text-center tracking-widest text-emerald-400">Rec Bayar</th>
+                      <th className="w-[110px] px-6 py-4 text-[8px] font-black uppercase text-center tracking-widest">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {currentItems.length > 0 ? currentItems.map((item, i) => {
+                      const totalInView = sortedAndFilteredData.length;
+                      const displayIndex = totalInView - ((currentPage - 1) * itemsPerPage + i);
+                      const textColor = item.isLocked ? 'text-slate-900' : 'text-slate-950';
+                      return (
+                        <tr key={item.id} className={`group transition-all ${item.isLocked ? 'bg-purple-50/50' : 'hover:bg-slate-50/80'}`}>
+                          <td className="pl-6 py-3 text-center align-middle border-r border-slate-50">
+                            <span className={`text-[9px] font-black ${item.isLocked ? 'text-slate-900' : 'text-slate-300 group-hover:text-slate-500'}`}>{displayIndex}</span>
+                          </td>
+                          <td className={`px-3 py-3 font-black text-[10px] align-middle border-r border-slate-50 ${textColor}`}>{item.unitPelayanan}</td>
+                          <td className={`px-3 py-3 text-center font-black uppercase text-[9px] align-middle border-r border-slate-50 ${textColor}`}>{formatBulanIndo(item.bulanTahun)}</td>
+                          <td className="px-1 py-3 text-center font-black text-slate-300 text-[9px] align-middle border-r border-slate-50">{item.periodeLaporan?.charAt(0)}</td>
+                          <td className={`px-3 py-3 font-black text-[10px] leading-relaxed align-middle border-r border-slate-50 ${textColor} ${item.isLocked ? 'italic' : ''}`}>{item.uraianBelanja}</td>
+                          <td className={`px-3 py-3 text-center font-black text-[9px] uppercase align-middle border-r border-slate-50 ${textColor}`}>{item.penyediaToko || '-'}</td>
+                          <td className={`px-3 py-3 text-right font-black text-[11px] align-middle border-r border-slate-50 ${textColor}`}>Rp {item.nominal}</td>
+                          <td className="px-2 py-3 border-r border-slate-50">
+                            <input disabled={item.isLocked} value={item.suratPesanan || ''} onChange={(e) => handleInlineUpdate(item.id, 'suratPesanan', e.target.value)} className="w-full bg-transparent text-center font-black text-[9px] uppercase outline-none focus:bg-white p-1 rounded-md text-orange-600" placeholder="-" />
+                          </td>
+                          <td className="px-2 py-3 border-r border-slate-50">
+                            <input disabled={item.isLocked} value={item.noBP || ''} onChange={(e) => handleInlineUpdate(item.id, 'noBP', e.target.value)} className="w-full bg-transparent text-center font-black text-[9px] uppercase outline-none focus:bg-white p-1 rounded-md text-blue-600" placeholder="-" />
+                          </td>
+                          <td className="px-2 py-3 border-r border-slate-50">
+                            <input disabled={item.isLocked} value={item.recBayar || ''} onChange={(e) => handleInlineUpdate(item.id, 'recBayar', e.target.value)} className="w-full bg-transparent text-center font-black text-[9px] uppercase outline-none focus:bg-white p-1 rounded-md text-emerald-600" placeholder="-" />
+                          </td>
+                          <td className="px-6 py-3 align-middle">
+                            <div className="flex justify-center items-center gap-1">
+                               {!item.isLocked && (
+                                 <>
+                                   {/* TOMBOL EDIT SEKARANG LANGSUNG TANPA PIN */}
+                                   <button onClick={() => handleEditWithoutPin(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Edit Data">
+                                     <Edit3 size={13}/>
+                                   </button>
+                                   <button onClick={()=>setPinModal({show: true, type: 'delete', dataId: item.id})} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Hapus (Perlu PIN)">
+                                     <Trash2 size={13}/>
+                                   </button>
+                                 </>
+                               )}
+                               <button onClick={()=>setPinModal({show: true, type: 'lock_toggle', dataId: item.id, targetLockState: !item.isLocked})} className={`p-2 rounded-xl transition-all ${item.isLocked ? 'text-purple-600 bg-purple-100' : 'text-slate-300'}`} title={item.isLocked ? "Buka Kunci (Perlu PIN)" : "Kunci Data (Perlu PIN)"}>
+                                 {item.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
+                               </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan="11" className="py-24 text-center text-slate-200 font-black uppercase text-[10px]">Tidak Ada Data</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'backup' && (
+          <div className="max-w-md mx-auto mt-12">
+             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden text-center">
+                <div className="bg-slate-900 p-8">
+                    <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-600/20"><ShieldCheck size={32} className="text-white" /></div>
+                    <h2 className="text-white font-black uppercase text-[14px]">Admin Only</h2>
+                </div>
+                <div className="p-8 space-y-4">
+                  <button onClick={handleBackup} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] flex items-center justify-center gap-3"><Download size={16} /> Backup Data</button>
+                  <button onClick={()=>fileInputRef.current?.click()} className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] flex items-center justify-center gap-3"><UploadCloud size={16} /> Restore Data</button>
+                </div>
+             </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
