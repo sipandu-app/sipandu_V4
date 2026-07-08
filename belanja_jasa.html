@@ -947,16 +947,13 @@
             activeTab = tab;
             document.getElementById('tab-input').classList.toggle('hidden', tab !== 'input');
             document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history');
-            document.getElementById('tab-olddata').classList.toggle('hidden', tab !== 'olddata');
             document.getElementById('tab-database').classList.toggle('hidden', tab !== 'database');
             
             document.getElementById('tab-input-btn').className = tab === 'input' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
             document.getElementById('tab-history-btn').className = tab === 'history' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
-            document.getElementById('tab-olddata-btn').className = tab === 'olddata' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
             document.getElementById('tab-database-btn').className = tab === 'database' ? 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 active-tab' : 'px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 text-emerald-50 hover:text-white';
 
             if (tab === 'history') syncData();
-            if (tab === 'olddata') syncOldData();
         }
 
         async function syncOldData() {
