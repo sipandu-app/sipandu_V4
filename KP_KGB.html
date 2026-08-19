@@ -71,6 +71,7 @@
         const Eraser = (props) => <Icon {...props} path={<><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></>} />;
         const AlertTriangle = (props) => <Icon {...props} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
         const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+        const Check = (props) => <Icon {...props} path={<polyline points="20 6 9 17 4 12"/>} />;
         const UserIcon = (props) => <Icon {...props} path={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />;
         const Calendar = (props) => <Icon {...props} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />;
         const CopyPlus = (props) => <Icon {...props} path={<><rect x="8" y="8" width="12" height="12" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/><line x1="14" y1="11" x2="14" y2="17"/><line x1="11" y1="14" x2="17" y2="14"/></>} />;
@@ -102,16 +103,6 @@
             const date = new Date(dateString);
             if (isNaN(date.getTime())) return null;
             date.setFullYear(date.getFullYear() + yearsToAdd);
-            return date;
-        };
-
-        const calculateRetirementDate = (dateString, years) => {
-            if (!dateString) return null;
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return null;
-            date.setFullYear(date.getFullYear() + years);
-            date.setMonth(date.getMonth() + 1);
-            date.setDate(1);
             return date;
         };
 
@@ -193,10 +184,10 @@
                     
                     if (kgbError) throw kgbError;
 
-                    // 2. Ambil referensi dari data_pegawai (termasuk order_index)
+                    // 2. Ambil referensi dari data_pegawai
                     const { data: pegData, error: pegError } = await supabaseClient
                         .from('data_pegawai')
-                        .select('nama, nip, pangkat, tanggal_lahir, order_index, pendidikan');
+                        .select('nama, nip, pangkat, tanggal_lahir');
                     
                     if (!pegError && pegData) {
                         setMasterPegawai(pegData);
@@ -205,15 +196,9 @@
                             const refPegawai = pegData.find(p => p.nip === item.nip);
                             return {
                                 ...item,
-                                tanggal_lahir: refPegawai?.tanggal_lahir || item.tanggal_lahir,
-                                pendidikan: refPegawai?.pendidikan || null,
-                                pangkat: refPegawai?.pangkat || item.pangkat,
-                                peg_order_index: refPegawai?.order_index !== undefined ? refPegawai.order_index : 999999
+                                tanggal_lahir: refPegawai?.tanggal_lahir || item.tanggal_lahir
                             };
                         });
-                        
-                        // Urutkan berdasarkan order_index di data_pegawai
-                        enrichedData.sort((a, b) => a.peg_order_index - b.peg_order_index);
                         setListPegawai(enrichedData);
                     } else {
                         setListPegawai(kgbData || []);
@@ -298,7 +283,6 @@
                         pangkat: form.pangkat || '',
                         tmt_pangkat: form.tmt_pangkat || null,
                         tanggal_lahir: form.tanggal_lahir || null,
-                        is_fungsional: form.is_fungsional || false,
                         gaji_berkala: parseRibuan(form.gaji_berkala || '0'),
                         tmt_gaji: form.tmt_gaji || null,
                         npwp: form.npwp || '',
@@ -431,28 +415,31 @@
             };
 
             const handleFileUpload = async (e, field) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                // Batas ukuran file (misal 2MB)
-                if (file.size > 2000000) return showNotif("File terlalu besar (Maks 2MB)", "error");
-                
-                setIsProcessing(true);
-                showNotif(`Mengunggah ${field.split('_')[0].toUpperCase()}...`, "info");
-
                 try {
-                    const fileExt = file.name.split('.').pop();
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    const file = files[0];
+                    
+                    e.target.value = '';
+
+                    if (file.size > 5000000) {
+                        showNotif("File terlalu besar (Maks 5MB)", "error");
+                        return;
+                    }
+                    
+                    setIsProcessing(true);
+                    showNotif(`Mengunggah ${field.split('_')[0].toUpperCase()}...`, "info");
+
+                    const fileExt = (file.name.split('.').pop() || 'pdf').toLowerCase();
                     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                     const filePath = `${field}/${fileName}`;
 
-                    // Upload ke Supabase Storage
-                    const { data, error } = await supabaseClient.storage
+                    const { error } = await supabaseClient.storage
                         .from('arsip-pegawai')
                         .upload(filePath, file);
 
                     if (error) throw error;
 
-                    // Dapatkan Public URL
                     const { data: { publicUrl } } = supabaseClient.storage
                         .from('arsip-pegawai')
                         .getPublicUrl(filePath);
@@ -461,7 +448,7 @@
                     showNotif(`${field.split('_')[0].toUpperCase()} berhasil diunggah`, "success");
                 } catch (err) {
                     console.error("Upload Error:", err);
-                    showNotif("Gagal mengunggah file ke Storage", "error");
+                    showNotif("Gagal mengunggah file: " + (err.message || "Kesalahan tidak diketahui"), "error");
                 } finally {
                     setIsProcessing(false);
                 }
@@ -478,17 +465,17 @@
                  if (filterPurnaTugas) {
                      data = data.filter(p => {
                          if (!p.tanggal_lahir) return false;
-                         const purnaDate = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
+                         const purnaDate = calculateNextSchedule(p.tanggal_lahir, 58);
                          return isNearDate(purnaDate, true);
                      });
                      // Urutkan otomatis dari yang terdekat saat filter Purna aktif
                      data.sort((a, b) => {
-                         const dateA = calculateRetirementDate(a.tanggal_lahir, a.is_fungsional ? 60 : 58);
-                         const dateB = calculateRetirementDate(b.tanggal_lahir, b.is_fungsional ? 60 : 58);
+                         const dateA = calculateNextSchedule(a.tanggal_lahir, 58);
+                         const dateB = calculateNextSchedule(b.tanggal_lahir, 58);
                          if (!dateA) return 1;
                          if (!dateB) return -1;
  
-                         // Prioritaskan yang sudah lewat paling atas
+                         // Prioritaskan yang sudah lewat (lebih 58 tahun) paling atas
                          const isPastA = dateA < today;
                          const isPastB = dateB < today;
                          if (isPastA && !isPastB) return -1;
@@ -546,20 +533,20 @@
                          return dateA - dateB;
                      });
                  } else if (sortBy === 'purna') {
-                      data.sort((a, b) => {
-                          const dateA = calculateRetirementDate(a.tanggal_lahir, a.is_fungsional ? 60 : 58);
-                          const dateB = calculateRetirementDate(b.tanggal_lahir, b.is_fungsional ? 60 : 58);
-                          if (!dateA) return 1;
-                          if (!dateB) return -1;
- 
-                          // Prioritaskan yang sudah lewat paling atas
-                          const isPastA = dateA < today;
-                          const isPastB = dateB < today;
-                          if (isPastA && !isPastB) return -1;
-                          if (!isPastA && isPastB) return 1;
- 
-                          return dateA - dateB;
-                      });
+                     data.sort((a, b) => {
+                         const dateA = calculateNextSchedule(a.tanggal_lahir, 58);
+                         const dateB = calculateNextSchedule(b.tanggal_lahir, 58);
+                         if (!dateA) return 1;
+                         if (!dateB) return -1;
+
+                         // Prioritaskan yang sudah lewat (lebih 58 tahun) paling atas
+                         const isPastA = dateA < today;
+                         const isPastB = dateB < today;
+                         if (isPastA && !isPastB) return -1;
+                         if (!isPastA && isPastB) return 1;
+
+                         return dateA - dateB;
+                     });
                  }
  
                  return data;
@@ -645,7 +632,7 @@
                                             className={`px-3 py-1 rounded-lg font-black uppercase text-[9px] transition-all ${filterPurnaTugas ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                             title="Filter Purna Tugas dalam 90 hari"
                                         >
-                                            Purna Tugas
+                                            Purna (58)
                                         </button>
                                        {(filterKP || filterKGB || filterPurnaTugas || sortBy !== 'default' || searchTerm !== '') && (
                                            <button 
@@ -696,7 +683,7 @@
                                         {filteredData.map((p, i) => {
                                             const nextPangkat = calculateNextSchedule(p.tmt_pangkat, 4);
                                             const nextGaji = calculateNextSchedule(p.tmt_gaji, 2);
-                                            const purnaTugas = calculateRetirementDate(p.tanggal_lahir, p.is_fungsional ? 60 : 58);
+                                            const purnaTugas = calculateNextSchedule(p.tanggal_lahir, 58);
                                             const age = calculateAge(p.tanggal_lahir);
                                             
                                             const isWithinOneYearPurna = purnaTugas && (Math.ceil((purnaTugas - new Date()) / (1000 * 60 * 60 * 24)) <= 365);
@@ -724,9 +711,9 @@
                                                                          <div className={`flex items-center gap-2 text-[8px] font-black uppercase p-1.5 rounded-lg w-fit ${purnaNear ? (purnaBlink ? 'bg-orange-500 text-white animate-pulse' : 'bg-orange-500 text-white') : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
                                                                              <Calendar size={10} /> PURNA: {formatIDDate(purnaTugas)}
                                                                          </div>
-                                                                         {age >= (p.is_fungsional ? 60 : 58) && (
-                                                                            <div className={`flex items-center gap-1.5 px-2 py-1 bg-orange-500 text-white rounded text-[7px] font-black uppercase w-fit ${age === (p.is_fungsional ? 60 : 58) && purnaBlink ? 'animate-pulse' : ''}`}>
-                                                                                <AlertTriangle size={10} /> {p.is_fungsional ? "Purna tugas fungsional" : "Purna tugas"}
+                                                                         {age >= 58 && (
+                                                                            <div className={`flex items-center gap-1.5 px-2 py-1 bg-orange-500 text-white rounded text-[7px] font-black uppercase w-fit ${age === 58 && purnaBlink ? 'animate-pulse' : ''}`}>
+                                                                                <AlertTriangle size={10} /> Purna tugas fungsional
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -740,56 +727,18 @@
                                                         <p className="font-black text-slate-950 uppercase">{p.pangkat || "-"}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold tracking-tighter italic">TMT: {p.tmt_pangkat || "-"}</p>
                                                         {nextPangkat && (
-                                                            nextPangkat < new Date() ? (
-                                                                (() => {
-                                                                    const isS1 = p.pendidikan && p.pendidikan.toUpperCase() === 'S1';
-                                                                    let isBelum3D = false;
-                                                                    if (isS1) {
-                                                                        const pangkat = p.pangkat || "";
-                                                                        const match = pangkat.match(/^(I|II|III|IV)\/[a-e]/i);
-                                                                        if (!match) {
-                                                                            isBelum3D = true;
-                                                                        } else {
-                                                                            const rankPrefix = match[0].toUpperCase();
-                                                                            const rankValues = {
-                                                                                "I/A": 1, "I/B": 2, "I/C": 3, "I/D": 4,
-                                                                                "II/A": 5, "II/B": 6, "II/C": 7, "II/D": 8,
-                                                                                "III/A": 9, "III/B": 10, "III/C": 11,
-                                                                                "III/D": 12,
-                                                                                "IV/A": 13, "IV/B": 14, "IV/C": 15, "IV/D": 16, "IV/E": 17
-                                                                            };
-                                                                            const val = rankValues[rankPrefix] || 0;
-                                                                            isBelum3D = val < 12;
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    const labelText = isBelum3D ? "Belum Naik Pangkat" : "Pangkat Tertinggi : Peraturan Kepegawaian";
-                                                                    return (
-                                                                        <div className="mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
-                                                                            <AlertCircle size={10} /> {labelText}
-                                                                        </div>
-                                                                    );
-                                                                })()
-                                                            ) : (
-                                                                <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kpNear ? (kpBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                                                                    <AlertCircle size={10} /> ESTIMASI KP: {formatIDDate(nextPangkat)}
-                                                                </div>
-                                                            )
+                                                            <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kpNear ? (kpBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                                <AlertCircle size={10} /> ESTIMASI KP: {formatIDDate(nextPangkat)}
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-6">
                                                         <p className="font-black text-slate-950 uppercase">{p.gaji_berkala > 0 ? 'Rp. Terinput' : 'Kosong'}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold tracking-tighter italic">TMT: {p.tmt_gaji || "-"}</p>
                                                         {nextGaji && (
-                                                            nextGaji < new Date() ? (
-                                                                <div className="mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg bg-blue-600 text-white animate-pulse">
-                                                                    <Clock size={10} /> Belum di perbaharui
-                                                                </div>
-                                                            ) : (
-                                                                <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kgbNear ? (kgbBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                                                                    <Clock size={10} /> ESTIMASI KGB: {formatIDDate(nextGaji)}
-                                                                </div>
-                                                            )
+                                                            <div className={`mt-2 flex items-center gap-2 text-[8px] font-black uppercase p-2 rounded-lg ${kgbNear ? (kgbBlink ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-600 text-white') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                                <Clock size={10} /> ESTIMASI KGB: {formatIDDate(nextGaji)}
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-6">
@@ -891,20 +840,9 @@
                                                 <input type="text" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold uppercase border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.nama || ''} onChange={e => setForm({...form, nama: e.target.value.toUpperCase()})} />
                                             </div>
                                             <div className="space-y-1.5">
-                                                 <label className="text-[10px] font-black text-slate-400 uppercase px-1">Tgl Lahir</label>
-                                                 <input type="date" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.tanggal_lahir || ''} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} />
-                                             </div>
-                                             <div className="space-y-1.5 flex flex-col justify-end pb-3">
-                                                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                     <input 
-                                                         type="checkbox" 
-                                                         className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                                                         checked={form.is_fungsional || false}
-                                                         onChange={e => setForm({...form, is_fungsional: e.target.checked})}
-                                                     />
-                                                     <span className="text-[10px] font-black text-slate-600 uppercase">Masa Kerja Fungsional (60 Th)</span>
-                                                 </label>
-                                             </div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase px-1">Tgl Lahir</label>
+                                                <input type="date" className="w-full bg-white px-4 py-2.5 rounded-xl font-bold border border-slate-200 focus:border-slate-900 outline-none transition-all text-sm shadow-sm" value={form.tanggal_lahir || ''} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1016,20 +954,52 @@
                                         <div className="p-4 bg-amber-100 text-amber-600 rounded-2xl group-hover:bg-amber-600 group-hover:text-white transition-all"><CopyPlus size={28} /></div>
                                         <span className="text-[9px] font-black uppercase tracking-widest text-center">Impor Gabung</span>
                                         <input type="file" ref={restoreMergeRef} className="hidden" accept=".json" onChange={e => {
-                                            const file = e.target.files[0];
-                                            const reader = new FileReader();
-                                            reader.onload = (ev) => setPinModal({ show: true, type: 'restore_merge', payload: JSON.parse(ev.target.result) });
-                                            reader.readAsText(file);
+                                            try {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                e.target.value = '';
+                                                const reader = new FileReader();
+                                                reader.onerror = () => showNotif("Gagal membaca file", "error");
+                                                reader.onload = (ev) => {
+                                                    try {
+                                                        const parsed = JSON.parse(ev.target.result);
+                                                        setPinModal({ show: true, type: 'restore_merge', payload: parsed });
+                                                    } catch (parseErr) {
+                                                        console.error("Parse Error:", parseErr);
+                                                        showNotif("File JSON tidak valid", "error");
+                                                    }
+                                                };
+                                                reader.readAsText(file);
+                                            } catch (err) {
+                                                console.error("Import Error:", err);
+                                                showNotif("Gagal memproses file impor", "error");
+                                            }
                                         }} />
                                     </button>
                                     <button onClick={() => restoreOverwriteRef.current.click()} className="p-8 bg-slate-50 rounded-[3rem] border-2 border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all flex flex-col items-center gap-5 group">
                                         <div className="p-4 bg-emerald-100 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-all"><Replace size={28} /></div>
                                         <span className="text-[9px] font-black uppercase tracking-widest text-center">Impor Ganti</span>
                                         <input type="file" ref={restoreOverwriteRef} className="hidden" accept=".json" onChange={e => {
-                                            const file = e.target.files[0];
-                                            const reader = new FileReader();
-                                            reader.onload = (ev) => setPinModal({ show: true, type: 'restore_overwrite', payload: JSON.parse(ev.target.result) });
-                                            reader.readAsText(file);
+                                            try {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                e.target.value = '';
+                                                const reader = new FileReader();
+                                                reader.onerror = () => showNotif("Gagal membaca file", "error");
+                                                reader.onload = (ev) => {
+                                                    try {
+                                                        const parsed = JSON.parse(ev.target.result);
+                                                        setPinModal({ show: true, type: 'restore_overwrite', payload: parsed });
+                                                    } catch (parseErr) {
+                                                        console.error("Parse Error:", parseErr);
+                                                        showNotif("File JSON tidak valid", "error");
+                                                    }
+                                                };
+                                                reader.readAsText(file);
+                                            } catch (err) {
+                                                console.error("Import Error:", err);
+                                                showNotif("Gagal memproses file impor", "error");
+                                            }
                                         }} />
                                     </button>
                                     <button onClick={() => setShowResetConfirm(true)} className="col-span-3 p-8 bg-rose-50 rounded-[3rem] border-2 border-rose-100 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-6 text-rose-600 group">
