@@ -20,6 +20,29 @@
         .mono { font-family: 'JetBrains Mono', monospace; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Combo Filter Triwulan & Semester: Background PUTIH + teks HITAM (pasti kelihatan) */
+        #filter-triwulan, #filter-semester {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+        #filter-triwulan option,
+        #filter-semester option {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            padding: 3px 8px !important;
+        }
+        #filter-triwulan option:checked,
+        #filter-semester option:checked {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+        }
+        #filter-triwulan::-ms-expand,
+        #filter-semester::-ms-expand {
+            background-color: #ffffff;
+            color: #000000;
+        }
         
         /* Custom Table Spacing */
         .border-separate { border-collapse: collapse; }
@@ -29,6 +52,9 @@
         #main-table { table-layout: fixed; width: max-content; min-width: 100%; }
         .sticky-col-1 { position: sticky; left: 0; z-index: 20; }
         .sticky-col-2 { position: sticky; left: 100px; z-index: 20; }
+        .sticky-col-3 { position: sticky; left: 500px; z-index: 20; }
+        .sticky-col-4 { position: sticky; left: 580px; z-index: 20; }
+        .sticky-col-5 { position: sticky; left: 660px; z-index: 20; }
         
         /* Fixed Header */
         #table-head th { 
@@ -39,7 +65,9 @@
         }
         
         /* Ensure horizontally sticky headers have higher z-index */
-        #table-head .sticky-col-1, #table-head .sticky-col-2 { z-index: 60; }
+        #table-head .sticky-col-1, #table-head .sticky-col-2,
+        #table-head .sticky-col-3, #table-head .sticky-col-4,
+        #table-head .sticky-col-5 { z-index: 60; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10">
@@ -64,6 +92,9 @@
                 <button onclick="setActiveTab('rekap')" id="tab-rekap" class="tab-btn px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
                     <i data-lucide="bar-chart-3" class="w-2.5 h-2.5"></i> Rekap
                 </button>
+                <button onclick="setActiveTab('daftarBelanja')" id="tab-daftarBelanja" class="tab-btn px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
+                    <i data-lucide="scroll-text" class="w-2.5 h-2.5"></i> Daftar Belanja
+                </button>
                 <a href="bend23.html" class="px-3 py-1 rounded-md font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-300">
                     <i data-lucide="shopping-bag" class="w-2.5 h-2.5"></i> Bend 23
                 </a>
@@ -84,6 +115,7 @@
     </header>
 
     <main class="container mx-auto p-2">
+        <div id="regular-container">
         <div class="mb-2 flex items-center justify-between gap-4">
             <div class="flex bg-white p-0.5 rounded-xl shadow-sm border border-slate-200">
                 <button onclick="setViewMode('murni')" id="mode-murni" class="mode-btn px-3 py-1.5 rounded-lg font-black uppercase text-[7px] transition-all flex items-center gap-1.5 text-slate-400 hover:bg-slate-50">
@@ -108,6 +140,42 @@
                     <i data-lucide="file-text" class="w-3 h-3"></i> PDF
                 </button>
                 <div id="rekap-controls" class="hidden flex items-center gap-2">
+                    <div class="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 rounded-md px-2 py-1">
+                        <i data-lucide="calendar-days" style="color:#000000 !important;" class="w-2.5 h-2.5"></i>
+                        <span style="color:#000000 !important;" class="text-[6px] font-black uppercase tracking-widest">Triwulan:</span>
+                        <select id="filter-triwulan" onchange="setFilterTriwulan(this.value)" style="background-color:#ffffff !important; color:#000000 !important;" class="rounded text-[7px] font-black outline-none appearance-none cursor-pointer px-1.5 py-0.5">
+                            <option value="all" style="background:#ffffff; color:#000000;">ALL</option>
+                            <option value="1" style="background:#ffffff; color:#000000;">TW I (Jan - Mar)</option>
+                            <option value="2" style="background:#ffffff; color:#000000;">TW II (Apr - Jun)</option>
+                            <option value="3" style="background:#ffffff; color:#000000;">TW III (Jul - Sep)</option>
+                            <option value="4" style="background:#ffffff; color:#000000;">TW IV (Okt - Des)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1 bg-indigo-500/10 border border-indigo-500/20 rounded-md px-2 py-1">
+                        <i data-lucide="calendar-range" style="color:#000000 !important;" class="w-2.5 h-2.5"></i>
+                        <span style="color:#000000 !important;" class="text-[6px] font-black uppercase tracking-widest">Semester:</span>
+                        <select id="filter-semester" onchange="setFilterSemester(this.value)" style="background-color:#ffffff !important; color:#000000 !important;" class="rounded text-[7px] font-black outline-none appearance-none cursor-pointer px-1.5 py-0.5">
+                            <option value="all" style="background:#ffffff; color:#000000;">ALL</option>
+                            <option value="1" style="background:#ffffff; color:#000000;">SEMESTER I (Jan - Jun)</option>
+                            <option value="2" style="background:#ffffff; color:#000000;">SEMESTER II (Jul - Des)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1 bg-amber-600/10 border border-amber-600/20 rounded-md px-2 py-1">
+                        <i data-lucide="columns-3" style="color:#000000 !important;" class="w-2.5 h-2.5"></i>
+                        <span style="color:#000000 !important;" class="text-[6px] font-black uppercase tracking-widest">Rekap TW:</span>
+                        <select id="rekap-triwulan" onchange="setRekapMode('triwulan', this.value)" style="background-color:#ffffff !important; color:#000000 !important;" class="rounded text-[7px] font-black outline-none appearance-none cursor-pointer px-1.5 py-0.5">
+                            <option value="off" style="background:#ffffff; color:#000000;">OFF</option>
+                            <option value="on" style="background:#ffffff; color:#000000;">ON (4 Kolom)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1 bg-purple-600/10 border border-purple-600/20 rounded-md px-2 py-1">
+                        <i data-lucide="columns-2" style="color:#000000 !important;" class="w-2.5 h-2.5"></i>
+                        <span style="color:#000000 !important;" class="text-[6px] font-black uppercase tracking-widest">Rekap Smt:</span>
+                        <select id="rekap-semester" onchange="setRekapMode('semester', this.value)" style="background-color:#ffffff !important; color:#000000 !important;" class="rounded text-[7px] font-black outline-none appearance-none cursor-pointer px-1.5 py-0.5">
+                            <option value="off" style="background:#ffffff; color:#000000;">OFF</option>
+                            <option value="on" style="background:#ffffff; color:#000000;">ON (2 Kolom)</option>
+                        </select>
+                    </div>
                     <button onclick="showAllMonths()" class="bg-blue-600 text-white px-2 py-1 rounded-md font-black uppercase text-[7px] flex items-center gap-1 hover:bg-blue-700 transition-all shadow-sm">
                         <i data-lucide="eye" class="w-2.5 h-2.5"></i> Semua Bulan
                     </button>
@@ -275,6 +343,111 @@
                 </table>
             </div>
         </div>
+        </div>
+
+        <!-- DAFTAR BELANJA CONTAINER -->
+        <div id="daftarBelanja-container" class="hidden">
+            <!-- Action Bar -->
+            <div class="mb-2 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="bg-emerald-500 p-1.5 rounded-xl shadow-lg"><i data-lucide="scroll-text" class="w-4 h-4 text-white"></i></div>
+                    <div>
+                        <h2 class="text-sm font-black uppercase tracking-tight text-slate-800 leading-none">Daftar Belanja Lengkap</h2>
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">Program • Kegiatan • Sub-Kegiatan • Rekening • Transaksi</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="daftarBelanjaExpandAll()" class="bg-amber-500 text-white px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-amber-600 transition-all shadow-sm">
+                        <i data-lucide="unfold-vertical" class="w-3 h-3"></i> Expand Semua
+                    </button>
+                    <button onclick="daftarBelanjaCollapseAll()" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-slate-300 transition-all shadow-sm">
+                        <i data-lucide="fold-vertical" class="w-3 h-3"></i> Collapse Semua
+                    </button>
+                    <button onclick="daftarBelanjaExportExcel()" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                        <i data-lucide="file-output" class="w-3 h-3"></i> Excel
+                    </button>
+                    <button onclick="daftarBelanjaExportPDF()" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                        <i data-lucide="file-text" class="w-3 h-3"></i> PDF Portrait
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Section Daftar Belanja -->
+            <div class="mb-2 bg-white p-2 rounded-xl shadow-sm border border-slate-200 space-y-2">
+                <!-- Row 1: Hierarki Filters + Uraian -->
+                <div class="grid grid-cols-12 gap-1.5 items-end">
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Program</label>
+                        <select id="db-program" onchange="daftarBelanjaOnHierChange('program')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-blue-500/20">
+                            <option value="all">SEMUA PROGRAM</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Kegiatan</label>
+                        <select id="db-kegiatan" onchange="daftarBelanjaOnHierChange('kegiatan')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-indigo-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Sub-Kegiatan</label>
+                        <select id="db-subkeg" onchange="daftarBelanjaOnHierChange('sub_kegiatan')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-emerald-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA SUB-KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Rekening</label>
+                        <select id="db-rekening" onchange="daftarBelanjaOnHierChange('rekening')" class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-orange-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA REKENING</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Uraian Transaksi</label>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-2.5 h-2.5"></i>
+                            <input id="db-uraian" oninput="daftarBelanjaDebounceRender()" placeholder="Cari uraian transaksi..." class="w-full pl-7 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[8px] outline-none focus:ring-2 ring-emerald-500/5 transition-all" />
+                        </div>
+                    </div>
+                    <div class="col-span-2 space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">&nbsp;</label>
+                        <button id="db-reset-btn" onclick="daftarBelanjaResetFilter()" class="hidden w-full bg-rose-600 text-white px-2 py-1 rounded-md font-black uppercase text-[7px] flex items-center justify-center gap-1 shadow-lg hover:bg-rose-700 transition-all">
+                            <i data-lucide="refresh-ccw" class="w-2.5 h-2.5"></i> RESET FILTER
+                        </button>
+                    </div>
+                </div>
+                <!-- Row 2: Tanggal Range -->
+                <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="calendar-range" class="w-3 h-3 text-slate-400"></i>
+                        <span class="text-[6px] font-black text-slate-400 uppercase tracking-widest">Periode Tanggal:</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[7px] font-bold text-slate-600">Dari</span>
+                        <input type="date" id="db-tgl-dari" onchange="daftarBelanjaDebounceRender()" class="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-[8px] font-bold outline-none focus:ring-1 ring-emerald-500/20" />
+                        <span class="text-[7px] font-bold text-slate-600">s/d</span>
+                        <input type="date" id="db-tgl-sampai" onchange="daftarBelanjaDebounceRender()" class="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-[8px] font-bold outline-none focus:ring-1 ring-emerald-500/20" />
+                    </div>
+                    <div class="flex-1"></div>
+                    <div class="flex items-center gap-3 text-[7px] font-mono font-black">
+                        <span class="flex items-center gap-1 text-slate-500"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Total Transaksi: <span id="db-total-trx" class="text-emerald-600">0</span></span>
+                        <span class="flex items-center gap-1 text-slate-500"><span class="w-2 h-2 rounded-full bg-blue-600"></span> Total Nilai: <span id="db-total-nilai" class="text-blue-700">Rp 0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daftar Belanja Expandable Table -->
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex-1">
+                <div class="overflow-x-auto overflow-y-auto no-scrollbar max-h-[calc(100vh-260px)]">
+                    <table id="db-main-table" class="w-full text-left border-collapse" style="width: max-content; min-width: 100%; table-layout: fixed;">
+                        <thead id="db-table-head">
+                            <!-- Head rendered by JS -->
+                        </thead>
+                        <tbody id="db-table-body" class="divide-y divide-white/5">
+                            <!-- Data injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Modals -->
@@ -362,6 +535,11 @@
             pendingAction: null,
             paguForm: { id: '', type: 'program', kode: '', uraian: '', paguMurni: '', paguPerubahan: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', metodeBelanja2: 'TIDAK_ADA', pelaksana: 'TU', parentId: null },
             hiddenMonths: new Set(), // Bulan yang disembunyikan
+            filterTriwulan: 'all', // Filter Tri Wulan (1-4) di Tab Rekap
+            filterSemester: 'all', // Filter Semester (1-2) di Tab Rekap
+            isFilterPeriodeAktif: false, // Penanda: jika true -> view mode Ringkas Periode (hanya Bulan + Real periode)
+            periodeRange: null, // Array index bulan yang masuk periode: [0,1,2] dst, null = tidak aktif
+            rekapMode: 'none', // Mode rekap kolom: 'none' | 'triwulan' | 'semester'
             showPercentages: true, // Menampilkan prosentase
             hiddenCols: new Set(), // Kolom rekap yang disembunyikan
             editingId: null, // Melacak rekening yang sedang diedit manual
@@ -375,6 +553,15 @@
                 penandatangan: localStorage.getItem('pdf_penandatangan') || '',
                 jabatan: localStorage.getItem('pdf_jabatan') || '',
                 nip: localStorage.getItem('pdf_nip') || ''
+            },
+            daftarBelanja: {
+                expanded: {},
+                allExpanded: false,
+                filterHier: { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' },
+                filterUraian: '',
+                filterTglDari: '',
+                filterTglSampai: '',
+                _debounceTimer: null
             }
         };
 
@@ -528,10 +715,21 @@
             document.getElementById(`tab-${tab}`).classList.remove('text-slate-500', 'hover:text-slate-300');
             
             const btnAdd = document.getElementById('btn-add-program');
+            const regularContainer = document.getElementById('regular-container');
+            const dbContainer = document.getElementById('daftarBelanja-container');
+
             if (tab === 'pagu') btnAdd.classList.remove('hidden');
             else btnAdd.classList.add('hidden');
 
-            render();
+            if (tab === 'daftarBelanja') {
+                regularContainer.classList.add('hidden');
+                dbContainer.classList.remove('hidden');
+                renderDaftarBelanja();
+            } else {
+                regularContainer.classList.remove('hidden');
+                dbContainer.classList.add('hidden');
+                render();
+            }
         }
 
         function setViewMode(mode) {
@@ -669,6 +867,10 @@
             document.getElementById('filter-metode').value = 'all';
             document.getElementById('filter-metode2').value = 'all';
             document.getElementById('filter-pelaksana').value = 'all';
+            const elTw = document.getElementById('filter-triwulan');
+            const elSm = document.getElementById('filter-semester');
+            if (elTw) elTw.value = 'all';
+            if (elSm) elSm.value = 'all';
             state.filterText = '';
             state.filterDana = 'all';
             state.filterMetode = 'all';
@@ -676,6 +878,12 @@
             state.filterPelaksana = 'all';
             state.filterLevel = 'all';
             state.filterHierarchy = { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' };
+            state.filterTriwulan = 'all';
+            state.filterSemester = 'all';
+            state.isFilterPeriodeAktif = false;
+            state.periodeRange = null;
+            state.hiddenMonths.clear();
+            state.hiddenCols.clear();
             state.expandedItems = {};
             document.getElementById('reset-filter-btn').classList.add('hidden');
             updateHierarchyOptions();
@@ -1193,12 +1401,129 @@ COMMIT;`;
             } else {
                 state.hiddenMonths.add(monthIdx);
             }
+            // Jika user toggle bulan manual, reset combo TW/Semester agar sinkron
+            state.filterTriwulan = 'all';
+            state.filterSemester = 'all';
+            const elTw = document.getElementById('filter-triwulan');
+            const elSm = document.getElementById('filter-semester');
+            if (elTw) elTw.value = 'all';
+            if (elSm) elSm.value = 'all';
+            render();
+        }
+
+        function setFilterTriwulan(value) {
+            const val = String(value || 'all');
+            state.filterTriwulan = val;
+            if (val !== 'all') {
+                state.filterSemester = 'all';
+                const elSm = document.getElementById('filter-semester');
+                if (elSm) elSm.value = 'all';
+            }
+            state.hiddenMonths.clear();
+            state.hiddenCols.clear();
+            const rangeMap = {
+                '1': [0, 1, 2],
+                '2': [3, 4, 5],
+                '3': [6, 7, 8],
+                '4': [9, 10, 11]
+            };
+            if (val !== 'all' && rangeMap[val]) {
+                state.isFilterPeriodeAktif = true;
+                state.periodeRange = rangeMap[val];
+                const showIdx = new Set(rangeMap[val]);
+                for (let i = 0; i < 12; i++) {
+                    if (!showIdx.has(i)) state.hiddenMonths.add(i);
+                }
+                // Sembunyikan semua kolom summary KECUALI Real
+                state.hiddenCols.add('sisa');
+                state.hiddenCols.add('belum_sp2d');
+                state.hiddenCols.add('real_plus_sp2d');
+                state.hiddenCols.add('sisa_real');
+            } else {
+                state.isFilterPeriodeAktif = false;
+                state.periodeRange = null;
+            }
+            render();
+        }
+
+        function setFilterSemester(value) {
+            const val = String(value || 'all');
+            state.filterSemester = val;
+            if (val !== 'all') {
+                state.filterTriwulan = 'all';
+                const elTw = document.getElementById('filter-triwulan');
+                if (elTw) elTw.value = 'all';
+            }
+            state.hiddenMonths.clear();
+            state.hiddenCols.clear();
+            const rangeMap = {
+                '1': [0, 1, 2, 3, 4, 5],
+                '2': [6, 7, 8, 9, 10, 11]
+            };
+            if (val !== 'all' && rangeMap[val]) {
+                state.isFilterPeriodeAktif = true;
+                state.periodeRange = rangeMap[val];
+                const showIdx = new Set(rangeMap[val]);
+                for (let i = 0; i < 12; i++) {
+                    if (!showIdx.has(i)) state.hiddenMonths.add(i);
+                }
+                // Sembunyikan semua kolom summary KECUALI Real
+                state.hiddenCols.add('sisa');
+                state.hiddenCols.add('belum_sp2d');
+                state.hiddenCols.add('real_plus_sp2d');
+                state.hiddenCols.add('sisa_real');
+            } else {
+                state.isFilterPeriodeAktif = false;
+                state.periodeRange = null;
+            }
             render();
         }
 
         function showAllMonths() {
             state.hiddenMonths.clear();
             state.hiddenCols.clear();
+            state.filterTriwulan = 'all';
+            state.filterSemester = 'all';
+            state.isFilterPeriodeAktif = false;
+            state.periodeRange = null;
+            state.rekapMode = 'none';
+            const elTw = document.getElementById('filter-triwulan');
+            const elSm = document.getElementById('filter-semester');
+            const elRekapTw = document.getElementById('rekap-triwulan');
+            const elRekapSmt = document.getElementById('rekap-semester');
+            if (elTw) elTw.value = 'all';
+            if (elSm) elSm.value = 'all';
+            if (elRekapTw) elRekapTw.value = 'off';
+            if (elRekapSmt) elRekapSmt.value = 'off';
+            render();
+        }
+
+        function setRekapMode(mode, value) {
+            // Reset dulu: jika yang satu ON, matikan yang lain dan hidden semua bulan individual
+            const elRekapTw = document.getElementById('rekap-triwulan');
+            const elRekapSmt = document.getElementById('rekap-semester');
+            state.hiddenMonths.clear();
+            state.hiddenCols.clear();
+            state.filterTriwulan = 'all';
+            state.filterSemester = 'all';
+            state.isFilterPeriodeAktif = false;
+            state.periodeRange = null;
+            const elTw = document.getElementById('filter-triwulan');
+            const elSm = document.getElementById('filter-semester');
+            if (elTw) elTw.value = 'all';
+            if (elSm) elSm.value = 'all';
+
+            if (mode === 'triwulan' && value === 'on') {
+                state.rekapMode = 'triwulan';
+                if (elRekapSmt) elRekapSmt.value = 'off';
+                for (let i = 0; i < 12; i++) state.hiddenMonths.add(i);
+            } else if (mode === 'semester' && value === 'on') {
+                state.rekapMode = 'semester';
+                if (elRekapTw) elRekapTw.value = 'off';
+                for (let i = 0; i < 12; i++) state.hiddenMonths.add(i);
+            } else {
+                state.rekapMode = 'none';
+            }
             render();
         }
 
@@ -1209,6 +1534,14 @@ COMMIT;`;
                 state.hiddenCols.add(colId);
             }
             render();
+        }
+
+        function sumInPeriode(monthlyArr, range) {
+            if (!monthlyArr) return 0;
+            if (!range || !range.length) return monthlyArr.reduce((s, v) => s + (v || 0), 0);
+            let sum = 0;
+            for (const i of range) sum += (monthlyArr[i] || 0);
+            return sum;
         }
 
         function renderTable() {
@@ -1227,7 +1560,6 @@ COMMIT;`;
                     <th class="px-3 py-2.5 w-[400px] sticky-col-2 bg-slate-900 border-r border-b ${borderColor}">Program dan Kegiatan</th>
             `;
 
-            // Tab Rekap: Hanya tampilkan satu kolom pagu yang aktif (dikunci)
             if (state.activeTab === 'rekap') {
                 const activePaguLabel = state.viewMode === 'murni' ? 'Pagu Murni' : (state.viewMode === 'efisiensi' ? 'Pagu Efisiensi' : (state.viewMode === 'perubahan' ? 'Pagu Perubahan' : 'Pagu'));
                 headHtml += `
@@ -1262,14 +1594,63 @@ COMMIT;`;
                             </th>`;
                     }
                 });
+                // Kolom Rekap Triwulan (4 kolom: TW I - TW IV)
+                if (state.rekapMode === 'triwulan') {
+                    const twRanges = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+                    const twLabels = ['TW I','TW II','TW III','TW IV'];
+                    const twColors = ['bg-amber-900','bg-amber-800','bg-amber-700','bg-amber-600'];
+                    twRanges.forEach((_, i) => {
+                        headHtml += `
+                            <th class="px-2 py-2.5 text-center w-[75px] border-r border-b ${borderColor} ${twColors[i]} text-amber-100">
+                                <div class="flex flex-col items-center leading-tight">
+                                    <span class="text-[8.5px] font-black">${twLabels[i]}</span>
+                                    <span class="text-[6px] font-black opacity-60">${BULAN_LIST[twRanges[i][0]]}-${BULAN_LIST[twRanges[i][2]]}</span>
+                                </div>
+                            </th>`;
+                    });
+                }
+                // Kolom Rekap Semester (2 kolom: Smt I - Smt II)
+                if (state.rekapMode === 'semester') {
+                    const smtRanges = [[0,1,2,3,4,5],[6,7,8,9,10,11]];
+                    const smtLabels = ['Smt I','Smt II'];
+                    const smtColors = ['bg-purple-900','bg-purple-700'];
+                    smtRanges.forEach((_, i) => {
+                        headHtml += `
+                            <th class="px-2 py-2.5 text-center w-[90px] border-r border-b ${borderColor} ${smtColors[i]} text-purple-100">
+                                <div class="flex flex-col items-center leading-tight">
+                                    <span class="text-[8.5px] font-black">${smtLabels[i]}</span>
+                                    <span class="text-[6px] font-black opacity-60">${BULAN_LIST[smtRanges[i][0]]}-${BULAN_LIST[smtRanges[i][5]]}</span>
+                                </div>
+                            </th>`;
+                    });
+                }
                 if (!state.hiddenCols.has('real')) {
+                    let realLabel = 'Real';
+                    if (state.isFilterPeriodeAktif && state.periodeRange) {
+                        if (state.filterTriwulan !== 'all') {
+                            realLabel = `Real TW ${state.filterTriwulan}`;
+                        } else if (state.filterSemester !== 'all') {
+                            realLabel = `Real Smt ${state.filterSemester}`;
+                        } else {
+                            realLabel = 'Real Periode';
+                        }
+                    }
                     headHtml += `
-                        <th class="px-2 py-2.5 text-right w-[80px] bg-emerald-950 text-amber-400 border-r border-b ${borderColor}">
-                            <div class="flex flex-col items-center">
-                                <input type="checkbox" onchange="toggleCol('real')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Real">
-                                <span>Real</span>
+                        <th class="px-2 py-2.5 text-right w-[95px] bg-emerald-950 text-amber-400 border-r border-b ${borderColor}">
+                            <div class="flex flex-col items-center leading-tight">
+                                ${state.isFilterPeriodeAktif ? '' : `<input type="checkbox" onchange="toggleCol('real')" class="w-2.5 h-2.5 mb-1 cursor-pointer accent-amber-500" title="Sembunyikan Real">`}
+                                <span class="text-[8.5px] font-black">${realLabel}</span>
                             </div>
                         </th>`;
+                    // Tambah kolom Real Tahunan (Realisasi Keseluruhan) jika filter periode aktif ATAU mode rekap kolom aktif
+                    if (state.isFilterPeriodeAktif || state.rekapMode !== 'none') {
+                        headHtml += `
+                            <th class="px-2 py-2.5 text-right w-[95px] bg-emerald-900 text-amber-400 border-r border-b ${borderColor}">
+                                <div class="flex flex-col items-center leading-tight">
+                                    <span class="text-[8.5px] font-black">Real Thn</span>
+                                </div>
+                            </th>`;
+                    }
                 }
                 if (!state.hiddenCols.has('sisa')) {
                     headHtml += `
@@ -1341,20 +1722,26 @@ COMMIT;`;
             const totalMurni = filtered.paguMurni;
             const totalEfisiensi = filtered.paguEfisiensi;
             const totalPerubahan = filtered.paguPerubahan;
-            const totalReal = filtered.realisasi;
             const totalBelum = filtered.belumSP2D;
             const totalMonthly = filtered.monthly;
+            // Hitung Real = total tahunan, ATAU jumlah periode jika filter TW/Semester aktif
+            const totalReal = state.isFilterPeriodeAktif ? sumInPeriode(totalMonthly, state.periodeRange) : filtered.realisasi;
 
             let activeTotalPagu = state.viewMode === 'murni' ? totalMurni : (state.viewMode === 'efisiensi' ? totalEfisiensi : totalPerubahan);
+            // Base line total periode: pagu dibagi 12 * jumlah bulan periode agar lebih realistis ketika mode filter periode
+            const periodeLen = state.isFilterPeriodeAktif && state.periodeRange ? state.periodeRange.length : 12;
+            const paguPeriode = state.isFilterPeriodeAktif ? Math.round(activeTotalPagu / 12 * periodeLen) : activeTotalPagu;
+            // Presentase selalu dibagi terhadap pagu tahunan (konsisten dengan logika sebelumnya); atau ganti ke paguPeriode jika ingin % terhadap pagu periode
+            const basePaguForPercent = activeTotalPagu;
             const totalSisa = activeTotalPagu - totalReal;
             const totalRealPlusSP2D = totalReal + totalBelum;
             const totalSisaReal = activeTotalPagu - totalRealPlusSP2D;
 
-            const pctReal = activeTotalPagu > 0 ? (totalReal / activeTotalPagu * 100).toFixed(1) : '0';
-            const pctSisa = activeTotalPagu > 0 ? (totalSisa / activeTotalPagu * 100).toFixed(1) : '0';
-            const pctBlm = activeTotalPagu > 0 ? (totalBelum / activeTotalPagu * 100).toFixed(1) : '0';
-            const pctTotalReal = activeTotalPagu > 0 ? (totalRealPlusSP2D / activeTotalPagu * 100).toFixed(1) : '0';
-            const pctSisaReal = activeTotalPagu > 0 ? (totalSisaReal / activeTotalPagu * 100).toFixed(1) : '0';
+            const pctReal = basePaguForPercent > 0 ? (totalReal / basePaguForPercent * 100).toFixed(1) : '0';
+            const pctSisa = basePaguForPercent > 0 ? (totalSisa / basePaguForPercent * 100).toFixed(1) : '0';
+            const pctBlm = basePaguForPercent > 0 ? (totalBelum / basePaguForPercent * 100).toFixed(1) : '0';
+            const pctTotalReal = basePaguForPercent > 0 ? (totalRealPlusSP2D / basePaguForPercent * 100).toFixed(1) : '0';
+            const pctSisaReal = basePaguForPercent > 0 ? (totalSisaReal / basePaguForPercent * 100).toFixed(1) : '0';
 
             const row = document.createElement('tr');
             row.className = "bg-slate-800 text-amber-400 font-black text-[10px] uppercase sticky top-[34px] z-[40] border-b-2 border-amber-500/30";
@@ -1379,27 +1766,72 @@ COMMIT;`;
                             <td class="px-1 py-1 border-r border-b ${borderColor} ${v > 0 ? 'bg-white/5' : 'opacity-40'}">
                                 <div class="flex flex-col items-end">
                                     <span class="font-mono text-[9px]">${v.toLocaleString('id-ID')}</span>
-                                    ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">${pctMo}%</span>` : ''}
+                                    ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctMo}%)</span>` : ''}
                                 </div>
                             </td>`;
                     }
                 });
 
+                // Kolom Rekap Triwulan (4 kolom) di Baris TOTAL
+                if (state.rekapMode === 'triwulan') {
+                    const twRanges = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+                    const twColors = ['bg-amber-900/60','bg-amber-800/60','bg-amber-700/60','bg-amber-600/60'];
+                    twRanges.forEach((range, i) => {
+                        const sumTw = sumInPeriode(totalMonthly, range);
+                        const pctTw = activeTotalPagu > 0 ? (sumTw / activeTotalPagu * 100).toFixed(1) : '0';
+                        html += `
+                            <td class="px-2 py-1 border-r border-b ${borderColor} ${twColors[i]} w-[75px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[10px] text-amber-100">${sumTw.toLocaleString('id-ID')}</span>
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctTw}%)</span>` : ''}
+                                </div>
+                            </td>`;
+                    });
+                }
+                // Kolom Rekap Semester (2 kolom) di Baris TOTAL
+                if (state.rekapMode === 'semester') {
+                    const smtRanges = [[0,1,2,3,4,5],[6,7,8,9,10,11]];
+                    const smtColors = ['bg-purple-900/60','bg-purple-700/60'];
+                    smtRanges.forEach((range, i) => {
+                        const sumSmt = sumInPeriode(totalMonthly, range);
+                        const pctSmt = activeTotalPagu > 0 ? (sumSmt / activeTotalPagu * 100).toFixed(1) : '0';
+                        html += `
+                            <td class="px-2 py-1 border-r border-b ${borderColor} ${smtColors[i]} w-[90px]">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[10px] text-purple-100">${sumSmt.toLocaleString('id-ID')}</span>
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctSmt}%)</span>` : ''}
+                                </div>
+                            </td>`;
+                    });
+                }
+
                 if (!state.hiddenCols.has('real')) {
                     html += `
-                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
+                        <td class="px-2 py-1 border-r border-b ${borderColor} bg-emerald-950/60">
                             <div class="flex flex-col items-end">
                                 <span class="font-mono text-[11px]">${totalReal.toLocaleString('id-ID')}</span>
-                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctReal}%)</span>` : ''}
                             </div>
                         </td>`;
+                    // Tambah kolom Real Tahunan (Realisasi Keseluruhan) jika filter periode aktif ATAU mode rekap kolom aktif
+                    if (state.isFilterPeriodeAktif || state.rekapMode !== 'none') {
+                        const totalRealThn = filtered.realisasi;
+                        const pctRealThn = activeTotalPagu > 0 ? (totalRealThn / activeTotalPagu * 100).toFixed(1) : '0';
+                        html += `
+                            <td class="px-2 py-1 border-r border-b ${borderColor} bg-emerald-900/70">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-mono text-[11px] text-emerald-200">${totalRealThn.toLocaleString('id-ID')}</span>
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctRealThn}%)</span>` : ''}
+                                </div>
+                            </td>`;
+                    }
                 }
                 if (!state.hiddenCols.has('sisa')) {
                     html += `
                         <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/30">
                             <div class="flex flex-col items-end">
                                 <span class="font-mono text-[11px]">${totalSisa.toLocaleString('id-ID')}</span>
-                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisa}%)</span>` : ''}
                             </div>
                         </td>`;
                 }
@@ -1408,7 +1840,7 @@ COMMIT;`;
                         <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
                             <div class="flex flex-col items-end">
                                 <span class="font-mono text-[11px] text-rose-300">${totalBelum.toLocaleString('id-ID')}</span>
-                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctBlm}%</span>` : ''}
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctBlm}%)</span>` : ''}
                             </div>
                         </td>`;
                 }
@@ -1417,7 +1849,7 @@ COMMIT;`;
                         <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10">
                             <div class="flex flex-col items-end">
                                 <span class="font-mono text-[11px] text-indigo-100">${totalRealPlusSP2D.toLocaleString('id-ID')}</span>
-                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctTotalReal}%</span>` : ''}
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctTotalReal}%)</span>` : ''}
                             </div>
                         </td>`;
                 }
@@ -1426,7 +1858,7 @@ COMMIT;`;
                         <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
                             <div class="flex flex-col items-end">
                                 <span class="font-mono text-[11px] text-blue-100">${totalSisaReal.toLocaleString('id-ID')}</span>
-                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisaReal}%</span>` : ''}
+                                ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisaReal}%)</span>` : ''}
                             </div>
                         </td>`;
                 }
@@ -1449,13 +1881,13 @@ COMMIT;`;
                     <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/20">
                         <div class="flex flex-col items-end">
                             <span class="font-mono text-[11px] text-emerald-300">${totalReal.toLocaleString('id-ID')}</span>
-                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctReal}%)</span>` : ''}
                         </div>
                     </td>
                     <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/30">
                         <div class="flex flex-col items-end">
                             <span class="font-mono text-[11px] text-yellow-200">${totalSisa.toLocaleString('id-ID')}</span>
-                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisa}%)</span>` : ''}
                         </div>
                     </td>
                 `;
@@ -1530,6 +1962,9 @@ COMMIT;`;
                 else if (state.viewMode === 'efisiensi') activePagu = agg.paguEfisiensi;
                 else activePagu = agg.paguPerubahan;
 
+                // Periode-aware realisasi: jumlah dalam TW/Semester jika filter aktif
+                const rowRealisasi = state.isFilterPeriodeAktif ? sumInPeriode(agg.monthly, state.periodeRange) : agg.realisasi;
+
                 // Logika Visibilitas:
                 if (isFiltering) {
                     if (!isVisible) return;
@@ -1537,7 +1972,7 @@ COMMIT;`;
                     // Jika di Tab Pagu atau Realisasi: Tampilkan semua agar bisa dikelola
                     // Jika di Tab Rekap: Sembunyikan yang tidak ada anggaran/transaksi agar tidak penuh
                     if (state.activeTab === 'rekap') {
-                        const hasValue = activePagu > 0 || agg.realisasi > 0 || agg.belumSP2D > 0 || hasMatchingChild(item.children);
+                        const hasValue = activePagu > 0 || rowRealisasi > 0 || agg.belumSP2D > 0 || hasMatchingChild(item.children);
                         if (!hasValue) return;
                     }
                 }
@@ -1545,8 +1980,8 @@ COMMIT;`;
                 const shouldShowSelf = state.filterLevel === 'all' || state.filterLevel === item.type;
                 const style = LEVEL_STYLES[item.type];
                 
-                const sisa = activePagu - agg.realisasi;
-                const realPlusSP2D = agg.realisasi + agg.belumSP2D;
+                const sisa = activePagu - rowRealisasi;
+                const realPlusSP2D = rowRealisasi + agg.belumSP2D;
                 const sisaReal = activePagu - realPlusSP2D;
 
                 if (shouldShowSelf) {
@@ -1607,7 +2042,7 @@ COMMIT;`;
                     `;
 
                     if (state.activeTab === 'rekap') {
-                        const pctReal = activePagu > 0 ? (agg.realisasi / activePagu * 100).toFixed(1) : '0';
+                        const pctReal = activePagu > 0 ? (rowRealisasi / activePagu * 100).toFixed(1) : '0';
                         const pctSisa = activePagu > 0 ? (sisa / activePagu * 100).toFixed(1) : '0';
                         const pctBlm = activePagu > 0 ? (agg.belumSP2D / activePagu * 100).toFixed(1) : '0';
                         const pctTotalReal = activePagu > 0 ? (realPlusSP2D / activePagu * 100).toFixed(1) : '0';
@@ -1627,27 +2062,72 @@ COMMIT;`;
                                     <td class="px-1 py-1 border-r border-b ${borderColor} ${v > 0 ? 'bg-white/5 font-bold' : 'opacity-10'} w-[55px]">
                                         <div class="flex flex-col items-end">
                                             <span class="font-mono text-[9px]">${v.toLocaleString('id-ID')}</span>
-                                            ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">${pctMo}%</span>` : ''}
+                                            ${v > 0 && state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctMo}%)</span>` : ''}
                                         </div>
                                     </td>`;
                             }
                         });
+
+                        // Kolom Rekap Triwulan (4 kolom) di Baris Data
+                        if (state.rekapMode === 'triwulan') {
+                            const twRanges = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+                            const twColors = ['bg-amber-900/40','bg-amber-800/40','bg-amber-700/40','bg-amber-600/40'];
+                            twRanges.forEach((range, i) => {
+                                const sumTw = sumInPeriode(agg.monthly, range);
+                                const pctTw = activePagu > 0 ? (sumTw / activePagu * 100).toFixed(1) : '0';
+                                html += `
+                                    <td class="px-2 py-1 border-r border-b ${borderColor} ${twColors[i]} w-[75px]">
+                                        <div class="flex flex-col items-end">
+                                            <span class="font-mono text-[10px] font-bold text-amber-100">${sumTw.toLocaleString('id-ID')}</span>
+                                            ${state.showPercentages && sumTw > 0 ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctTw}%)</span>` : ''}
+                                        </div>
+                                    </td>`;
+                            });
+                        }
+                        // Kolom Rekap Semester (2 kolom) di Baris Data
+                        if (state.rekapMode === 'semester') {
+                            const smtRanges = [[0,1,2,3,4,5],[6,7,8,9,10,11]];
+                            const smtColors = ['bg-purple-900/40','bg-purple-700/40'];
+                            smtRanges.forEach((range, i) => {
+                                const sumSmt = sumInPeriode(agg.monthly, range);
+                                const pctSmt = activePagu > 0 ? (sumSmt / activePagu * 100).toFixed(1) : '0';
+                                html += `
+                                    <td class="px-2 py-1 border-r border-b ${borderColor} ${smtColors[i]} w-[90px]">
+                                        <div class="flex flex-col items-end">
+                                            <span class="font-mono text-[10px] font-bold text-purple-100">${sumSmt.toLocaleString('id-ID')}</span>
+                                            ${state.showPercentages && sumSmt > 0 ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm">(${pctSmt}%)</span>` : ''}
+                                        </div>
+                                    </td>`;
+                            });
+                        }
                         
                         if (!state.hiddenCols.has('real')) {
                             html += `
-                                <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10 w-[80px]">
+                                <td class="px-2 py-1 border-r border-b ${borderColor} bg-emerald-950/40 w-[95px]">
                                     <div class="flex flex-col items-end">
-                                        <span class="font-mono text-[11px] font-black text-emerald-300">${agg.realisasi.toLocaleString('id-ID')}</span>
-                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                                        <span class="font-mono text-[11px] font-black text-emerald-300">${rowRealisasi.toLocaleString('id-ID')}</span>
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctReal}%)</span>` : ''}
                                     </div>
                                 </td>`;
+                            // Tambah kolom Real Tahunan (Realisasi Keseluruhan) jika filter periode aktif ATAU mode rekap kolom aktif
+                            if (state.isFilterPeriodeAktif || state.rekapMode !== 'none') {
+                                const rowRealThn = agg.realisasi;
+                                const pctRowRealThn = activePagu > 0 ? (rowRealThn / activePagu * 100).toFixed(1) : '0';
+                                html += `
+                                    <td class="px-2 py-1 border-r border-b ${borderColor} bg-emerald-900/40 w-[95px]">
+                                        <div class="flex flex-col items-end">
+                                            <span class="font-mono text-[11px] font-black text-emerald-200">${rowRealThn.toLocaleString('id-ID')}</span>
+                                            ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctRowRealThn}%)</span>` : ''}
+                                        </div>
+                                    </td>`;
+                            }
                         }
                         if (!state.hiddenCols.has('sisa')) {
                             html += `
                                 <td class="px-2 py-1 border-r border-b ${borderColor} ${sisa < 0 ? 'bg-red-600' : 'bg-black/20'} w-[80px]">
                                     <div class="flex flex-col items-end">
                                         <span class="font-mono text-[11px] font-black ${sisa < 0 ? 'text-white' : 'text-yellow-200'}">${sisa.toLocaleString('id-ID')}</span>
-                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisa}%)</span>` : ''}
                                     </div>
                                 </td>`;
                         }
@@ -1666,7 +2146,7 @@ COMMIT;`;
                                         ` : `
                                             <span class="font-mono text-[11px] font-black text-rose-300">${agg.belumSP2D.toLocaleString('id-ID')}</span>
                                         `}
-                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctBlm}%</span>` : ''}
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctBlm}%)</span>` : ''}
                                     </div>
                                 </td>`;
                         }
@@ -1675,7 +2155,7 @@ COMMIT;`;
                                 <td class="px-2 py-1 border-r border-b ${borderColor} bg-indigo-900/40 w-[80px]">
                                     <div class="flex flex-col items-end">
                                         <span class="font-mono text-[11px] font-black text-indigo-100">${realPlusSP2D.toLocaleString('id-ID')}</span>
-                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctTotalReal}%</span>` : ''}
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctTotalReal}%)</span>` : ''}
                                     </div>
                                 </td>`;
                         }
@@ -1684,7 +2164,7 @@ COMMIT;`;
                                 <td class="px-2 py-1 border-r border-b ${borderColor} bg-blue-900/40 w-[80px]">
                                     <div class="flex flex-col items-end">
                                         <span class="font-mono text-[11px] font-black text-blue-100">${sisaReal.toLocaleString('id-ID')}</span>
-                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisaReal}%</span>` : ''}
+                                        ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisaReal}%)</span>` : ''}
                                     </div>
                                 </td>`;
                         }
@@ -1707,13 +2187,13 @@ COMMIT;`;
                             <td class="px-2 py-1 border-r border-b ${borderColor} bg-black/10 w-[80px]">
                                 <div class="flex flex-col items-end">
                                     <span class="font-mono text-[11px] font-black text-emerald-300">${agg.realisasi.toLocaleString('id-ID')}</span>
-                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctReal}%</span>` : ''}
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctReal}%)</span>` : ''}
                                 </div>
                             </td>
                             <td class="px-2 py-1 border-r border-b ${borderColor} ${sisa < 0 ? 'bg-red-600' : 'bg-black/20'} w-[80px]">
                                 <div class="flex flex-col items-end">
                                     <span class="font-mono text-[11px] font-black ${sisa < 0 ? 'text-white' : 'text-yellow-200'}">${sisa.toLocaleString('id-ID')}</span>
-                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                    ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">(${pctSisa}%)</span>` : ''}
                                 </div>
                             </td>
                         `;
@@ -3119,6 +3599,683 @@ COMMIT;`;
             a.click();
             URL.revokeObjectURL(url);
             showNotif(`Export transaksi berhasil`);
+        }
+
+        // ============================================================
+        // DAFTAR BELANJA - HEMAT EGRESS (menggunakan data di state)
+        // Semua data diambil dari state.data.pagu & state.data.realisasi
+        // TIDAK ADA query tambahan ke Supabase = 0 KB egress!
+        // ============================================================
+
+        // Helper: Parse tanggal berbagai format ke YYYY-MM-DD (untuk perbandingan)
+        function dbParseDate(tglStr) {
+            if (!tglStr) return null;
+            const s = String(tglStr).trim();
+            if (!s) return null;
+            const parts = s.split(/[-/.]/);
+            if (parts.length !== 3) return null;
+            let y, m, d;
+            // YYYY-MM-DD atau YYYY/MM/DD
+            if (parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
+            // DD-MM-YYYY atau DD/MM/YYYY
+            else if (parts[2].length === 4) { y = parts[2]; m = parts[1]; d = parts[0]; }
+            else return null;
+            m = m.padStart(2, '0'); d = d.padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // Helper: Cek apakah transaksi realisasi match dengan filter saat ini
+        function dbRealisasiMatchFilter(r) {
+            const ur = state.daftarBelanja.filterUraian.trim().toLowerCase();
+            if (ur) {
+                const inKet = (r.keterangan || '').toLowerCase().includes(ur);
+                const inPenerima = (r.penerima || '').toLowerCase().includes(ur);
+                const inNoBp = (r.noBp || '').toLowerCase().includes(ur);
+                if (!inKet && !inPenerima && !inNoBp) return false;
+            }
+            const tgl = dbParseDate(r.tanggal);
+            if (state.daftarBelanja.filterTglDari && tgl) {
+                if (tgl < state.daftarBelanja.filterTglDari) return false;
+            }
+            if (state.daftarBelanja.filterTglSampai && tgl) {
+                if (tgl > state.daftarBelanja.filterTglSampai) return false;
+            }
+            return true;
+        }
+
+        // Ambil daftar realisasi per rekeningId, filter by uraian & tanggal
+        function dbGetRealisasiByRekeningId(rekeningId) {
+            const all = (state.data.realisasi || []).filter(r => r.rekeningId === rekeningId);
+            return all.filter(r => dbRealisasiMatchFilter(r));
+        }
+
+        // Recursively count total transactions matching filter under an item
+        function dbCountTrxAndSum(item) {
+            let count = 0, sum = 0;
+            if (item.type === 'rekening') {
+                const trxs = dbGetRealisasiByRekeningId(item.id);
+                count = trxs.length;
+                trxs.forEach(t => { sum += parseRupiah(t.nilai || 0); });
+            } else if (item.children) {
+                item.children.forEach(c => {
+                    const r = dbCountTrxAndSum(c);
+                    count += r.count; sum += r.sum;
+                });
+            }
+            return { count, sum };
+        }
+
+        // Populate filter dropdown options
+        function dbInitHierOptions() {
+            const prog = document.getElementById('db-program');
+            const keg = document.getElementById('db-kegiatan');
+            const sub = document.getElementById('db-subkeg');
+            const rek = document.getElementById('db-rekening');
+            const fh = state.daftarBelanja.filterHier;
+
+            const programs = state.data.pagu.filter(p => p.type === 'program');
+            prog.innerHTML = '<option value="all">SEMUA PROGRAM</option>' +
+                programs.map(p => `<option value="${p.id}" ${fh.program === p.id ? 'selected' : ''}>${p.kode} - ${p.uraian}</option>`).join('');
+
+            let kegList = [];
+            keg.disabled = fh.program === 'all';
+            if (fh.program !== 'all') {
+                const sp = programs.find(p => p.id === fh.program);
+                if (sp && sp.children) kegList = sp.children.filter(c => c.type === 'kegiatan');
+            }
+            keg.innerHTML = '<option value="all">SEMUA KEGIATAN</option>' +
+                kegList.map(k => `<option value="${k.id}" ${fh.kegiatan === k.id ? 'selected' : ''}>${k.kode} - ${k.uraian}</option>`).join('');
+
+            let subList = [];
+            sub.disabled = fh.kegiatan === 'all';
+            if (fh.kegiatan !== 'all') {
+                const sk = findInTree(state.data.pagu, fh.kegiatan);
+                if (sk && sk.children) subList = sk.children.filter(s => s.type === 'sub_kegiatan');
+            }
+            sub.innerHTML = '<option value="all">SEMUA SUB-KEGIATAN</option>' +
+                subList.map(s => `<option value="${s.id}" ${fh.sub_kegiatan === s.id ? 'selected' : ''}>${s.kode} - ${s.uraian}</option>`).join('');
+
+            let rekList = [];
+            rek.disabled = fh.sub_kegiatan === 'all';
+            if (fh.sub_kegiatan !== 'all') {
+                const sr = findInTree(state.data.pagu, fh.sub_kegiatan);
+                if (sr && sr.children) rekList = sr.children.filter(r => r.type === 'rekening');
+            }
+            rek.innerHTML = '<option value="all">SEMUA REKENING</option>' +
+                rekList.map(r => `<option value="${r.id}" ${fh.rekening === r.id ? 'selected' : ''}>${r.kode} - ${r.uraian}</option>`).join('');
+        }
+
+        // Handler ganti hierarki filter
+        function daftarBelanjaOnHierChange(level) {
+            const elId = level === 'sub_kegiatan' ? 'db-subkeg' : `db-${level}`;
+            const val = document.getElementById(elId).value;
+            state.daftarBelanja.filterHier[level] = val;
+            if (level === 'program') {
+                state.daftarBelanja.filterHier.kegiatan = 'all';
+                state.daftarBelanja.filterHier.sub_kegiatan = 'all';
+                state.daftarBelanja.filterHier.rekening = 'all';
+            } else if (level === 'kegiatan') {
+                state.daftarBelanja.filterHier.sub_kegiatan = 'all';
+                state.daftarBelanja.filterHier.rekening = 'all';
+            } else if (level === 'sub_kegiatan') {
+                state.daftarBelanja.filterHier.rekening = 'all';
+            }
+            dbInitHierOptions();
+            renderDaftarBelanja();
+        }
+
+        // Debounce render untuk input uraian (hindari render setiap ketik huruf)
+        function daftarBelanjaDebounceRender() {
+            state.daftarBelanja.filterUraian = document.getElementById('db-uraian').value;
+            state.daftarBelanja.filterTglDari = document.getElementById('db-tgl-dari').value;
+            state.daftarBelanja.filterTglSampai = document.getElementById('db-tgl-sampai').value;
+            if (state.daftarBelanja._debounceTimer) clearTimeout(state.daftarBelanja._debounceTimer);
+            state.daftarBelanja._debounceTimer = setTimeout(() => {
+                renderDaftarBelanja();
+            }, 250);
+        }
+
+        // Cek apakah filter aktif (untuk tombol reset)
+        function dbIsFiltering() {
+            const fh = state.daftarBelanja.filterHier;
+            return fh.program !== 'all' || fh.kegiatan !== 'all' || fh.sub_kegiatan !== 'all' || fh.rekening !== 'all' ||
+                !!state.daftarBelanja.filterUraian || !!state.daftarBelanja.filterTglDari || !!state.daftarBelanja.filterTglSampai;
+        }
+
+        // Reset semua filter
+        function daftarBelanjaResetFilter() {
+            state.daftarBelanja.filterHier = { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' };
+            state.daftarBelanja.filterUraian = '';
+            state.daftarBelanja.filterTglDari = '';
+            state.daftarBelanja.filterTglSampai = '';
+            document.getElementById('db-uraian').value = '';
+            document.getElementById('db-tgl-dari').value = '';
+            document.getElementById('db-tgl-sampai').value = '';
+            dbInitHierOptions();
+            renderDaftarBelanja();
+        }
+
+        // Expand / Collapse All
+        function daftarBelanjaExpandAll() {
+            const fh = state.daftarBelanja.filterHier;
+            const expanded = {};
+            const walk = (items) => {
+                items.forEach(item => {
+                    // Only expand if matching hierarchy filters
+                    let match = true;
+                    if (fh.program !== 'all' && item.type === 'program' && item.id !== fh.program) match = false;
+                    if (fh.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== fh.kegiatan) match = false;
+                    if (fh.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== fh.sub_kegiatan) match = false;
+                    if (fh.rekening !== 'all' && item.type === 'rekening' && item.id !== fh.rekening) match = false;
+                    if (match) {
+                        expanded[item.id] = true;
+                    }
+                    if (item.children) walk(item.children);
+                });
+            };
+            walk(state.data.pagu);
+            state.daftarBelanja.expanded = expanded;
+            state.daftarBelanja.allExpanded = true;
+            renderDaftarBelanja();
+        }
+
+        function daftarBelanjaCollapseAll() {
+            state.daftarBelanja.expanded = {};
+            state.daftarBelanja.allExpanded = false;
+            renderDaftarBelanja();
+        }
+
+        function daftarBelanjaToggleExpand(id) {
+            if (state.daftarBelanja.expanded[id]) {
+                delete state.daftarBelanja.expanded[id];
+            } else {
+                state.daftarBelanja.expanded[id] = true;
+            }
+            renderDaftarBelanja();
+        }
+
+        // Cek visibilitas item berdasarkan hierarchy filter + matching child + ada transaksi
+        function dbItemHasMatchingChild(item) {
+            if (!item.children) return false;
+            const fh = state.daftarBelanja.filterHier;
+            return item.children.some(c => {
+                let hierOk = true;
+                if (fh.program !== 'all' && c.type === 'program' && c.id !== fh.program) hierOk = false;
+                if (fh.kegiatan !== 'all' && c.type === 'kegiatan' && c.id !== fh.kegiatan) hierOk = false;
+                if (fh.sub_kegiatan !== 'all' && c.type === 'sub_kegiatan' && c.id !== fh.sub_kegiatan) hierOk = false;
+                if (fh.rekening !== 'all' && c.type === 'rekening' && c.id !== fh.rekening) hierOk = false;
+                if (!hierOk) return false;
+                if (c.type === 'rekening') {
+                    const trx = dbGetRealisasiByRekeningId(c.id);
+                    return trx.length > 0;
+                }
+                return dbItemHasMatchingChild(c);
+            });
+        }
+
+        function dbItemVisible(item) {
+            const fh = state.daftarBelanja.filterHier;
+            if (fh.program !== 'all' && item.type === 'program' && item.id !== fh.program) return false;
+            if (fh.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== fh.kegiatan) return false;
+            if (fh.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== fh.sub_kegiatan) return false;
+            if (fh.rekening !== 'all' && item.type === 'rekening' && item.id !== fh.rekening) return false;
+            // Jika ada filter uraian/tanggal, pastikan ada transaksi yg match di bawahnya
+            const hasUraianOrTgl = state.daftarBelanja.filterUraian || state.daftarBelanja.filterTglDari || state.daftarBelanja.filterTglSampai;
+            if (hasUraianOrTgl && item.type !== 'rekening') {
+                if (!dbItemHasMatchingChild(item)) return false;
+            }
+            // Untuk rekening dengan filter uraian/tgl, cek ada transaksi match
+            if (hasUraianOrTgl && item.type === 'rekening') {
+                const trx = dbGetRealisasiByRekeningId(item.id);
+                if (trx.length === 0) return false;
+            }
+            return true;
+        }
+
+        // Render THEAD untuk tabel Daftar Belanja
+        function dbRenderHead() {
+            const head = document.getElementById('db-table-head');
+            head.innerHTML = `
+                <tr class="bg-slate-900 text-amber-400 text-[9px] font-black uppercase tracking-[0.1em]">
+                    <th class="px-2 py-2.5 w-[80px] bg-slate-900 border-r border-b border-white/60 text-center">Kode</th>
+                    <th class="px-3 py-2.5 w-[340px] bg-slate-900 border-r border-b border-white/60">Uraian / Keterangan</th>
+                    <th class="px-2 py-2.5 w-[90px] bg-slate-900 border-r border-b border-white/60 text-center">No. BP</th>
+                    <th class="px-2 py-2.5 w-[80px] bg-slate-900 border-r border-b border-white/60 text-center">Tanggal</th>
+                    <th class="px-2 py-2.5 w-[160px] bg-slate-900 border-r border-b border-white/60">Penerima</th>
+                    <th class="px-2 py-2.5 w-[90px] bg-slate-900 border-r border-b border-white/60 text-right">Nilai (Rp)</th>
+                    <th class="px-2 py-2.5 w-[70px] bg-slate-900 border-r border-b border-white/60 text-center">PPn</th>
+                    <th class="px-2 py-2.5 w-[70px] bg-slate-900 border-r border-b border-white/60 text-center">PPh</th>
+                    <th class="px-2 py-2.5 w-[90px] bg-slate-900 border-b border-white/60 text-right">Netto</th>
+                </tr>
+            `;
+        }
+
+        // Render recursive rows
+        function dbRenderRows(items, depth, bodyEl) {
+            const fh = state.daftarBelanja.filterHier;
+            items.forEach(item => {
+                if (!dbItemVisible(item)) return;
+
+                const isExpanded = state.daftarBelanja.expanded[item.id];
+                const style = LEVEL_STYLES[item.type];
+                const agg = getAggregatedData(item);
+                let activePagu = 0;
+                if (state.viewMode === 'murni') activePagu = agg.paguMurni;
+                else if (state.viewMode === 'efisiensi') activePagu = agg.paguEfisiensi;
+                else activePagu = agg.paguPerubahan;
+                const stat = dbCountTrxAndSum(item);
+                const isLeaf = item.type === 'rekening';
+                const hasChildren = !isLeaf && item.children && item.children.some(c => dbItemVisible(c));
+
+                const tr = document.createElement('tr');
+                tr.className = `${style.bg} group ${style.text} hover:brightness-110 transition-all ${isLeaf ? '' : 'cursor-pointer'}`;
+                if (!isLeaf) {
+                    tr.onclick = (e) => {
+                        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+                        daftarBelanjaToggleExpand(item.id);
+                    };
+                }
+                const leftPad = depth * 14 + 4;
+                tr.innerHTML = `
+                    <td class="px-2 py-1.5 font-mono text-[9px] whitespace-nowrap align-middle border-r border-b border-white/60 bg-inherit" style="padding-left: ${leftPad}px">
+                        <div class="flex items-center gap-1">
+                            ${!isLeaf ? `<button onclick="daftarBelanjaToggleExpand('${item.id}')" class="p-0.5 hover:bg-black/20 rounded flex-shrink-0"><i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3 h-3"></i></button>` : '<span class="w-3.5 h-3.5 flex-shrink-0"></span>'}
+                            <span class="font-bold opacity-90 uppercase tracking-tight overflow-hidden text-ellipsis">${item.kode}</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-1.5 border-r border-b border-white/60 bg-inherit">
+                        <div class="flex flex-col">
+                            <span class="uppercase text-[10px] font-black leading-tight tracking-tight">${item.uraian}</span>
+                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span class="text-[6px] font-black uppercase px-1.5 py-0.5 rounded bg-white/15 opacity-80 shadow-sm">${style.label}</span>
+                                ${item.type === 'rekening' ? `
+                                    <span class="text-[6px] font-black uppercase px-1.5 py-0.5 rounded bg-white/15 opacity-80">${(SUMBER_DANA.find(s=>s.id===item.sumberDana)||SUMBER_DANA[0]).label}</span>
+                                    <span class="text-[6px] font-black uppercase px-1.5 py-0.5 rounded bg-white/15 opacity-80">${(METODE_BELANJA.find(m=>m.id===item.metodeBelanja)||METODE_BELANJA[4]).label}</span>
+                                ` : ''}
+                                <span class="text-[6px] font-mono opacity-70">Trx: ${stat.count} • Rp ${formatRupiah(stat.sum)}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-2 py-1.5 border-r border-b border-white/60 bg-inherit text-right font-mono text-[9px]">
+                        <div class="opacity-70">Angg:</div>
+                        <div class="font-black">Rp ${formatRupiah(activePagu)}</div>
+                    </td>
+                    <td class="px-2 py-1.5 border-r border-b border-white/60 bg-inherit text-right font-mono text-[9px]">
+                        <div class="opacity-70">Real:</div>
+                        <div class="font-black">Rp ${formatRupiah(agg.realisasi)}</div>
+                    </td>
+                    <td class="px-2 py-1.5 border-r border-b border-white/60 bg-inherit text-right font-mono text-[9px]">
+                        <div class="opacity-70">Sisa:</div>
+                        <div class="font-black">Rp ${formatRupiah(activePagu - agg.realisasi)}</div>
+                    </td>
+                    <td class="px-2 py-1.5 border-r border-b border-white/60 bg-inherit" colspan="4"></td>
+                `;
+                bodyEl.appendChild(tr);
+
+                // Jika expanded, render children atau transaksi
+                if (isExpanded) {
+                    // Render children (jika bukan rekening)
+                    if (hasChildren) {
+                        dbRenderRows(item.children.filter(c => dbItemVisible(c)), depth + 1, bodyEl);
+                    }
+                    // Render transaksi (jika rekening)
+                    if (isLeaf) {
+                        const trxs = dbGetRealisasiByRekeningId(item.id);
+                        if (trxs.length === 0) {
+                            const nr = document.createElement('tr');
+                            nr.className = 'bg-slate-50 text-slate-400';
+                            nr.innerHTML = `
+                                <td colspan="2" class="px-4 py-2 border-r border-b border-slate-100 text-center italic text-[9px]" style="padding-left: ${(depth + 1) * 14 + 4}px">(Tidak ada transaksi sesuai filter)</td>
+                                <td colspan="7" class="px-2 py-2 border-b border-slate-100"></td>
+                            `;
+                            bodyEl.appendChild(nr);
+                        } else {
+                            trxs.sort((a, b) => (dbParseDate(a.tanggal) || '9999') .localeCompare(dbParseDate(b.tanggal) || '9999'));
+                            let subtotal = 0, subPpn = 0, subPph = 0, subNetto = 0;
+                            trxs.forEach((r, i) => {
+                                const nilai = parseRupiah(r.nilai || 0);
+                                const ppn = parseRupiah(r.ppn || 0);
+                                const pph = parseRupiah(r.pph || 0);
+                                const netto = nilai - ppn - pph;
+                                subtotal += nilai; subPpn += ppn; subPph += pph; subNetto += netto;
+                                const nr = document.createElement('tr');
+                                nr.className = 'bg-white text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100';
+                                nr.innerHTML = `
+                                    <td class="px-2 py-1 border-r border-slate-100 text-center font-mono text-[8px] text-slate-300" style="padding-left: ${(depth + 1) * 14 + 4}px">▸</td>
+                                    <td class="px-3 py-1 border-r border-slate-100 text-[9px] leading-tight">
+                                        <div class="font-bold uppercase">${r.keterangan || '-'}</div>
+                                    </td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-center font-mono text-[8px] font-bold text-indigo-700">${r.noBp || '-'}</td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-center font-mono text-[8px]">${r.tanggal || '-'}</td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-[9px] uppercase leading-tight">${r.penerima || '-'}</td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-right font-mono text-[9px] font-black text-emerald-700">${formatRupiah(nilai)}</td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-right font-mono text-[8px] text-orange-600">${ppn > 0 ? formatRupiah(ppn) : '-'}</td>
+                                    <td class="px-2 py-1 border-r border-slate-100 text-right font-mono text-[8px] text-orange-600">${pph > 0 ? formatRupiah(pph) : '-'}</td>
+                                    <td class="px-2 py-1 text-right font-mono text-[9px] font-black text-blue-700">${formatRupiah(netto)}</td>
+                                `;
+                                bodyEl.appendChild(nr);
+                            });
+                            // Subtotal row for transactions in this rekening
+                            const sr = document.createElement('tr');
+                            sr.className = 'bg-orange-50 border-b border-slate-200';
+                            sr.innerHTML = `
+                                <td colspan="5" class="px-3 py-1.5 border-r border-slate-200 text-right text-[9px] font-black uppercase text-orange-800" style="padding-left: ${(depth + 1) * 14 + 4}px">Sub Total Rekening →</td>
+                                <td class="px-2 py-1.5 border-r border-slate-200 text-right font-mono text-[9px] font-black text-emerald-800">${formatRupiah(subtotal)}</td>
+                                <td class="px-2 py-1.5 border-r border-slate-200 text-right font-mono text-[8px] font-bold text-orange-700">${subPpn > 0 ? formatRupiah(subPpn) : '-'}</td>
+                                <td class="px-2 py-1.5 border-r border-slate-200 text-right font-mono text-[8px] font-bold text-orange-700">${subPph > 0 ? formatRupiah(subPph) : '-'}</td>
+                                <td class="px-2 py-1.5 text-right font-mono text-[9px] font-black text-blue-800">${formatRupiah(subNetto)}</td>
+                            `;
+                            bodyEl.appendChild(sr);
+                        }
+                    }
+                }
+            });
+        }
+
+        // MAIN RENDER
+        function renderDaftarBelanja() {
+            // 1. Init options (jika select options belum terisi)
+            if (!document.getElementById('db-program').options || document.getElementById('db-program').options.length <= 1) {
+                dbInitHierOptions();
+            }
+            // 2. Update filter state dari UI (jika user tidak lewat debounce)
+            state.daftarBelanja.filterUraian = document.getElementById('db-uraian').value;
+            state.daftarBelanja.filterTglDari = document.getElementById('db-tgl-dari').value;
+            state.daftarBelanja.filterTglSampai = document.getElementById('db-tgl-sampai').value;
+            // 3. Tombol reset visibility
+            document.getElementById('db-reset-btn').classList.toggle('hidden', !dbIsFiltering());
+            // 4. Hitung stats total keseluruhan (yg match filter)
+            let totalTrx = 0, totalNilai = 0;
+            const walk = (items) => {
+                items.forEach(item => {
+                    if (!dbItemVisible(item)) return;
+                    if (item.type === 'rekening') {
+                        const trxs = dbGetRealisasiByRekeningId(item.id);
+                        totalTrx += trxs.length;
+                        trxs.forEach(r => { totalNilai += parseRupiah(r.nilai || 0); });
+                    } else if (item.children) walk(item.children);
+                });
+            };
+            walk(state.data.pagu);
+            document.getElementById('db-total-trx').innerText = totalTrx;
+            document.getElementById('db-total-nilai').innerText = `Rp ${formatRupiah(totalNilai)}`;
+            // 5. Render Head & Body
+            dbRenderHead();
+            const body = document.getElementById('db-table-body');
+            body.innerHTML = '';
+            dbRenderRows(state.data.pagu, 0, body);
+            // 6. Render Lucide icons
+            lucide.createIcons();
+            // 7. Info user tentang egress di console
+            console.log(`[DaftarBelanja] Render selesai • Data dari STATE (TIDAK query database) • ${totalTrx} transaksi • Total Rp ${formatRupiah(totalNilai)} • EGRESS: 0 KB`);
+        }
+
+        // ============================================================
+        // DAFTAR BELANJA - EXPORT EXCEL & PDF (PORTRAIT)
+        // ============================================================
+
+        // Build HTML untuk export (reusable by Excel & PDF)
+        // Parameter: mode 'print' => untuk print/PDF => expand semua level
+        function dbBuildPrintableHTML(forPDF = false) {
+            // Pre-compute: kita akan expand SEMUA level agar laporan lengkap
+            const fh = state.daftarBelanja.filterHier;
+            const filterInfo = [];
+            if (fh.program !== 'all') { const it = findInTree(state.data.pagu, fh.program); if (it) filterInfo.push(`Program: ${it.kode} - ${it.uraian}`); }
+            if (fh.kegiatan !== 'all') { const it = findInTree(state.data.pagu, fh.kegiatan); if (it) filterInfo.push(`Kegiatan: ${it.kode} - ${it.uraian}`); }
+            if (fh.sub_kegiatan !== 'all') { const it = findInTree(state.data.pagu, fh.sub_kegiatan); if (it) filterInfo.push(`Sub-Kegiatan: ${it.kode} - ${it.uraian}`); }
+            if (fh.rekening !== 'all') { const it = findInTree(state.data.pagu, fh.rekening); if (it) filterInfo.push(`Rekening: ${it.kode} - ${it.uraian}`); }
+            if (state.daftarBelanja.filterUraian) filterInfo.push(`Uraian Transaksi: "${state.daftarBelanja.filterUraian}"`);
+            if (state.daftarBelanja.filterTglDari || state.daftarBelanja.filterTglSampai) {
+                filterInfo.push(`Periode: ${state.daftarBelanja.filterTglDari || '(Awal)'} s/d ${state.daftarBelanja.filterTglSampai || '(Akhir)'}`);
+            }
+
+            // Recursive function to build rows for print
+            let grandTotal = { trx: 0, nilai: 0, ppn: 0, pph: 0, netto: 0 };
+            const rowsHtml = [];
+
+            const LEVEL_BG_PRINT = {
+                program: 'bgcolor="#1d4ed8" style="color:#ffffff;background:#1d4ed8;"',
+                kegiatan: 'bgcolor="#047857" style="color:#ffffff;background:#047857;"',
+                sub_kegiatan: 'bgcolor="#10b981" style="color:#0f172a;background:#10b981;"',
+                rekening: 'bgcolor="#ea580c" style="color:#ffffff;background:#ea580c;"'
+            };
+
+            const buildRows = (items, depth) => {
+                items.forEach(item => {
+                    if (!dbItemVisible(item)) return;
+                    const style = LEVEL_STYLES[item.type];
+                    const bgAttr = LEVEL_BG_PRINT[item.type];
+                    const agg = getAggregatedData(item);
+                    const stat = dbCountTrxAndSum(item);
+                    let activePagu = 0;
+                    if (state.viewMode === 'murni') activePagu = agg.paguMurni;
+                    else if (state.viewMode === 'efisiensi') activePagu = agg.paguEfisiensi;
+                    else activePagu = agg.paguPerubahan;
+                    const isLeaf = item.type === 'rekening';
+                    const leftPad = depth * 12 + 6;
+
+                    rowsHtml.push(`
+                        <tr>
+                            <td ${bgAttr} style="padding:4px 4px 4px ${leftPad}px; font-family:monospace; font-size:7pt; font-weight:bold; border:1px solid #cbd5e1;">${item.kode}</td>
+                            <td ${bgAttr} style="padding:4px 6px; font-size:8pt; font-weight:800; border:1px solid #cbd5e1; text-transform:uppercase;">
+                                ${item.uraian}
+                                <span style="font-size:6pt; font-weight:600; opacity:0.85; margin-left:6px;">[${style.label} • ${stat.count} Trx • Rp ${formatRupiah(stat.sum)}]</span>
+                            </td>
+                            <td ${bgAttr} style="padding:4px 6px; font-family:monospace; font-size:7pt; text-align:right; border:1px solid #cbd5e1;" colspan="2">
+                                <div style="font-size:6pt;opacity:0.7">Angg: Rp ${formatRupiah(activePagu)}</div>
+                                <div>Real: Rp ${formatRupiah(agg.realisasi)}</div>
+                            </td>
+                            <td ${bgAttr} style="padding:4px 6px; font-family:monospace; font-size:7pt; text-align:right; border:1px solid #cbd5e1;">Rp ${formatRupiah(activePagu - agg.realisasi)}</td>
+                            <td ${bgAttr} style="border:1px solid #cbd5e1;" colspan="4"></td>
+                        </tr>
+                    `);
+
+                    // Render children (selalu expand di laporan cetak)
+                    if (!isLeaf && item.children) {
+                        buildRows(item.children.filter(c => dbItemVisible(c)), depth + 1);
+                    }
+                    // Render transaksi (jika rekening)
+                    if (isLeaf) {
+                        const trxs = dbGetRealisasiByRekeningId(item.id);
+                        if (trxs.length === 0) {
+                            rowsHtml.push(`
+                                <tr>
+                                    <td colspan="9" style="padding:4px 4px 4px ${(depth+1)*12+8}px; font-style:italic; font-size:7pt; color:#94a3b8; border:1px solid #e2e8f0;">(Tidak ada transaksi)</td>
+                                </tr>
+                            `);
+                        } else {
+                            trxs.sort((a, b) => (dbParseDate(a.tanggal) || '9999').localeCompare(dbParseDate(b.tanggal) || '9999'));
+                            let subtotal = 0, subPpn = 0, subPph = 0, subNetto = 0;
+                            trxs.forEach(r => {
+                                const nilai = parseRupiah(r.nilai || 0);
+                                const ppn = parseRupiah(r.ppn || 0);
+                                const pph = parseRupiah(r.pph || 0);
+                                const netto = nilai - ppn - pph;
+                                subtotal += nilai; subPpn += ppn; subPph += pph; subNetto += netto;
+                                grandTotal.trx += 1; grandTotal.nilai += nilai; grandTotal.ppn += ppn; grandTotal.pph += pph; grandTotal.netto += netto;
+                                rowsHtml.push(`
+                                    <tr style="background:#ffffff;">
+                                        <td style="padding:3px 3px 3px ${(depth+1)*12+8}px; border:1px solid #e2e8f0; font-size:7pt; color:#94a3b8;">▸</td>
+                                        <td style="padding:3px 6px; border:1px solid #e2e8f0; font-size:7.5pt; text-transform:uppercase;">${r.keterangan || '-'}</td>
+                                        <td style="padding:3px 4px; border:1px solid #e2e8f0; font-family:monospace; font-size:7pt; text-align:center; font-weight:bold; color:#4338ca;">${r.noBp || '-'}</td>
+                                        <td style="padding:3px 4px; border:1px solid #e2e8f0; font-family:monospace; font-size:7pt; text-align:center;">${r.tanggal || '-'}</td>
+                                        <td style="padding:3px 6px; border:1px solid #e2e8f0; font-size:7.5pt; text-transform:uppercase;">${r.penerima || '-'}</td>
+                                        <td style="padding:3px 6px; border:1px solid #e2e8f0; font-family:monospace; font-size:7.5pt; text-align:right; font-weight:bold; color:#047857;">${formatRupiah(nilai)}</td>
+                                        <td style="padding:3px 4px; border:1px solid #e2e8f0; font-family:monospace; font-size:7pt; text-align:right; color:#c2410c;">${ppn > 0 ? formatRupiah(ppn) : '-'}</td>
+                                        <td style="padding:3px 4px; border:1px solid #e2e8f0; font-family:monospace; font-size:7pt; text-align:right; color:#c2410c;">${pph > 0 ? formatRupiah(pph) : '-'}</td>
+                                        <td style="padding:3px 6px; border:1px solid #e2e8f0; font-family:monospace; font-size:7.5pt; text-align:right; font-weight:bold; color:#1d4ed8;">${formatRupiah(netto)}</td>
+                                    </tr>
+                                `);
+                            });
+                            // Sub total rekening
+                            rowsHtml.push(`
+                                <tr style="background:#fff7ed;">
+                                    <td colspan="5" style="padding:4px 6px 4px ${(depth+1)*12+8}px; border:1px solid #fed7aa; text-align:right; font-size:8pt; font-weight:800; text-transform:uppercase; color:#9a3412;">Sub Total Rekening →</td>
+                                    <td style="padding:4px 6px; border:1px solid #fed7aa; font-family:monospace; font-size:8pt; text-align:right; font-weight:900; color:#065f46;">${formatRupiah(subtotal)}</td>
+                                    <td style="padding:4px 4px; border:1px solid #fed7aa; font-family:monospace; font-size:7.5pt; text-align:right; font-weight:bold; color:#c2410c;">${subPpn > 0 ? formatRupiah(subPpn) : '-'}</td>
+                                    <td style="padding:4px 4px; border:1px solid #fed7aa; font-family:monospace; font-size:7.5pt; text-align:right; font-weight:bold; color:#c2410c;">${subPph > 0 ? formatRupiah(subPph) : '-'}</td>
+                                    <td style="padding:4px 6px; border:1px solid #fed7aa; font-family:monospace; font-size:8pt; text-align:right; font-weight:900; color:#1e3a8a;">${formatRupiah(subNetto)}</td>
+                                </tr>
+                            `);
+                        }
+                    }
+                });
+            };
+            buildRows(state.data.pagu, 0);
+
+            // Grand Total row
+            const grandTotalRow = `
+                <tr style="background:#0f172a;">
+                    <td colspan="5" style="padding:6px; border:1px solid #0f172a; text-align:right; font-size:9pt; font-weight:900; text-transform:uppercase; color:#fbbf24;">GRAND TOTAL SEMUA TRANSAKSI (${grandTotal.trx} items) →</td>
+                    <td style="padding:6px; border:1px solid #0f172a; font-family:monospace; font-size:9pt; text-align:right; font-weight:900; color:#34d399;">Rp ${formatRupiah(grandTotal.nilai)}</td>
+                    <td style="padding:6px; border:1px solid #0f172a; font-family:monospace; font-size:8.5pt; text-align:right; font-weight:900; color:#fb923c;">Rp ${formatRupiah(grandTotal.ppn)}</td>
+                    <td style="padding:6px; border:1px solid #0f172a; font-family:monospace; font-size:8.5pt; text-align:right; font-weight:900; color:#fb923c;">Rp ${formatRupiah(grandTotal.pph)}</td>
+                    <td style="padding:6px; border:1px solid #0f172a; font-family:monospace; font-size:9pt; text-align:right; font-weight:900; color:#60a5fa;">Rp ${formatRupiah(grandTotal.netto)}</td>
+                </tr>
+            `;
+
+            return { rowsHtml: rowsHtml.join(''), grandTotalRow, filterInfo, grandTotal };
+        }
+
+        // EXPORT EXCEL
+        function daftarBelanjaExportExcel() {
+            const build = dbBuildPrintableHTML(false);
+            const timestamp = new Date().toLocaleString('id-ID');
+            const html = `
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        @page { size: A4 portrait; margin: 12mm; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+                        table { border-collapse: collapse; width: 100%; mso-number-format:'\\@'; }
+                        th { background-color: #0f172a; color: #fbbf24; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 7pt; padding: 6px; border: 1px solid #334155; }
+                        .title { font-size: 14pt; font-weight: 800; text-align: center; margin-bottom: 2px; color: #0f172a; text-transform: uppercase; }
+                        .subtitle { font-size: 11pt; font-weight: 700; text-align: center; margin-bottom: 2px; color: #1d4ed8; text-transform: uppercase; }
+                        .sub2 { font-size: 10pt; font-weight: 600; text-align: center; margin-bottom: 8px; color: #475569; }
+                        .info { font-size: 8pt; margin-bottom: 1px; color: #475569; }
+                        .label { font-size: 7pt; color: #64748b; }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">DAFTAR BELANJA LENGKAP</div>
+                    <div class="subtitle">${state.pdfConfig.subJudul1}</div>
+                    <div class="sub2">${state.pdfConfig.subJudul2}</div>
+                    <div style="margin-bottom: 12px; border-bottom: 2px solid #0f172a; padding-bottom: 8px;">
+                        <div class="info"><b>Dicetak:</b> ${timestamp}</div>
+                        ${build.filterInfo.map(info => `<div class="info"><b>Filter:</b> ${info}</div>`).join('')}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:10%">Kode</th>
+                                <th style="width:28%">Uraian / Keterangan</th>
+                                <th style="width:8%">No BP</th>
+                                <th style="width:8%">Tanggal</th>
+                                <th style="width:14%">Penerima</th>
+                                <th style="width:10%">Nilai</th>
+                                <th style="width:7%">PPn</th>
+                                <th style="width:7%">PPh</th>
+                                <th style="width:8%">Netto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${build.rowsHtml}
+                            ${build.grandTotalRow}
+                        </tbody>
+                    </table>
+                    <!-- Penandatangan -->
+                    ${(state.pdfConfig.tanggal || state.pdfConfig.penandatangan || state.pdfConfig.jabatan || state.pdfConfig.nip) ? `
+                        <div style="margin-top: 30px; margin-left: auto; width: 280px; font-family: sans-serif; font-size: 9pt;">
+                            ${state.pdfConfig.tanggal ? `<div>${state.pdfConfig.tanggal}</div>` : ''}
+                            ${state.pdfConfig.jabatan ? `<div>${state.pdfConfig.jabatan}</div>` : ''}
+                            <div style="height: 65px;"></div>
+                            ${state.pdfConfig.penandatangan ? `<div style="font-weight: bold; text-decoration: underline;">${state.pdfConfig.penandatangan}</div>` : ''}
+                            ${state.pdfConfig.nip ? `<div>NIP. ${state.pdfConfig.nip}</div>` : ''}
+                        </div>
+                    ` : ''}
+                    <div style="margin-top: 20px; text-align: center; font-size: 7pt; font-weight: 500; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase;">Printed by SIPANDU</div>
+                </body>
+                </html>
+            `;
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `DAFTAR_BELANJA_${new Date().toISOString().split('T')[0]}.xls`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotif(`Export Excel Daftar Belanja berhasil! (${build.grandTotal.trx} transaksi)`);
+        }
+
+        // EXPORT PDF PORTRAIT
+        function daftarBelanjaExportPDF() {
+            const build = dbBuildPrintableHTML(true);
+            const timestamp = new Date().toLocaleString('id-ID');
+
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.padding = '10px';
+            pdfContainer.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+            pdfContainer.innerHTML = `
+                <div style="text-align:center; margin-bottom:12px; border-bottom:2px solid #0f172a; padding-bottom:8px;">
+                    <div style="font-size:14pt; font-weight:800; color:#0f172a; text-transform:uppercase; margin-bottom:2px;">DAFTAR BELANJA LENGKAP</div>
+                    <div style="font-size:11pt; font-weight:700; color:#1d4ed8; text-transform:uppercase; margin-bottom:2px;">${state.pdfConfig.subJudul1}</div>
+                    <div style="font-size:10pt; font-weight:600; color:#475569;">${state.pdfConfig.subJudul2}</div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <div style="font-size:8pt; margin-bottom:1px; color:#475569;"><b>Dicetak:</b> ${timestamp}</div>
+                    ${build.filterInfo.map(info => `<div style="font-size:8pt; margin-bottom:1px; color:#475569;"><b>Filter:</b> ${info}</div>`).join('')}
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="border-collapse: collapse; width:100%; table-layout:auto;">
+                        <thead style="display: table-header-group;">
+                            <tr>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:9%;">Kode</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;">Uraian</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:7%;">No BP</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:8%;">Tgl</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:13%;">Penerima</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:10%;">Nilai</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:7%;">PPn</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:7%;">PPh</th>
+                                <th style="background:#0f172a;color:#fbbf24;font-weight:bold;text-align:center;text-transform:uppercase;font-size:6.5pt;padding:5px 4px;border:1px solid #334155;width:9%;">Netto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${build.rowsHtml}
+                            ${build.grandTotalRow}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Penandatangan -->
+                ${(state.pdfConfig.tanggal || state.pdfConfig.penandatangan || state.pdfConfig.jabatan || state.pdfConfig.nip) ? `
+                    <div style="margin-top: 30px; margin-left: auto; width: 260px; font-family: sans-serif; font-size: 9pt;">
+                        ${state.pdfConfig.tanggal ? `<div>${state.pdfConfig.tanggal}</div>` : ''}
+                        ${state.pdfConfig.jabatan ? `<div>${state.pdfConfig.jabatan}</div>` : ''}
+                        <div style="height: 60px;"></div>
+                        ${state.pdfConfig.penandatangan ? `<div style="font-weight: bold; text-decoration: underline;">${state.pdfConfig.penandatangan}</div>` : ''}
+                        ${state.pdfConfig.nip ? `<div>NIP. ${state.pdfConfig.nip}</div>` : ''}
+                    </div>
+                ` : ''}
+                <div style="margin-top: 15px; text-align: center; font-size: 7pt; font-weight: 500; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase;">Printed by SIPANDU</div>
+            `;
+
+            document.body.appendChild(pdfContainer);
+
+            // PORTRAIT F4: 210mm x 330mm (tukar posisi dari landscape)
+            const opt = {
+                margin: [12, 10, 12, 10],
+                filename: `DAFTAR_BELANJA_PORTRAIT_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: [210, 330], orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                document.body.removeChild(pdfContainer);
+                showNotif(`Export PDF Portrait berhasil! (${build.grandTotal.trx} transaksi)`);
+            });
         }
 
         // --- START ---
