@@ -1,0 +1,3058 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPD - Rincian Pengajuan Bulanan | APBD TRACKER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+        html {
+            font-size: 13px;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        textarea.redaksi-text {
+            font-family: 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            tab-size: 4;
+        }
+
+        textarea.redaksi-text:focus {
+            outline: none;
+        }
+
+        .scroll-smooth-y {
+            scroll-behavior: smooth;
+        }
+
+        .sipd-table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            height: calc(100vh - 200px);
+            min-height: 360px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(100, 116, 139, 0.75) rgba(226, 232, 240, 0.9);
+        }
+
+        .sipd-table-scroll::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        .sipd-table-scroll::-webkit-scrollbar-track {
+            background: rgba(226, 232, 240, 0.9);
+        }
+
+        .sipd-table-scroll::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.8);
+            border-radius: 9999px;
+            border: 2px solid rgba(226, 232, 240, 0.9);
+        }
+
+        #sipd-main-table thead,
+        #sipd-main-table thead tr {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background-color: #0f172a !important;
+        }
+
+        #sipd-main-table tfoot,
+        #sipd-main-table tfoot tr {
+            position: sticky;
+            bottom: 0;
+            z-index: 40;
+            background-color: #0f172a !important;
+        }
+
+        #sipd-main-table th {
+            position: sticky;
+            top: 0;
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+
+        #sipd-main-table thead th,
+        #sipd-table-head th {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            border-color: #334155 !important;
+            box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.35);
+        }
+
+        #sipd-main-table thead th *,
+        #sipd-table-head th * {
+            color: #ffffff !important;
+        }
+
+        #sipd-main-table thead th button>span,
+        #sipd-main-table thead th button>div,
+        #sipd-table-head th button>span,
+        #sipd-table-head th button>div {
+            display: block;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        #sipd-main-table tbody td {
+            font-size: 9px;
+        }
+
+        /* Color overrides matching apbd.html */
+        header.bg-slate-300 {
+            background-color: #d1d5db !important;
+            color: #0f172a !important;
+        }
+
+        header.bg-slate-300 .text-slate-950,
+        header.bg-slate-300 .text-emerald-700,
+        header.bg-slate-300 #global-sisa {
+            color: #111827 !important;
+        }
+
+        .bg-blue-400 {
+            background-color: #93c5fd !important;
+            color: #111827 !important;
+        }
+
+        .bg-emerald-700 {
+            background-color: #047857 !important;
+            color: #111827 !important;
+        }
+
+        .bg-emerald-600 {
+            background-color: #16a34a !important;
+            color: #111827 !important;
+        }
+
+        .bg-emerald-500 {
+            background-color: #22c55e !important;
+            color: #111827 !important;
+        }
+
+        .bg-emerald-400 {
+            background-color: #86efac !important;
+            color: #111827 !important;
+        }
+
+        .bg-emerald-300 {
+            background-color: #bbf7d0 !important;
+            color: #111827 !important;
+        }
+
+        .bg-lime-300 {
+            background-color: #bef264 !important;
+            color: #172554 !important;
+        }
+
+        .bg-orange-300 {
+            background-color: #fdba74 !important;
+            color: #111827 !important;
+        }
+
+        .bg-slate-300 {
+            background-color: #d1d5db !important;
+            color: #111827 !important;
+        }
+
+        .bg-slate-800 {
+            background-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+
+        #sipd-table-head th,
+        #sipd-table-head .bg-slate-300 {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10">
+
+    <header class="bg-slate-300 sticky top-0 z-[100] px-4 py-1 text-slate-950 shadow-2xl border-b-2 border-amber-300">
+        <div class="container w-full px-2 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <a href="apbd.html"
+                    class="bg-slate-200 hover:bg-slate-100 p-1.5 rounded-lg border border-slate-300 transition-all text-slate-700"
+                    title="Kembali ke APBD Tracker">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                </a>
+                <div class="bg-cyan-500 p-1 rounded-xl -rotate-6 shadow-xl"><i data-lucide="clipboard-list"
+                        class="w-3.5 h-3.5 text-slate-950"></i></div>
+                <div>
+                    <h1 class="text-base font-black italic tracking-tighter uppercase leading-none text-slate-900">SIPD
+                        <span class="text-cyan-600 font-black italic text-[16px] ml-0.5">PENATAUSAHAAN KEUANGAN</span>
+                    </h1>
+                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-700 mt-0.5">Pengajuan dan
+                        Realisasi Bulanan</p>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex gap-3 items-center">
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border-2 border-cyan-300 shadow-sm">
+                    <i id="sipd-lock-icon" data-lucide="lock-open" class="w-3 h-3 text-cyan-700"></i>
+                    <span class="text-[7px] font-black uppercase tracking-widest text-cyan-900">
+                        Pagu: <span id="sipd-active-mode-label">Perubahan</span>
+                    </span>
+                </div>
+                <div class="h-4 w-[1px] bg-slate-300"></div>
+                <div class="text-right">
+                    <div class="text-[5px] text-slate-600 uppercase font-black tracking-widest">Sisa Kas</div>
+                    <div id="global-sisa"
+                        class="text-xs font-mono font-black text-emerald-700 leading-none tracking-tighter">0</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-2">
+        <!-- Action Bar -->
+        <div class="mb-2 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2 flex-wrap">
+
+                <!-- Kode Panti, ComboBox Bulan & Button Pengajuan -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <!-- Textarea Kode Panti + Checkbox Simpan Tetap -->
+                    <div
+                        class="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-1 shadow-sm">
+                        <i data-lucide="building-2" class="w-2.5 h-2.5 text-slate-600"></i>
+                        <label class="text-[6px] font-black uppercase tracking-widest text-slate-500">Kode
+                            Panti:</label>
+                        <input type="text" id="sipd-kode-panti" placeholder="Isi Kode Panti..."
+                            class="rounded text-[7px] font-black outline-none border border-slate-200 px-1.5 py-0.5 w-[110px] bg-white text-slate-900 leading-tight"
+                            oninput="sipdOnKodePantiChange()" />
+                        <label
+                            class="flex items-center gap-1 cursor-pointer text-[6.5px] font-black uppercase text-slate-600 select-none ml-1"
+                            title="Simpan tetap Kode Panti ini agar tidak hilang saat reload">
+                            <input type="checkbox" id="sipd-simpan-tetap-panti" onchange="sipdOnSimpanTetapChange()"
+                                class="rounded text-cyan-600 focus:ring-cyan-500 h-3 w-3 cursor-pointer">
+                            <span>Simpan Tetap</span>
+                        </label>
+                    </div>
+
+                    <!-- ComboBox Bulan -->
+                    <div
+                        class="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-1 shadow-sm">
+                        <i data-lucide="calendar" class="w-2.5 h-2.5 text-slate-600"></i>
+                        <label class="text-[6px] font-black uppercase tracking-widest text-slate-500">Bulan:</label>
+                        <select id="sipd-bulan-redaksi" onchange="sipdOnBulanRedaksiChange(this.value)"
+                            style="background-color:#ffffff !important; color:#000000 !important;"
+                            class="rounded text-[7px] font-black outline-none appearance-none cursor-pointer px-1.5 py-0.5 w-[110px]">
+                            <option value="1" style="background:#ffffff; color:#000000;">Januari</option>
+                            <option value="2" style="background:#ffffff; color:#000000;">Februari</option>
+                            <option value="3" style="background:#ffffff; color:#000000;">Maret</option>
+                            <option value="4" style="background:#ffffff; color:#000000;">April</option>
+                            <option value="5" style="background:#ffffff; color:#000000;">Mei</option>
+                            <option value="6" style="background:#ffffff; color:#000000;">Juni</option>
+                            <option value="7" style="background:#ffffff; color:#000000;">Juli</option>
+                            <option value="8" style="background:#ffffff; color:#000000;">Agustus</option>
+                            <option value="9" style="background:#ffffff; color:#000000;">September</option>
+                            <option value="10" style="background:#ffffff; color:#000000;">Oktober</option>
+                            <option value="11" style="background:#ffffff; color:#000000;">November</option>
+                            <option value="12" style="background:#ffffff; color:#000000;">Desember</option>
+                        </select>
+                        <button onclick="sipdResetBulan()" id="sipd-reset-bulan-btn"
+                            title="Tampilkan SEMUA Bulan (reset filter)"
+                            class="ml-0.5 bg-white hover:bg-slate-200 p-0.5 rounded text-slate-500 hover:text-slate-700 transition">
+                            <i data-lucide="x" class="w-2.5 h-2.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Button "Pengajuan" (Filter Hanya Sub-Kegiatan yang Diajukan) -->
+                    <button id="sipd-btn-only-pengajuan" onclick="sipdToggleOnlyPengajuan()"
+                        title="Klik untuk menampilkan Sub-Kegiatan yang diajukan saja pada bulan ini"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md font-black uppercase text-[8px] flex items-center gap-1.5 transition-all shadow-md">
+                        <i data-lucide="file-check" class="w-3 h-3"></i> Pengajuan
+                    </button>
+                    <!-- Container Badge Reset Urutan (jika sorting aktif) -->
+                    <div id="sipd-sort-active-container" class="hidden"></div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="sipd-btn-detail-toggle" onclick="sipdToggleExpandAll()"
+                    class="bg-amber-500 text-white px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-amber-600 transition-all shadow-sm">
+                    <i data-lucide="unfold-vertical" class="w-3 h-3"></i> Detail
+                </button>
+                <button onclick="sipdExportExcel()"
+                    class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                    <i data-lucide="file-output" class="w-3 h-3"></i> Excel
+                </button>
+
+                <!-- Column Checklist Dropdown -->
+                <div class="relative inline-block text-left" id="sipd-col-toggle-wrapper">
+                    <button onclick="sipdToggleColDropdown()" id="sipd-btn-col-toggle"
+                        class="bg-cyan-700 text-white px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-cyan-800 transition-all shadow-sm">
+                        <i data-lucide="columns" class="w-3 h-3"></i> Kolom Tabel
+                    </button>
+                    <div id="sipd-col-dropdown"
+                        class="hidden absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-[150] p-3 text-slate-800">
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                            <span class="text-[9px] font-black uppercase text-slate-700 tracking-wider">Checklist
+                                Kolom</span>
+                            <div class="flex gap-1">
+                                <button onclick="sipdSetAllCols(true)"
+                                    class="text-[7px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded">Semua</button>
+                                <button onclick="sipdSetAllCols(false)"
+                                    class="text-[7px] font-black uppercase text-rose-600 hover:text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded">Sembunyikan</button>
+                            </div>
+                        </div>
+                        <div id="sipd-col-checkbox-container" class="space-y-1 max-h-60 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section SIPD -->
+        <div class="mb-2 bg-white p-2 rounded-xl shadow-sm border border-slate-200 space-y-2">
+            <!-- Row 1: Search -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i data-lucide="search"
+                        class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
+                    <input id="sipd-search" oninput="sipdDebounceRender()"
+                        placeholder="Cari Kode, Uraian Program/Rekening..."
+                        class="w-full pl-8 pr-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none focus:ring-2 ring-cyan-500/5 transition-all" />
+                </div>
+
+                <button id="sipd-reset-btn" onclick="sipdResetFilter()"
+                    class="hidden bg-rose-600 text-white px-2 py-1 rounded-md font-black uppercase text-[7px] flex items-center gap-1 shadow-lg hover:bg-rose-700 transition-all animate-pulse">
+                    <i data-lucide="refresh-ccw" class="w-2.5 h-2.5"></i> RESET
+                </button>
+            </div>
+
+            <!-- Row 2: Hierarki Filters (Program - Kegiatan - Sub-Kegiatan - Rekening) -->
+            <div class="pt-2 border-t border-slate-100">
+                <div class="grid grid-cols-4 gap-1.5 items-end">
+                    <div class="space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Program</label>
+                        <select id="sipd-program" onchange="sipdOnHierChange('program')"
+                            class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-blue-500/20">
+                            <option value="all">SEMUA PROGRAM</option>
+                        </select>
+                    </div>
+                    <div class="space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Kegiatan</label>
+                        <select id="sipd-kegiatan" onchange="sipdOnHierChange('kegiatan')"
+                            class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-indigo-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Sub-Kegiatan</label>
+                        <select id="sipd-subkeg" onchange="sipdOnHierChange('sub_kegiatan')"
+                            class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-emerald-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA SUB-KEGIATAN</option>
+                        </select>
+                    </div>
+                    <div class="space-y-0.5">
+                        <label class="text-[6px] font-black text-slate-400 uppercase ml-1">Rekening</label>
+                        <select id="sipd-rekening" onchange="sipdOnHierChange('rekening')"
+                            class="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[8px] font-bold outline-none focus:ring-1 ring-orange-500/20 disabled:opacity-50 disabled:bg-slate-100 cursor-not-allowed">
+                            <option value="all">SEMUA REKENING</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIPD Table -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex-1">
+            <div class="sipd-table-scroll">
+                <table id="sipd-main-table" class="w-full text-left border-collapse"
+                    style="width: max-content; min-width: 100%; table-layout: fixed;">
+                    <thead id="sipd-table-head"></thead>
+                    <tbody id="sipd-table-body" class="divide-y divide-slate-200"></tbody>
+                    <tfoot id="sipd-table-foot" class="sticky bottom-0 z-[40]"></tfoot>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="sipd-redaksi-modal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4"></div>
+
+    <!-- Notification Toast -->
+    <div id="notif"
+        class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[500] px-8 py-4 bg-slate-900 text-white rounded-full shadow-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
+        <i id="notif-icon" data-lucide="info" class="w-4 h-4 text-emerald-400"></i>
+        <span id="notif-msg"></span>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
+        let supa = null;
+        try {
+            if (typeof supabase !== 'undefined') {
+                supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.error("[SIPD] Supabase early init failed:", e);
+        }
+        const appId = 'SIPD_PAGU_ADVANCED_v2';
+
+        const PIN_OTORITAS = "888";
+        const BULAN_LIST = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+        const BULAN_LIST_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        const SUMBER_DANA = [
+            { id: 'DAU', label: 'DAU', color: 'bg-amber-400 text-amber-950', icon: 'wallet' },
+            { id: 'DAK', label: 'DAK', color: 'bg-cyan-500 text-white', icon: 'database' },
+            { id: 'PAD', label: 'PAD', color: 'bg-emerald-500 text-white', icon: 'bar-chart-3' },
+            { id: 'LAINNYA', label: 'Lainnya', color: 'bg-slate-400 text-slate-900', icon: 'tag' }
+        ];
+
+        const METODE_BELANJA = [
+            { id: 'EPURCHASING', label: 'E-PURCH', color: 'bg-blue-600 text-white', icon: 'shopping-cart' },
+            { id: 'SWAKELOLA', label: 'SWAKELOLA', color: 'bg-purple-600 text-white', icon: 'users' },
+            { id: 'LANGSUNG', label: 'LANGSUNG', color: 'bg-rose-600 text-white', icon: 'hand-coins' },
+            { id: 'DIKECUALIKAN', label: 'DIKECUALIKAN', color: 'bg-orange-500 text-white', icon: 'shield-check' },
+            { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
+        ];
+
+        const METODE_BELANJA_2 = [
+            { id: 'PENYEDIA_SWAKELOLA', label: 'Penyedia Dalam Swakelola', color: 'bg-violet-500 text-white', icon: 'user-cog' },
+            { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
+        ];
+
+        const PELAKSANA = [
+            { id: 'TU', label: 'Tata Usaha', color: 'bg-lime-300 text-black', icon: 'building' },
+            { id: 'PENYANTUNAN', label: 'Penyantunan', color: 'bg-indigo-600 text-black', icon: 'heart' },
+            { id: 'BIMRESOS', label: 'Bimresos', color: 'bg-teal-600 text-black', icon: 'users-round' },
+            { id: 'LAINNYA', label: 'Lainnya', color: 'bg-slate-400 text-black', icon: 'user' }
+        ];
+
+        const LEVEL_STYLES = {
+            program: { bg: 'bg-blue-400', text: 'text-slate-950', border: 'border-sky-300', accent: 'bg-blue-200', label: 'Program', icon: 'layers' },
+            kegiatan: { bg: 'bg-emerald-600', text: 'text-slate-950', border: 'border-emerald-300', accent: 'bg-emerald-200', label: 'Kegiatan', icon: 'database' },
+            sub_kegiatan: { bg: 'bg-emerald-400', text: 'text-slate-950', border: 'border-emerald-200', accent: 'bg-emerald-100', label: 'Sub-Kegiatan', icon: 'tag' },
+            rekening: { bg: 'bg-orange-300', text: 'text-slate-950', border: 'border-orange-200', accent: 'bg-orange-200', label: 'Rekening', icon: 'receipt' }
+        };
+
+        // --- STATE ---
+        const DEFAULT_VISIBLE_COLUMNS = {
+            kode: true, uraian: true, pagu: true, realisasi: true, pajak: true, sisa: true,
+            realisasi_bulanan: true, pajak_bulanan: true, sisa_saldo: true,
+            jan: true, feb: true, mar: true, apr: true, mei: true, jun: true,
+            jul: true, agu: true, sep: true, okt: true, nov: true, des: true,
+            redaksi_pengajuan: true, redaksi_belanja: true, redaksi_sts: true
+        };
+
+        function sipdNormalizeVisibleColumns(raw) {
+            const base = raw && typeof raw === 'object' ? { ...raw } : {};
+            return { ...DEFAULT_VISIBLE_COLUMNS, ...base };
+        }
+
+        let state = {
+            viewMode: localStorage.getItem(`${appId}_viewMode`) || 'perubahan',
+            isModeLocked: localStorage.getItem(`${appId}_isModeLocked`) === 'true',
+            data: { pagu: [], realisasi: [], backups: [], redaksi: {} },
+            sipd: {
+                expanded: {},
+                allExpanded: false,
+                filterHier: { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' },
+                filterSearch: '',
+                _debounceTimer: null,
+                _saveTimer: null,
+                bulanRedaksi: null,
+                redaksi: {},
+                sortKey: null,
+                sortDir: 'none',
+                visibleColumns: sipdNormalizeVisibleColumns((function () {
+                    try {
+                        const saved = localStorage.getItem(`${appId}_visibleColumns`);
+                        return saved ? JSON.parse(saved) : null;
+                    } catch (e) { return null; }
+                })())
+            }
+        };
+
+        // --- UTILS ---
+        const formatRupiah = (num) => {
+            if (num === undefined || num === null || num === '') return '';
+            const val = typeof num === 'string' ? parseInt(num.replace(/[^0-9]/g, '')) : num;
+            if (isNaN(val)) return '0';
+            return new Intl.NumberFormat('id-ID').format(val);
+        };
+
+        const parseRupiah = (str) => {
+            if (!str) return 0;
+            return parseInt(str.toString().replace(/[^0-9]/g, '')) || 0;
+        };
+
+        function terbilang(angka) {
+            const bil = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+            let n = parseInt(angka);
+            if (n < 12) return bil[n];
+            if (n < 20) return bil[n - 10] + " Belas";
+            if (n < 100) return bil[Math.floor(n / 10)] + " Puluh " + bil[n % 10];
+            if (n < 200) return "Seratus " + terbilang(n - 100);
+            if (n < 1000) return bil[Math.floor(n / 100)] + " Ratus " + terbilang(n % 100);
+            if (n < 2000) return "Seribu " + terbilang(n - 1000);
+            if (n < 1000000) return terbilang(Math.floor(n / 1000)) + " Ribu " + terbilang(n % 1000);
+            if (n < 1000000000) return terbilang(Math.floor(n / 1000000)) + " Juta " + terbilang(n % 1000000);
+            if (n < 1000000000000) return terbilang(Math.floor(n / 1000000000)) + " Miliar " + terbilang(n % 1000000000);
+            return terbilang(Math.floor(n / 1000000000000)) + " Triliun " + terbilang(n % 1000000000000);
+        }
+
+        function showNotif(msg, type = 'success') {
+            const el = document.getElementById('notif');
+            const msgEl = document.getElementById('notif-msg');
+            const iconEl = document.getElementById('notif-icon');
+            msgEl.innerText = msg;
+            if (type === 'success') iconEl.className = 'w-4 h-4 text-emerald-400';
+            else if (type === 'error') iconEl.className = 'w-4 h-4 text-rose-400';
+            else if (type === 'warning') iconEl.className = 'w-4 h-4 text-amber-400';
+            else iconEl.className = 'w-4 h-4 text-cyan-400';
+            iconEl.setAttribute('data-lucide', type === 'success' ? 'check-circle-2' : type === 'error' ? 'x-circle' : type === 'warning' ? 'alert-triangle' : 'info');
+            el.style.opacity = '1';
+            el.style.transform = 'translate(-50%, 0)';
+            lucide.createIcons();
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translate(-50%, 10px)';
+            }, 3000);
+        }
+
+        // --- CORE DATABASE FUNCTIONS ---
+        async function init() {
+            try {
+                console.log("[SIPD] Initializing database connection...");
+                let retries = 0;
+                while (typeof supabase === 'undefined' && retries < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    retries++;
+                }
+                if (typeof supabase === 'undefined') throw new Error("Library Supabase tidak terdeteksi.");
+                if (!supa) supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+                const { data, error } = await supa
+                    .from('sipd_main_document')
+                    .select('pagu,realisasi,backups,redaksi')
+                    .eq('app_id', appId)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    state.data = {
+                        pagu: data.pagu || [],
+                        realisasi: data.realisasi || [],
+                        backups: data.backups || [],
+                        redaksi: data.redaksi || {}
+                    };
+                    state.sipd.redaksi = state.data.redaksi || {};
+                } else {
+                    await saveToSupabase({ pagu: [], realisasi: [], backups: [], redaksi: {} });
+                }
+                renderSIPD();
+            } catch (err) {
+                console.error("[SIPD] Initialization failed:", err);
+                showNotif(err.message || "Gagal memuat data", "error");
+                renderSIPD();
+            }
+        }
+
+        async function saveToSupabase(newData) {
+            try {
+                if (!supa) throw new Error("Koneksi database belum terinisialisasi.");
+                state.data = newData;
+                state.sipd.redaksi = newData.redaksi || state.sipd.redaksi;
+
+                // Modul SIPD hanya menulis kolom `pagu` (berisi struktur + data pengajuan)
+                // dan `redaksi`. Kolom `realisasi` & `backups` sengaja TIDAK dikirim
+                // agar tidak menimpa data yang dikelola apbd.html / bend23.html.
+                const { error } = await supa
+                    .from('sipd_main_document')
+                    .upsert({
+                        app_id: appId,
+                        pagu: newData.pagu,
+                        redaksi: newData.redaksi || {},
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'app_id' });
+
+                if (error) throw error;
+            } catch (err) {
+                console.error("Save Error:", err);
+                showNotif("Gagal menyimpan: " + (err.message || ""), "error");
+            }
+        }
+
+        function sipdSaveDebounce() {
+            if (state.sipd._saveTimer) clearTimeout(state.sipd._saveTimer);
+            state.sipd._saveTimer = setTimeout(() => {
+                saveToSupabase({
+                    pagu: state.data.pagu,
+                    realisasi: state.data.realisasi,
+                    backups: state.data.backups,
+                    redaksi: state.sipd.redaksi
+                }).catch(() => { });
+            }, 800);
+        }
+
+        // --- CALCULATION LOGIC ---
+        function getAggregatedData(item) {
+            let paguMurni = item.type === 'rekening' ? parseRupiah(item.paguMurni || item.pagu || 0) : 0;
+            let paguEfisiensi = item.type === 'rekening' ? parseRupiah(item.paguEfisiensi || 0) : 0;
+            let paguPerubahan = item.type === 'rekening' ? parseRupiah(item.paguPerubahan || item.pagu || 0) : 0;
+            let belumSP2D = parseRupiah(item.belumSP2D || 0);
+
+            const transactions = (state.data.realisasi || []).filter(r => r.rekeningId === item.id);
+
+            let realisasi = 0;
+            let pajak = 0;
+            let monthly = Array(12).fill(0);
+            let monthlyPajak = Array(12).fill(0);
+
+            transactions.forEach(r => {
+                const nilai = parseRupiah(r.nilai);
+                const pajakTransaksi = parseRupiah(r.ppn || 0) + parseRupiah(r.pph || 0);
+                realisasi += nilai;
+                pajak += pajakTransaksi;
+                if (r.tanggal) {
+                    const dateParts = r.tanggal.split(/[-/.]/);
+                    let month = -1;
+                    if (dateParts.length === 3) {
+                        if (parseInt(dateParts[0]) > 31) month = parseInt(dateParts[1]) - 1;
+                        else if (parseInt(dateParts[2]) > 31) month = parseInt(dateParts[1]) - 1;
+                        else month = parseInt(dateParts[1]) - 1;
+                    }
+                    if (month >= 0 && month <= 11) {
+                        monthly[month] += nilai;
+                        monthlyPajak[month] += pajakTransaksi;
+                    }
+                    else {
+                        const fallbackMonth = new Date(r.tanggal).getMonth();
+                        if (!isNaN(fallbackMonth)) {
+                            monthly[fallbackMonth] += nilai;
+                            monthlyPajak[fallbackMonth] += pajakTransaksi;
+                        } else {
+                            monthly[0] += nilai;
+                            monthlyPajak[0] += pajakTransaksi;
+                        }
+                    }
+                } else {
+                    monthly[0] += nilai;
+                    monthlyPajak[0] += pajakTransaksi;
+                }
+            });
+
+            if (item.children && item.children.length > 0) {
+                let sumMurni = 0, sumEfisiensi = 0, sumPerubahan = 0, sumReal = 0, sumPajak = 0, sumBelum = 0;
+                let sumMonthly = Array(12).fill(0);
+                let sumMonthlyPajak = Array(12).fill(0);
+                item.children.forEach(child => {
+                    const childData = getAggregatedData(child);
+                    sumMurni += childData.paguMurni;
+                    sumEfisiensi += childData.paguEfisiensi;
+                    sumPerubahan += childData.paguPerubahan;
+                    sumReal += childData.realisasi;
+                    sumPajak += childData.pajak;
+                    sumBelum += childData.belumSP2D;
+                    childData.monthly.forEach((v, i) => sumMonthly[i] += v);
+                    childData.monthlyPajak.forEach((v, i) => sumMonthlyPajak[i] += v);
+                });
+                paguMurni = sumMurni; paguEfisiensi = sumEfisiensi; paguPerubahan = sumPerubahan;
+                realisasi = sumReal; pajak = sumPajak; belumSP2D = sumBelum; monthly = sumMonthly; monthlyPajak = sumMonthlyPajak;
+            }
+            return { paguMurni, paguEfisiensi, paguPerubahan, realisasi, pajak, belumSP2D, monthly, monthlyPajak };
+        }
+
+        function calculateFilteredTotals(items) {
+            let murni = 0, efisiensi = 0, perubahan = 0, real = 0, pajak = 0, belum = 0;
+            let monthly = Array(12).fill(0);
+            let monthlyPajak = Array(12).fill(0);
+            const walk = (list, forceMatch) => {
+                list.forEach(item => {
+                    const fh = state.sipd.filterHier;
+                    let skip = false;
+                    if (fh.program !== 'all' && item.type === 'program' && item.id !== fh.program) skip = true;
+                    if (fh.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== fh.kegiatan) skip = true;
+                    if (fh.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== fh.sub_kegiatan) skip = true;
+                    if (fh.rekening !== 'all' && item.type === 'rekening' && item.id !== fh.rekening) skip = true;
+                    if (skip) return;
+                    const matchText = !state.sipd.filterSearch || item.uraian.toLowerCase().includes(state.sipd.filterSearch) || (item.kode || '').toLowerCase().includes(state.sipd.filterSearch);
+                    const force = forceMatch || matchText;
+                    if (item.type === 'rekening') {
+                        const agg = getAggregatedData(item);
+                        if (force && sipdHasFilledPagu(item)) {
+                            murni += agg.paguMurni; efisiensi += agg.paguEfisiensi; perubahan += agg.paguPerubahan;
+                            real += agg.realisasi; belum += agg.belumSP2D;
+                            pajak += agg.pajak;
+                            agg.monthly.forEach((v, i) => monthly[i] += v);
+                            agg.monthlyPajak.forEach((v, i) => monthlyPajak[i] += v);
+                        }
+                    } else if (item.children) {
+                        walk(item.children, force);
+                    }
+                });
+            };
+            walk(items, false);
+            return { paguMurni: murni, paguEfisiensi: efisiensi, paguPerubahan: perubahan, realisasi: real, pajak, belumSP2D: belum, monthly, monthlyPajak };
+        }
+
+        // --- SIPD CORE FUNCTIONS ---
+        function sipdBulanIdx(bln12) { return (Number(bln12) || 1) - 1; }
+
+        function sipdEnsurePengajuanFields() {
+            let changed = false;
+            const walk = (items) => {
+                if (!items) return;
+                items.forEach(it => {
+                    if (it.type === 'rekening') {
+                        if (!it.pengajuanBulanan || !Array.isArray(it.pengajuanBulanan) || it.pengajuanBulanan.length !== 12) {
+                            it.pengajuanBulanan = new Array(12).fill(0);
+                            changed = true;
+                        } else {
+                            while (it.pengajuanBulanan.length < 12) { it.pengajuanBulanan.push(0); changed = true; }
+                            if (it.pengajuanBulanan.length > 12) { it.pengajuanBulanan = it.pengajuanBulanan.slice(0, 12); changed = true; }
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return changed;
+        }
+
+        function sipdEnsureStatusFields() {
+            let changed = false;
+            const walk = (items) => {
+                if (!items) return;
+                items.forEach(it => {
+                    if (it.type === 'rekening') {
+                        if (!it.statusPengajuan || !Array.isArray(it.statusPengajuan) || it.statusPengajuan.length !== 12) {
+                            it.statusPengajuan = new Array(12).fill('draft');
+                            changed = true;
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return changed;
+        }
+
+        function sipdEnsureNomorFields() {
+            let changed = false;
+            const walk = (items) => {
+                if (!items) return;
+                items.forEach(it => {
+                    if (it.type === 'sub_kegiatan') {
+                        if (!it.nomorPengajuanBulanan || !Array.isArray(it.nomorPengajuanBulanan) || it.nomorPengajuanBulanan.length !== 12) {
+                            it.nomorPengajuanBulanan = new Array(12).fill('');
+                            changed = true;
+                        }
+                        if (!it.nomorSPPBulanan || !Array.isArray(it.nomorSPPBulanan) || it.nomorSPPBulanan.length !== 12) {
+                            it.nomorSPPBulanan = new Array(12).fill('');
+                            changed = true;
+                        }
+                        if (!it.nomorSP2DBulanan || !Array.isArray(it.nomorSP2DBulanan) || it.nomorSP2DBulanan.length !== 12) {
+                            it.nomorSP2DBulanan = new Array(12).fill('');
+                            changed = true;
+                        }
+                        if (!it.nomorSTS || !Array.isArray(it.nomorSTS) || it.nomorSTS.length !== 12) {
+                            it.nomorSTS = new Array(12).fill('');
+                            changed = true;
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return changed;
+        }
+
+        function sipdToggleNomorDropdown(itemId) {
+            state.sipd.openNomorDropdowns = state.sipd.openNomorDropdowns || {};
+            state.sipd.openNomorDropdowns[itemId] = !state.sipd.openNomorDropdowns[itemId];
+            const drop = document.getElementById(`sipd-nomor-drop-${itemId}`);
+            if (drop) {
+                if (state.sipd.openNomorDropdowns[itemId]) {
+                    drop.classList.remove('hidden');
+                    drop.classList.add('block');
+                    const ta = drop.querySelector('textarea');
+                    if (ta) {
+                        ta.focus();
+                        ta.select();
+                    }
+                } else {
+                    drop.classList.add('hidden');
+                    drop.classList.remove('block');
+                }
+            }
+        }
+
+        function sipdOnEditNomorSubKeg(itemId, bulanIdx, value) {
+            const item = sipdFindItem(state.data.pagu, itemId);
+            if (!item) return;
+            if (!item.nomorPengajuanBulanan || !Array.isArray(item.nomorPengajuanBulanan)) {
+                item.nomorPengajuanBulanan = new Array(12).fill('');
+            }
+            item.nomorPengajuanBulanan[bulanIdx] = value;
+            sipdSaveDebounce();
+        }
+
+        function sipdOnEditNomorPengajuanSubKeg(itemId, bulanIdx, value) {
+            sipdOnEditNomorSubKeg(itemId, bulanIdx, value);
+        }
+
+        function sipdOnEditNomorSPPSubKeg(itemId, bulanIdx, value) {
+            const item = sipdFindItem(state.data.pagu, itemId);
+            if (!item) return;
+            if (!item.nomorSPPBulanan || !Array.isArray(item.nomorSPPBulanan)) {
+                item.nomorSPPBulanan = new Array(12).fill('');
+            }
+            item.nomorSPPBulanan[bulanIdx] = value;
+            sipdSaveDebounce();
+        }
+
+        function sipdOnEditNomorSP2DSubKeg(itemId, bulanIdx, value) {
+            const item = sipdFindItem(state.data.pagu, itemId);
+            if (!item) return;
+            if (!item.nomorSP2DBulanan || !Array.isArray(item.nomorSP2DBulanan)) {
+                item.nomorSP2DBulanan = new Array(12).fill('');
+            }
+            item.nomorSP2DBulanan[bulanIdx] = value;
+            sipdSaveDebounce();
+        }
+
+        function sipdOnEditNomorSTSSubKeg(itemId, bulanIdx, value) {
+            const item = sipdFindItem(state.data.pagu, itemId);
+            if (!item) return;
+            if (!item.nomorSTS || !Array.isArray(item.nomorSTS)) {
+                item.nomorSTS = new Array(12).fill('');
+            }
+            item.nomorSTS[bulanIdx] = value;
+            sipdSaveDebounce();
+        }
+
+        function sipdIsBulanLocked(rekeningItem, bulanIdx) {
+            if (!rekeningItem || !rekeningItem.statusPengajuan) return false;
+            const s = rekeningItem.statusPengajuan[bulanIdx];
+            return s === 'diajukan' || s === 'diverifikasi';
+        }
+
+        function sipdGetTotalPengajuan(rekeningItem) {
+            if (!rekeningItem || !rekeningItem.pengajuanBulanan) return 0;
+            return rekeningItem.pengajuanBulanan.reduce((a, b) => a + (Number(b) || 0), 0);
+        }
+
+        function sipdGetActivePagu(agg) {
+            if (state.viewMode === 'murni') return agg.paguMurni;
+            if (state.viewMode === 'efisiensi') return agg.paguEfisiensi;
+            if (state.viewMode === 'perbandingan') return agg.paguPerubahan;
+            return agg.paguPerubahan;
+        }
+
+        function sipdGetActivePaguLabel() {
+            if (state.viewMode === 'murni') return 'Pagu Murni';
+            if (state.viewMode === 'efisiensi') return 'Pagu Efisiensi';
+            if (state.viewMode === 'perbandingan') return 'Pagu Perubahan';
+            return 'Pagu Perubahan';
+        }
+
+        function sipdGetActivePaguColor() {
+            if (state.viewMode === 'murni') return 'bg-blue-950';
+            if (state.viewMode === 'efisiensi') return 'bg-emerald-950';
+            return 'bg-cyan-950';
+        }
+
+        function sipdHasFilledPagu(item) {
+            if (item.type === 'rekening') {
+                const agg = getAggregatedData(item);
+                const paguAktif = sipdGetActivePagu(agg);
+                return paguAktif > 0 || agg.realisasi > 0;
+            }
+            if (item.children && item.children.length > 0) {
+                for (const c of item.children) if (sipdHasFilledPagu(c)) return true;
+            }
+            return false;
+        }
+
+        function sipdHasPengajuanInMonth(item, monthIdx) {
+            if (item.type === 'rekening') {
+                return (Number(item.pengajuanBulanan?.[monthIdx]) || 0) > 0;
+            }
+            if (item.children && item.children.length > 0) {
+                for (const c of item.children) {
+                    if (sipdHasPengajuanInMonth(c, monthIdx)) return true;
+                }
+            }
+            return false;
+        }
+
+        function sipdHasAnyPengajuan(item) {
+            if (item.type === 'rekening') {
+                return (item.pengajuanBulanan || []).some(v => (Number(v) || 0) > 0);
+            }
+            if (item.children && item.children.length > 0) {
+                for (const c of item.children) {
+                    if (sipdHasAnyPengajuan(c)) return true;
+                }
+            }
+            return false;
+        }
+
+        function sipdToggleOnlyPengajuan() {
+            state.sipd.onlyFilledPengajuan = !state.sipd.onlyFilledPengajuan;
+            sipdUpdatePengajuanBtnUI();
+            renderSIPD();
+        }
+
+        function sipdUpdatePengajuanBtnUI() {
+            const btn = document.getElementById('sipd-btn-only-pengajuan');
+            if (!btn) return;
+            const bln = state.sipd.bulanRedaksi;
+            const idx = bln ? sipdBulanIdx(bln) : 8;
+            const count = sipdCountFilledSubKegForMonth(idx);
+
+            if (state.sipd.onlyFilledPengajuan) {
+                btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md font-black uppercase text-[8px] flex items-center gap-1.5 transition-all shadow-md ring-2 ring-emerald-400";
+                btn.innerHTML = `<i data-lucide="check-circle-2" class="w-3 h-3 text-white"></i> Sub-Kegiatan Diajukan (${count})`;
+                showNotif("✅ Filter Aktif: Menampilkan Sub-Kegiatan yang diajukan saja", "success");
+            } else {
+                btn.className = "bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md font-black uppercase text-[8px] flex items-center gap-1.5 transition-all shadow-md";
+                btn.innerHTML = `<i data-lucide="file-check" class="w-3 h-3"></i> Pengajuan (${count})`;
+                showNotif("Filter Pengajuan Dinonaktifkan: Menampilkan semua data", "info");
+            }
+            lucide.createIcons();
+        }
+
+        function sipdToggleSort(key) {
+            if (state.sipd.sortKey !== key) {
+                state.sipd.sortKey = key;
+                state.sipd.sortDir = 'asc';
+            } else if (state.sipd.sortDir === 'asc') {
+                state.sipd.sortDir = 'desc';
+            } else {
+                state.sipd.sortKey = null;
+                state.sipd.sortDir = 'none';
+            }
+            const keyNames = {
+                pagu: 'Pagu Aktif',
+                realisasi: 'Realisasi Thn Ini',
+                pajak: 'Pajak Thn Ini',
+                sisa: 'Sisa Pagu',
+                realisasi_bulanan: 'Realisasi Bulanan',
+                pajak_bulanan: 'Pajak Bulanan',
+                sisa_saldo: 'Sisa Saldo Bulanan'
+            };
+            let labelName = keyNames[key] || 'Pengajuan Bulanan';
+            if (key.startsWith('month_')) {
+                const mIdx = parseInt(key.split('_')[1]);
+                labelName = `Pengajuan ${BULAN_LIST_FULL[mIdx] || 'Bulan'}`;
+            }
+            if (state.sipd.sortDir === 'asc') {
+                showNotif(`🔀 Urutan ${labelName}: Terkecil ➔ Terbesar`, "info");
+            } else if (state.sipd.sortDir === 'desc') {
+                showNotif(`🔀 Urutan ${labelName}: Terbesar ➔ Terkecil`, "info");
+            } else {
+                showNotif(`🔄 Urutan tabel dinormalkan kembali (Default)`, "info");
+            }
+            sipdUpdateSortBtnUI();
+            renderSIPD();
+        }
+
+        function sipdResetSort() {
+            state.sipd.sortKey = null;
+            state.sipd.sortDir = 'none';
+            showNotif(`🔄 Urutan tabel dinormalkan kembali (Default)`, "info");
+            sipdUpdateSortBtnUI();
+            renderSIPD();
+        }
+
+        function sipdUpdateSortBtnUI() {
+            const container = document.getElementById('sipd-sort-active-container');
+            if (!container) return;
+            if (state.sipd.sortDir !== 'none' && state.sipd.sortKey) {
+                const key = state.sipd.sortKey;
+                const dirIcon = state.sipd.sortDir === 'asc' ? '▲' : '▼';
+                let labelName = key;
+                if (key.startsWith('month_')) {
+                    const mIdx = parseInt(key.split('_')[1]);
+                    labelName = BULAN_LIST[mIdx] || 'Bulan';
+                } else if (key === 'realisasi_bulanan') labelName = 'Real Bln';
+                else if (key === 'sisa_saldo') labelName = 'Sisa Saldo';
+                else if (key === 'pagu') labelName = 'Pagu';
+                else if (key === 'realisasi') labelName = 'Realisasi';
+                else if (key === 'sisa') labelName = 'Sisa Pagu';
+
+                container.className = "flex items-center gap-1 bg-amber-500 text-slate-950 px-2.5 py-1 rounded-md font-black uppercase text-[7.5px] shadow-md ring-2 ring-amber-300 transition-all";
+                container.innerHTML = `<span>Sort: ${labelName} ${dirIcon}</span>
+                    <button onclick="sipdResetSort()" title="Normalkan urutan kembali" class="ml-1 hover:text-white font-bold bg-black/20 hover:bg-black/40 px-1 rounded transition-all">✕</button>`;
+            } else {
+                container.className = "hidden";
+                container.innerHTML = "";
+            }
+        }
+
+        function sipdSortHeaderBtn(key, labelHtml, extraCss = '', fallbackText = '') {
+            const isActive = state.sipd.sortKey === key;
+            const dir = isActive ? state.sipd.sortDir : 'none';
+            let icon = `<i data-lucide="chevrons-up-down" class="w-3.5 h-3.5 text-slate-400 ml-1 inline-block flex-shrink-0" style="color:#94a3b8 !important;"></i>`;
+            let activeCls = 'text-white hover:text-white';
+            if (dir === 'asc') {
+                icon = `<i data-lucide="arrow-up" class="w-3.5 h-3.5 text-cyan-400 font-black ml-1 inline-block flex-shrink-0" style="color:#22d3ee !important;"></i>`;
+                activeCls = 'text-cyan-300 font-black ring-1 ring-cyan-400 bg-cyan-950 px-1 py-0.5 rounded';
+            } else if (dir === 'desc') {
+                icon = `<i data-lucide="arrow-down" class="w-3.5 h-3.5 text-amber-400 font-black ml-1 inline-block flex-shrink-0" style="color:#fbbf24 !important;"></i>`;
+                activeCls = 'text-amber-300 font-black ring-1 ring-amber-400 bg-amber-950 px-1 py-0.5 rounded';
+            }
+
+            const safeLabel = (labelHtml && String(labelHtml).trim()) ? labelHtml : (fallbackText || 'Kolom');
+            const labelMarkup = safeLabel.includes('<')
+                ? `<div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.1; color:#ffffff !important; font-weight:900;">${safeLabel}</div>`
+                : `<span style="color:#ffffff !important; font-weight:900; line-height:1.2; display:block; text-align:right;">${safeLabel}</span>`;
+
+            return `<button onclick="sipdToggleSort('${key}')" title="Klik untuk mengurutkan (Kecil->Besar, Besar->Kecil, Reset Normal)" class="w-full inline-flex items-center justify-end gap-1 hover:bg-white/10 px-1.5 py-1 rounded transition-all cursor-pointer select-none ${activeCls} ${extraCss}" style="color:#ffffff !important; background:transparent; font-weight:900;">
+                ${labelMarkup}
+                ${icon}
+            </button>`;
+        }
+
+        function sipdHasMatchingChild(item) {
+            if (!item.children || item.children.length === 0) return false;
+            for (const c of item.children) {
+                if (sipdItemVisible(c)) return true;
+                if (c.children && sipdHasMatchingChild(c)) return true;
+            }
+            return false;
+        }
+
+        function sipdItemVisible(item) {
+            const fh = state.sipd.filterHier;
+            if (fh.program !== 'all' && item.type === 'program' && item.id !== fh.program) return false;
+            if (fh.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== fh.kegiatan) return false;
+            if (fh.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== fh.sub_kegiatan) return false;
+            if (fh.rekening !== 'all' && item.type === 'rekening' && item.id !== fh.rekening) return false;
+            if (!sipdHasFilledPagu(item)) return false;
+
+            if (state.sipd.onlyFilledPengajuan) {
+                const bln = state.sipd.bulanRedaksi;
+                const idx = bln ? sipdBulanIdx(bln) : null;
+                if (idx !== null) {
+                    if (!sipdHasPengajuanInMonth(item, idx)) return false;
+                } else {
+                    if (!sipdHasAnyPengajuan(item)) return false;
+                }
+            }
+
+            const search = state.sipd.filterSearch;
+            const matchText = !search || item.uraian.toLowerCase().includes(search) || (item.kode || '').toLowerCase().includes(search);
+            if (matchText) return true;
+            if (item.type !== 'rekening') return sipdHasMatchingChild(item);
+            return false;
+        }
+
+        function sipdFindItem(list, id) {
+            for (const item of list) {
+                if (item.id === id) return item;
+                if (item.children) { const f = sipdFindItem(item.children, id); if (f) return f; }
+            }
+            return null;
+        }
+
+        function sipdInitHierOptions() {
+            const progSelect = document.getElementById('sipd-program');
+            const kegSelect = document.getElementById('sipd-kegiatan');
+            const subkegSelect = document.getElementById('sipd-subkeg');
+            const rekSelect = document.getElementById('sipd-rekening');
+
+            const programs = state.data.pagu.filter(p => p.type === 'program' && sipdHasFilledPagu(p));
+            progSelect.innerHTML = '<option value="all">SEMUA PROGRAM</option>' +
+                programs.map(p => `<option value="${p.id}" ${state.sipd.filterHier.program === p.id ? 'selected' : ''}>${p.kode} - ${p.uraian}</option>`).join('');
+
+            let kegiatanList = [];
+            kegSelect.disabled = state.sipd.filterHier.program === 'all';
+            if (state.sipd.filterHier.program !== 'all') {
+                const sp = programs.find(p => p.id === state.sipd.filterHier.program);
+                if (sp && sp.children) kegiatanList = sp.children.filter(c => c.type === 'kegiatan' && sipdHasFilledPagu(c));
+            }
+            kegSelect.innerHTML = '<option value="all">SEMUA KEGIATAN</option>' +
+                kegiatanList.map(k => `<option value="${k.id}" ${state.sipd.filterHier.kegiatan === k.id ? 'selected' : ''}>${k.kode} - ${k.uraian}</option>`).join('');
+
+            let subkegList = [];
+            subkegSelect.disabled = state.sipd.filterHier.kegiatan === 'all';
+            if (state.sipd.filterHier.kegiatan !== 'all') {
+                const sk = sipdFindItem(state.data.pagu, state.sipd.filterHier.kegiatan);
+                if (sk && sk.children) subkegList = sk.children.filter(s => s.type === 'sub_kegiatan' && sipdHasFilledPagu(s));
+            }
+            subkegSelect.innerHTML = '<option value="all">SEMUA SUB-KEGIATAN</option>' +
+                subkegList.map(s => `<option value="${s.id}" ${state.sipd.filterHier.sub_kegiatan === s.id ? 'selected' : ''}>${s.kode} - ${s.uraian}</option>`).join('');
+
+            let rekList = [];
+            rekSelect.disabled = state.sipd.filterHier.sub_kegiatan === 'all';
+            if (state.sipd.filterHier.sub_kegiatan !== 'all') {
+                const sr = sipdFindItem(state.data.pagu, state.sipd.filterHier.sub_kegiatan);
+                if (sr && sr.children) rekList = sr.children.filter(r => r.type === 'rekening' && sipdHasFilledPagu(r));
+            }
+            rekSelect.innerHTML = '<option value="all">SEMUA REKENING</option>' +
+                rekList.map(r => `<option value="${r.id}" ${state.sipd.filterHier.rekening === r.id ? 'selected' : ''}>${r.kode} - ${r.uraian}</option>`).join('');
+        }
+
+        function sipdDebounceRender() {
+            if (state.sipd._debounceTimer) clearTimeout(state.sipd._debounceTimer);
+            state.sipd._debounceTimer = setTimeout(() => {
+                state.sipd.filterSearch = document.getElementById('sipd-search').value.toLowerCase();
+                sipdCheckResetBtn();
+                renderSIPD();
+            }, 200);
+        }
+
+        function sipdIsFiltering() {
+            const s = state.sipd;
+            const hasSearch = !!s.filterSearch;
+            const hasHier = s.filterHier.program !== 'all' || s.filterHier.kegiatan !== 'all'
+                || s.filterHier.sub_kegiatan !== 'all' || s.filterHier.rekening !== 'all';
+            return hasSearch || hasHier;
+        }
+
+        function sipdCheckResetBtn() {
+            const btn = document.getElementById('sipd-reset-btn');
+            if (btn) {
+                if (sipdIsFiltering()) btn.classList.remove('hidden');
+                else btn.classList.add('hidden');
+            }
+        }
+
+        function sipdResetFilter() {
+            const searchEl = document.getElementById('sipd-search');
+            if (searchEl) searchEl.value = '';
+            state.sipd.filterSearch = '';
+            state.sipd.filterHier = { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' };
+            state.sipd.expanded = {};
+            state.sipd.allExpanded = false;
+            sipdInitHierOptions();
+            sipdCheckResetBtn();
+            sipdUpdateDetailBtnUI();
+            renderSIPD();
+        }
+
+        function sipdOnHierChange(level) {
+            const elId = level === 'sub_kegiatan' ? 'sipd-subkeg' : `sipd-${level}`;
+            const el = document.getElementById(elId);
+            const val = el ? el.value : 'all';
+            state.sipd.filterHier[level] = val;
+            if (level === 'program') { state.sipd.filterHier.kegiatan = 'all'; state.sipd.filterHier.sub_kegiatan = 'all'; state.sipd.filterHier.rekening = 'all'; }
+            else if (level === 'kegiatan') { state.sipd.filterHier.sub_kegiatan = 'all'; state.sipd.filterHier.rekening = 'all'; }
+            else if (level === 'sub_kegiatan') { state.sipd.filterHier.rekening = 'all'; }
+            sipdInitHierOptions();
+            sipdCheckResetBtn();
+            renderSIPD();
+        }
+
+        function sipdToggleExpand(id) {
+            state.sipd.expanded[id] = !state.sipd.expanded[id];
+            renderSIPD();
+        }
+
+        function sipdToggleExpandAll() {
+            state.sipd.allExpanded = !state.sipd.allExpanded;
+            if (state.sipd.allExpanded) {
+                const walk = (items) => { items.forEach(it => { if (it.type !== 'rekening') state.sipd.expanded[it.id] = true; if (it.children) walk(it.children); }); };
+                walk(state.data.pagu);
+            } else {
+                state.sipd.expanded = {};
+            }
+            sipdUpdateDetailBtnUI();
+            renderSIPD();
+        }
+
+        function sipdUpdateDetailBtnUI() {
+            const btn = document.getElementById('sipd-btn-detail-toggle');
+            if (!btn) return;
+            btn.className = "bg-amber-500 text-white px-3 py-1.5 rounded-lg font-black uppercase text-[8px] flex items-center gap-1.5 hover:bg-amber-600 transition-all shadow-sm";
+            if (state.sipd.allExpanded) {
+                btn.innerHTML = `<i data-lucide="fold-vertical" class="w-3 h-3"></i> Compact`;
+            } else {
+                btn.innerHTML = `<i data-lucide="unfold-vertical" class="w-3 h-3"></i> Detail`;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        // --- RENDER ---
+        // --- COLUMN & MONTH ACTIONS ---
+        const COLUMN_DEFS = [
+            { key: 'kode', label: 'Kode Rekening' },
+            { key: 'uraian', label: 'Uraian Program & Rekening' },
+            { key: 'pagu', label: 'Pagu Aktif' },
+            { key: 'realisasi', label: 'Realisasi Thn Ini' },
+            { key: 'pajak', label: 'Pajak Thn Ini' },
+            { key: 'sisa', label: 'Sisa Pagu' },
+            { key: 'realisasi_bulanan', label: 'Realisasi Bulanan' },
+            { key: 'pajak_bulanan', label: 'Pajak Bulanan' },
+            { key: 'sisa_saldo', label: 'Sisa Saldo' },
+            { key: 'jan', label: 'Januari' },
+            { key: 'feb', label: 'Februari' },
+            { key: 'mar', label: 'Maret' },
+            { key: 'apr', label: 'April' },
+            { key: 'mei', label: 'Mei' },
+            { key: 'jun', label: 'Juni' },
+            { key: 'jul', label: 'Juli' },
+            { key: 'agu', label: 'Agustus' },
+            { key: 'sep', label: 'September' },
+            { key: 'okt', label: 'Oktober' },
+            { key: 'nov', label: 'November' },
+            { key: 'des', label: 'Desember' },
+            { key: 'redaksi_pengajuan', label: 'Redaksi Pengajuan' },
+            { key: 'redaksi_belanja', label: 'Redaksi Belanja' },
+            { key: 'redaksi_sts', label: 'Redaksi STS' }
+        ];
+
+        function sipdEnsureVisibleColumns() {
+            if (!state.sipd.visibleColumns || typeof state.sipd.visibleColumns !== 'object') {
+                state.sipd.visibleColumns = { ...DEFAULT_VISIBLE_COLUMNS };
+            } else {
+                const normalized = sipdNormalizeVisibleColumns(state.sipd.visibleColumns);
+                if (JSON.stringify(normalized) !== JSON.stringify(state.sipd.visibleColumns)) {
+                    state.sipd.visibleColumns = normalized;
+                    localStorage.setItem(`${appId}_visibleColumns`, JSON.stringify(normalized));
+                }
+            }
+        }
+
+        function sipdIsColVisible(key) {
+            if (!state.sipd.visibleColumns) return true;
+            return state.sipd.visibleColumns[key] !== false;
+        }
+
+        function sipdToggleColDropdown() {
+            const dd = document.getElementById('sipd-col-dropdown');
+            if (!dd) return;
+            const isHidden = dd.classList.contains('hidden');
+            if (isHidden) {
+                sipdRenderColCheckboxes();
+                dd.classList.remove('hidden');
+            } else {
+                dd.classList.add('hidden');
+            }
+        }
+
+        function sipdRenderColCheckboxes() {
+            const container = document.getElementById('sipd-col-checkbox-container');
+            if (!container) return;
+            container.innerHTML = COLUMN_DEFS.map(col => {
+                const checked = sipdIsColVisible(col.key) ? 'checked' : '';
+                return `<label class="flex items-center gap-2 px-1.5 py-1 hover:bg-slate-100 rounded cursor-pointer text-[8.5px] font-bold text-slate-700 select-none">
+                    <input type="checkbox" ${checked} onchange="sipdToggleCol('${col.key}', this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500 h-3.5 w-3.5">
+                    <span>${col.label}</span>
+                </label>`;
+            }).join('');
+        }
+
+        function sipdToggleCol(key, isVisible) {
+            if (!state.sipd.visibleColumns) state.sipd.visibleColumns = {};
+            state.sipd.visibleColumns[key] = isVisible;
+            localStorage.setItem(`${appId}_visibleColumns`, JSON.stringify(state.sipd.visibleColumns));
+            renderSIPD();
+        }
+
+        function sipdSetAllCols(status) {
+            if (!state.sipd.visibleColumns) state.sipd.visibleColumns = {};
+            COLUMN_DEFS.forEach(col => {
+                state.sipd.visibleColumns[col.key] = status;
+            });
+            localStorage.setItem(`${appId}_visibleColumns`, JSON.stringify(state.sipd.visibleColumns));
+            sipdRenderColCheckboxes();
+            renderSIPD();
+        }
+
+        function sipdSimpanBulan(bulanIdx) {
+            saveToSupabase({
+                pagu: state.data.pagu,
+                realisasi: state.data.realisasi,
+                backups: state.data.backups,
+                redaksi: state.sipd.redaksi
+            }).then(() => {
+                showNotif(`✅ Data bulan ${BULAN_LIST_FULL[bulanIdx]} berhasil disimpan!`, "success");
+            }).catch(err => {
+                showNotif("Gagal menyimpan: " + (err.message || ""), "error");
+            });
+        }
+
+        function sipdAjukanBulan(bulanIdx) {
+            let count = 0;
+            let realisasiMelebihi = 0;
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (it.type === 'rekening') {
+                        const nom = Number(it.pengajuanBulanan?.[bulanIdx]) || 0;
+                        if (nom > 0 && it.statusPengajuan[bulanIdx] === 'draft') {
+                            const agg = getAggregatedData(it);
+                            const totalPengajuan = sipdGetTotalPengajuan(it);
+                            if (totalPengajuan > agg.realisasi + 0.5) {
+                                it.pengajuanBulanan[bulanIdx] = 0; // Dikosongkan kembali
+                                realisasiMelebihi++;
+                            } else {
+                                it.statusPengajuan[bulanIdx] = 'diajukan';
+                                count++;
+                            }
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            if (count === 0 && realisasiMelebihi === 0) {
+                showNotif(`Tidak ada rekening yang diisi untuk bulan ${BULAN_LIST[bulanIdx]} (semua 0 / sudah diajukan)`, "info");
+                return;
+            }
+            sipdSaveDebounce();
+            renderSIPD();
+            if (count > 0) {
+                showNotif(`✅ Bulan ${BULAN_LIST_FULL[bulanIdx]}: ${count} Rekening berhasil diajukan & dikunci.`, "success");
+            }
+            if (realisasiMelebihi > 0) {
+                setTimeout(() => showNotif(`⚠ ${realisasiMelebihi} rekening memiliki total pengajuan Januari–Desember melebihi Realisasi APBD — input bulan ini dikosongkan dan tidak diajukan.`, "error"), 400);
+            }
+        }
+
+        function sipdIsMonthLocked(bulanIdx) {
+            let locked = false;
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (it.type === 'rekening' && it.statusPengajuan) {
+                        const s = it.statusPengajuan[bulanIdx];
+                        if (s === 'diajukan' || s === 'diverifikasi') locked = true;
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return locked;
+        }
+
+        function sipdBukaKunciBulan(bulanIdx) {
+            let count = 0;
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (it.type === 'rekening' && it.statusPengajuan) {
+                        if (it.statusPengajuan[bulanIdx] === 'diajukan' || it.statusPengajuan[bulanIdx] === 'diverifikasi') {
+                            it.statusPengajuan[bulanIdx] = 'draft';
+                            count++;
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            sipdSaveDebounce();
+            renderSIPD();
+            if (count > 0) {
+                showNotif(`🔓 Bulan ${BULAN_LIST_FULL[bulanIdx]}: ${count} Rekening berhasil dibuka kuncinya.`, "success");
+            } else {
+                showNotif(`Bulan ${BULAN_LIST_FULL[bulanIdx]} tidak dalam keadaan terkunci.`, "info");
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('sipd-col-toggle-wrapper');
+            const dd = document.getElementById('sipd-col-dropdown');
+            if (wrapper && dd && !wrapper.contains(e.target) && !dd.classList.contains('hidden')) {
+                dd.classList.add('hidden');
+            }
+        });
+
+        function sipdCountFilledSubKegForMonth(idx) {
+            let count = 0;
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (!sipdItemVisible(it)) return;
+                    if (it.type === 'sub_kegiatan') {
+                        let subMonthSum = 0;
+                        const sumKids = (kids) => {
+                            if (!kids) return;
+                            kids.forEach(k => {
+                                if (k.type === 'rekening' && sipdItemVisible(k)) {
+                                    subMonthSum += (Number(k.pengajuanBulanan?.[idx]) || 0);
+                                }
+                                if (k.children) sumKids(k.children);
+                            });
+                        };
+                        sumKids(it.children);
+                        if (subMonthSum > 0) count++;
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return count;
+        }
+
+        function sipdApplyHeaderTheme() {
+            const nodes = document.querySelectorAll('#sipd-main-table thead th, #sipd-table-head th');
+            nodes.forEach(el => {
+                el.style.setProperty('background-color', '#0f172a', 'important');
+                el.style.setProperty('color', '#ffffff', 'important');
+                el.style.setProperty('border-color', '#334155', 'important');
+            });
+        }
+
+        // --- RENDER ---
+        function sipdRenderHead() {
+            const head = document.getElementById('sipd-table-head');
+            const paguLabel = sipdGetActivePaguLabel();
+            const blnRedaksi = state.sipd.bulanRedaksi;
+            const targetIdx = blnRedaksi ? sipdBulanIdx(blnRedaksi) : null;
+
+            let bulanCols = '';
+            BULAN_LIST.forEach((b, idx) => {
+                if (targetIdx !== null && idx !== targetIdx) return;
+                const bKey = b.toLowerCase();
+                if (!sipdIsColVisible(bKey)) return;
+                const filledSubCount = sipdCountFilledSubKegForMonth(idx);
+                const countBadge = filledSubCount > 0
+                    ? `<span class="bg-cyan-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-md ml-1" style="background-color:#06b6d4 !important; color:#020617 !important;" title="${filledSubCount} Sub-Kegiatan terisi bulan ${b}">${filledSubCount}</span>`
+                    : `<span class="text-slate-400 text-[8px] font-bold opacity-60 ml-1" style="color:#94a3b8 !important;">(0)</span>`;
+
+                const isLocked = sipdIsMonthLocked(idx);
+                const actionBtn = isLocked
+                    ? `<button onclick="sipdBukaKunciBulan(${idx})" title="Buka Kunci bulan ${b} agar dapat diedit kembali" class="bg-amber-600 hover:bg-amber-500 text-white text-[7px] px-2 py-0.5 rounded-md font-black uppercase flex items-center gap-1 shadow-sm transition-all whitespace-nowrap" style="background-color:#d97706 !important; color:#ffffff !important;">
+                            <i data-lucide="unlock" class="w-2.5 h-2.5" style="color:#ffffff !important;"></i> Buka Kunci
+                       </button>`
+                    : `<button onclick="sipdAjukanBulan(${idx})" title="Simpan & Ajukan bulan ${b}" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[7px] px-2 py-0.5 rounded-md font-black uppercase flex items-center gap-1 shadow-sm transition-all whitespace-nowrap" style="background-color:#4f46e5 !important; color:#ffffff !important;">
+                            <i data-lucide="send" class="w-2.5 h-2.5" style="color:#ffffff !important;"></i> Simpan & Ajukan
+                       </button>`;
+
+                const monthTitleHtml = `<span class="text-[9px] font-black uppercase text-white" style="color:#ffffff !important;">${b}</span>`;
+                const monthSortBtn = sipdSortHeaderBtn(`month_${idx}`, monthTitleHtml, '', b);
+
+                bulanCols += `<th class="px-1 py-1.5 w-[95px] bg-slate-900 text-white border-r border-b border-slate-700 text-center align-middle" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    <div class="flex flex-col items-center gap-1 leading-tight py-0.5" style="color:#ffffff !important;">
+                        <div class="flex items-center justify-center gap-0.5">
+                            ${monthSortBtn}
+                            ${countBadge}
+                        </div>
+                        ${actionBtn}
+                    </div>
+                </th>`;
+            });
+
+            let headHtml = '<tr class="bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.1em]" style="background:#0f172a !important; color:#ffffff !important;">';
+            if (sipdIsColVisible('kode')) {
+                headHtml += `<th class="px-2 py-2.5 w-[90px] bg-slate-900 text-white border-r border-b border-slate-700" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">Kode</th>`;
+            }
+            if (sipdIsColVisible('uraian')) {
+                headHtml += `<th class="px-3 py-2.5 w-[380px] bg-slate-900 text-white border-r border-b border-slate-700" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">Uraian Program & Rekening</th>`;
+            }
+            if (sipdIsColVisible('pagu')) {
+                headHtml += `<th class="px-2 py-2.5 w-[105px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">${sipdSortHeaderBtn('pagu', paguLabel, '', 'Pagu')}</th>`;
+            }
+            if (sipdIsColVisible('realisasi')) {
+                headHtml += `<th class="px-2 py-2.5 w-[100px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    ${sipdSortHeaderBtn('realisasi', '<div class="flex flex-col items-end leading-tight"><span class="text-[8.5px] font-black" style="color:#ffffff !important;">Realisasi</span><span class="text-[5px] font-black opacity-75" style="color:#cbd5e1 !important;">Thn Ini</span></div>', '', 'Realisasi')}
+                </th>`;
+            }
+            if (sipdIsColVisible('pajak')) {
+                headHtml += `<th class="px-2 py-2.5 w-[100px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">${sipdSortHeaderBtn('pajak', 'Pajak<br><span class="text-[5px] opacity-75" style="color:#cbd5e1 !important;">Thn Ini</span>', '', 'Pajak')}</th>`;
+            }
+            if (sipdIsColVisible('sisa')) {
+                headHtml += `<th class="px-2 py-2.5 w-[100px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">${sipdSortHeaderBtn('sisa', 'Sisa Pagu', '', 'Sisa Pagu')}</th>`;
+            }
+            headHtml += bulanCols;
+
+            if (sipdIsColVisible('realisasi_bulanan')) {
+                const bulanAktif = targetIdx !== null ? BULAN_LIST[targetIdx] : 'Bln';
+                headHtml += `<th class="px-2 py-2.5 w-[110px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    ${sipdSortHeaderBtn('realisasi_bulanan', `<div class="flex flex-col items-end leading-tight"><span class="text-[8px] font-black" style="color:#ffffff !important;">Realisasi</span><span class="text-[5px] font-black opacity-75" style="color:#cbd5e1 !important;">${bulanAktif}</span></div>`)}
+                </th>`;
+            }
+            if (sipdIsColVisible('pajak_bulanan')) {
+                const bulanAktif = targetIdx !== null ? BULAN_LIST[targetIdx] : 'Bln';
+                headHtml += `<th class="px-2 py-2.5 w-[110px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    ${sipdSortHeaderBtn('pajak_bulanan', `<div class="flex flex-col items-end leading-tight"><span class="text-[8px] font-black" style="color:#ffffff !important;">Pajak</span><span class="text-[5px] font-black opacity-75" style="color:#cbd5e1 !important;">${bulanAktif}</span></div>`)}
+                </th>`;
+            }
+            if (sipdIsColVisible('sisa_saldo')) {
+                const bulanAktif = targetIdx !== null ? BULAN_LIST[targetIdx] : 'Bln';
+                headHtml += `<th class="px-2 py-2.5 w-[110px] bg-slate-900 text-white border-r border-b border-slate-700 text-right" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    ${sipdSortHeaderBtn('sisa_saldo', `<div class="flex flex-col items-end leading-tight"><span class="text-[8px] font-black" style="color:#ffffff !important;">Sisa Saldo</span><span class="text-[5px] font-black opacity-75" style="color:#cbd5e1 !important;">${bulanAktif}</span></div>`)}
+                </th>`;
+            }
+
+            if (sipdIsColVisible('redaksi_pengajuan')) {
+                headHtml += `<th class="px-2 py-2.5 w-[240px] bg-slate-900 text-white border-r border-b border-slate-700 text-left whitespace-normal" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    <span class="text-[8.5px] font-black uppercase" style="color:#ffffff !important;">Redaksi Pengajuan</span>
+                </th>`;
+            }
+            if (sipdIsColVisible('redaksi_belanja')) {
+                headHtml += `<th class="px-2 py-2.5 w-[240px] bg-slate-900 text-white border-r border-b border-slate-700 text-left whitespace-nowrap" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    <span class="text-[8.5px] font-black uppercase" style="color:#ffffff !important;">Redaksi Belanja</span>
+                </th>`;
+            }
+            if (sipdIsColVisible('redaksi_sts')) {
+                headHtml += `<th class="px-2 py-2.5 w-[240px] bg-slate-900 text-white border-r border-b border-slate-700 text-left whitespace-nowrap" style="background:#0f172a !important; color:#ffffff !important; border-color:#334155 !important;">
+                    <span class="text-[8.5px] font-black uppercase" style="color:#ffffff !important;">Redaksi STS</span>
+                </th>`;
+            }
+            headHtml += '</tr>';
+            head.innerHTML = headHtml;
+            sipdApplyHeaderTheme();
+        }
+
+        function sipdToTitleCase(str) {
+            if (!str) return '';
+            const smallWords = /^(dan|di|dalam|ke|dari|pada|untuk|yang|atau|terhadap|serta|dengan)$/i;
+            return str.toLowerCase().split(' ').map((word, index) => {
+                if (!word) return '';
+                return word.split('/').map((subWord, subIndex) => {
+                    return subWord.split('-').map((part, partIndex) => {
+                        if (!part) return '';
+                        if (index > 0 && subIndex === 0 && partIndex === 0 && smallWords.test(part)) {
+                            return part.toLowerCase();
+                        }
+                        return part.charAt(0).toUpperCase() + part.slice(1);
+                    }).join('-');
+                }).join('/');
+            }).join(' ');
+        }
+
+        function sipdResolveResosSuffix(item, parentProgram = null, currentKegiatan = null) {
+            if (!item || item.type !== 'sub_kegiatan') return '';
+
+            const contextText = [item.uraian || '', parentProgram?.uraian || '', currentKegiatan?.uraian || '']
+                .join(' ')
+                .toLowerCase();
+
+            const isPenunjang = contextText.includes('penunjang');
+            const isRehabilitasiSosial = contextText.includes('rehabilitasi sosial') || contextText.includes('resos');
+            if (isPenunjang || !isRehabilitasiSosial) return '';
+
+            const normalized = contextText
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (
+                normalized.includes('lanjut usia') ||
+                normalized.includes('lansia')
+            ) {
+                return ' (RESOS LANSIA)';
+            }
+            if (
+                normalized.includes('pmks') && (
+                    normalized.includes('di dalam panti') ||
+                    normalized.includes('luar hiv') ||
+                    normalized.includes('lainnya')
+                )
+            ) {
+                return ' (RESOS PMKS)';
+            }
+            if (
+                normalized.includes('anak')
+            ) {
+                return ' (RESOS ANAK)';
+            }
+            if (
+                normalized.includes('disabilitas') ||
+                normalized.includes('penyandang disabilitas')
+            ) {
+                return ' (RESOS DISABILITAS)';
+            }
+
+            return '';
+        }
+
+        function sipdFormatRedaksiPengajuanSubKeg(item, parentProgram, currentKegiatan = null) {
+            if (!item || item.type !== 'sub_kegiatan') return '';
+
+            const blnVal = state.sipd.bulanRedaksi;
+            const now = new Date();
+            const blnIdx = (blnVal !== null && blnVal !== undefined) ? sipdBulanIdx(blnVal) : now.getMonth();
+            const kodeBulan = String(blnIdx + 1).padStart(2, '0');
+            const namaBulan = BULAN_LIST_FULL[blnIdx] || 'September';
+            const tahun = now.getFullYear();
+
+            const pantiEl = document.getElementById('sipd-kode-panti');
+            const rawKodePanti = state.sipd.kodePanti || (pantiEl ? pantiEl.value : '');
+            let cleanKodePanti = (rawKodePanti && rawKodePanti.trim()) ? rawKodePanti.trim().toUpperCase() : 'PPS012';
+            cleanKodePanti = cleanKodePanti.replace(/^TU-?/i, '').replace(/-+$/, '').trim();
+            if (!cleanKodePanti) cleanKodePanti = 'PPS012';
+
+            // Pelaksana
+            let pelaksana = item.pelaksana;
+            if (!pelaksana && item.children && item.children.length > 0) {
+                const leafWithPel = item.children.find(c => c.pelaksana);
+                if (leafWithPel) pelaksana = leafWithPel.pelaksana;
+            }
+            let pelaksanaCode = (pelaksana || 'TU').toUpperCase();
+            if (pelaksanaCode === 'TATA USAHA' || pelaksanaCode === 'LAINNYA') pelaksanaCode = 'TU';
+
+            const namaUnit = 'PPS RAHARJO';
+
+            const resosSuffix = sipdResolveResosSuffix(item, parentProgram, currentKegiatan);
+            const subKegTitleCase = sipdToTitleCase(item.uraian);
+
+            return `(${pelaksanaCode}-${cleanKodePanti}-${kodeBulan}) Pengajuan ${pelaksanaCode} ${namaUnit} bulan ${namaBulan} ${tahun} Sub Kegiatan ${subKegTitleCase}${resosSuffix}`;
+        }
+
+        function sipdFormatRedaksiBelanjaSubKeg(item, parentProgram, currentKegiatan = null) {
+            if (!item || item.type !== 'sub_kegiatan') return '';
+
+            const now = new Date();
+            const blnVal = state.sipd.bulanRedaksi;
+            const blnIdx = (blnVal !== null && blnVal !== undefined) ? sipdBulanIdx(blnVal) : now.getMonth();
+            const kodeBulan = String(blnIdx + 1).padStart(2, '0');
+            const namaBulan = BULAN_LIST_FULL[blnIdx] || 'September';
+            const tahun = now.getFullYear();
+
+            const pantiEl = document.getElementById('sipd-kode-panti');
+            const rawKodePanti = state.sipd.kodePanti || (pantiEl ? pantiEl.value : '');
+            let cleanKodePanti = (rawKodePanti && rawKodePanti.trim()) ? rawKodePanti.trim().toUpperCase() : 'PPS012';
+            cleanKodePanti = cleanKodePanti.replace(/^TU-?/i, '').replace(/-+$/, '').trim();
+            if (!cleanKodePanti) cleanKodePanti = 'PPS012';
+
+            let pelaksana = item.pelaksana;
+            if (!pelaksana && item.children && item.children.length > 0) {
+                const leafWithPel = item.children.find(c => c.pelaksana);
+                if (leafWithPel) pelaksana = leafWithPel.pelaksana;
+            }
+            let pelaksanaCode = (pelaksana || 'TU').toUpperCase();
+            if (pelaksanaCode === 'TATA USAHA' || pelaksanaCode === 'LAINNYA') pelaksanaCode = 'TU';
+
+            const resosSuffix = sipdResolveResosSuffix(item, parentProgram, currentKegiatan);
+            const subKegTitleCase = sipdToTitleCase(item.uraian);
+            return `PPS Raharjo (${pelaksanaCode}-${cleanKodePanti}-${kodeBulan}) Belanja ${subKegTitleCase} bulan ${namaBulan} Tahun ${tahun}${resosSuffix}`;
+        }
+
+        function sipdFormatRedaksiSTSSubKeg(item, parentProgram, currentKegiatan = null, pengajuanVal = 0, realisasiVal = 0, sisaVal = 0) {
+            if (!item || item.type !== 'sub_kegiatan') return '';
+
+            const now = new Date();
+            const blnVal = state.sipd.bulanRedaksi;
+            const blnIdx = (blnVal !== null && blnVal !== undefined) ? sipdBulanIdx(blnVal) : now.getMonth();
+            const kodeBulan = String(blnIdx + 1).padStart(2, '0');
+            const namaBulan = BULAN_LIST_FULL[blnIdx] || 'September';
+            const tahun = now.getFullYear();
+
+            const pantiEl = document.getElementById('sipd-kode-panti');
+            const rawKodePanti = state.sipd.kodePanti || (pantiEl ? pantiEl.value : '');
+            let cleanKodePanti = (rawKodePanti && rawKodePanti.trim()) ? rawKodePanti.trim().toUpperCase() : 'PPS012';
+            cleanKodePanti = cleanKodePanti.replace(/^TU-?/i, '').replace(/-+$/, '').trim();
+            if (!cleanKodePanti) cleanKodePanti = 'PPS012';
+
+            let pelaksana = item.pelaksana;
+            if (!pelaksana && item.children && item.children.length > 0) {
+                const leafWithPel = item.children.find(c => c.pelaksana);
+                if (leafWithPel) pelaksana = leafWithPel.pelaksana;
+            }
+            let pelaksanaCode = (pelaksana || 'TU').toUpperCase();
+            if (pelaksanaCode === 'TATA USAHA' || pelaksanaCode === 'LAINNYA') pelaksanaCode = 'TU';
+
+            const subKegTitleCase = sipdToTitleCase(item.uraian);
+            const resosSuffix = sipdResolveResosSuffix(item, parentProgram, currentKegiatan);
+            const nilaiPengajuan = `Rp. ${formatRupiah(Number(pengajuanVal || 0))},-`;
+            const nilaiSPJ = `Rp. ${formatRupiah(Number(realisasiVal || 0))},-`;
+            const nilaiSisa = `Rp. ${formatRupiah(Number(sisaVal || 0))},-`;
+
+            return `(${pelaksanaCode}-${cleanKodePanti}-${kodeBulan}) Pengesahan SPJ ${pelaksanaCode} PPSDI RAHARJO SRAGEN bulan ${namaBulan} ${tahun} Sub Kegiatan ${subKegTitleCase}${resosSuffix} Nilai TU isi ${nilaiPengajuan} Nilai SPJ ${nilaiSPJ} Nilai Sisa ${nilaiSisa}`;
+        }
+
+        function sipdGetItemSortValue(it, key, targetIdx) {
+            if (!it) return 0;
+            const agg = getAggregatedData(it);
+
+            if (key === 'pagu') return Number(sipdGetActivePagu(agg)) || 0;
+            if (key === 'realisasi') return Number(agg.realisasi) || 0;
+            if (key === 'pajak') return Number(agg.pajak) || 0;
+            if (key === 'sisa') return Number(sipdGetActivePagu(agg) - agg.realisasi) || 0;
+
+            const curIdx = (targetIdx !== null && targetIdx !== undefined) ? targetIdx : 0;
+
+            if (key.startsWith('month_')) {
+                const mIdx = parseInt(key.split('_')[1]);
+                const idxToUse = isNaN(mIdx) ? curIdx : mIdx;
+                if (it.type === 'rekening') return Number(it.pengajuanBulanan?.[idxToUse]) || 0;
+                let sum = 0;
+                const walkKids = (kids) => {
+                    if (!kids) return;
+                    kids.forEach(k => {
+                        if (k.type === 'rekening') sum += (Number(k.pengajuanBulanan?.[idxToUse]) || 0);
+                        if (k.children) walkKids(k.children);
+                    });
+                };
+                walkKids(it.children);
+                return Number(sum) || 0;
+            }
+
+            if (key === 'realisasi_bulanan') return Number(agg.monthly?.[curIdx]) || 0;
+            if (key === 'pajak_bulanan') return Number(agg.monthlyPajak?.[curIdx]) || 0;
+
+            if (key === 'sisa_saldo') {
+                let peng = 0;
+                if (it.type === 'rekening') peng = Number(it.pengajuanBulanan?.[curIdx]) || 0;
+                else {
+                    const walkKids = (kids) => {
+                        if (!kids) return;
+                        kids.forEach(k => {
+                            if (k.type === 'rekening') peng += (Number(k.pengajuanBulanan?.[curIdx]) || 0);
+                            if (k.children) walkKids(k.children);
+                        });
+                    };
+                    walkKids(it.children);
+                }
+                const realBln = Number(agg.monthly?.[curIdx]) || 0;
+                return (Number(peng) || 0) - realBln;
+            }
+            return 0;
+        }
+
+        function sipdRenderRows(items, depth, bodyEl, parentProgram = null, parentKegiatan = null) {
+            const borderColor = 'border-slate-300';
+            const blnRedaksi = state.sipd.bulanRedaksi;
+            const targetIdx = blnRedaksi ? sipdBulanIdx(blnRedaksi) : null;
+            const isOnlySubKeg = state.sipd.onlyFilledPengajuan;
+            const isSortingActive = state.sipd.sortDir !== 'none' && !!state.sipd.sortKey;
+
+            // Jika sorting aktif ATAU dalam mode "Sub-Kegiatan Diajukan" (isOnlySubKeg) pada top-level (depth === 0),
+            // ratakan seluruh Sub-Kegiatan secara global agar pengurutan numerik tabel benar dari atas ke bawah.
+            if ((isOnlySubKeg || isSortingActive) && depth === 0) {
+                let flatList = [];
+                const collectSubKeg = (list, pProg = null, pKeg = null) => {
+                    list.forEach(item => {
+                        let curProg = pProg;
+                        let curKeg = pKeg;
+                        if (item.type === 'program') curProg = item;
+                        if (item.type === 'kegiatan') curKeg = item;
+                        if (item.type === 'sub_kegiatan') {
+                            if (sipdItemVisible(item)) {
+                                flatList.push({ item, currentProgram: curProg, currentKegiatan: curKeg });
+                            }
+                        } else if (item.children && item.children.length > 0) {
+                            collectSubKeg(item.children, curProg, curKeg);
+                        }
+                    });
+                };
+                collectSubKeg(items, parentProgram, parentKegiatan);
+
+                // Urutkan flatList secara global berdasarkan kolom yang dipilih
+                if (isSortingActive) {
+                    const key = state.sipd.sortKey;
+                    const dir = state.sipd.sortDir === 'asc' ? 1 : -1;
+                    flatList.sort((a, b) => {
+                        const valA = sipdGetItemSortValue(a.item, key, targetIdx);
+                        const valB = sipdGetItemSortValue(b.item, key, targetIdx);
+                        if (valA !== valB) return (valA - valB) * dir;
+                        return (a.item.kode || '').localeCompare(b.item.kode || '') * dir;
+                    });
+                }
+
+                // Render setiap Sub-Kegiatan yang terurut secara global
+                flatList.forEach(({ item, currentProgram, currentKegiatan }) => {
+                    sipdRenderSingleRowItem(item, 0, bodyEl, currentProgram, currentKegiatan, targetIdx, borderColor, isOnlySubKeg || isSortingActive);
+                });
+                return;
+            }
+
+            // Hirarki Normal (tanpa sorting aktif)
+            let renderList = [...items];
+            renderList.forEach(item => {
+                let currentProgram = parentProgram;
+                let currentKegiatan = parentKegiatan;
+                if (item.type === 'program') currentProgram = item;
+                if (item.type === 'kegiatan') currentKegiatan = item;
+
+                if (!sipdItemVisible(item)) return;
+
+                sipdRenderSingleRowItem(item, depth, bodyEl, currentProgram, currentKegiatan, targetIdx, borderColor, false);
+            });
+        }
+
+        function sipdRenderSingleRowItem(item, depth, bodyEl, currentProgram, currentKegiatan, targetIdx, borderColor, isOnlySubKeg) {
+            const isExpanded = !!state.sipd.expanded[item.id];
+            const style = LEVEL_STYLES[item.type];
+            const agg = getAggregatedData(item);
+            const activePagu = sipdGetActivePagu(agg);
+            const sisa = activePagu - agg.realisasi;
+            const isLeaf = item.type === 'rekening';
+            const hasChildren = !isLeaf && item.children && item.children.some(c => sipdItemVisible(c));
+            const pctReal = activePagu > 0 ? (agg.realisasi / activePagu * 100).toFixed(1) : '0';
+
+            const tr = document.createElement('tr');
+            tr.dataset.sipdItemId = item.id;
+            tr.className = `hover:brightness-95 transition-all text-slate-900 border-b ${borderColor} ${isLeaf || isOnlySubKeg ? '' : 'cursor-pointer'}`;
+            if (!isLeaf && !isOnlySubKeg) {
+                tr.onclick = (e) => {
+                    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return;
+                    sipdToggleExpand(item.id);
+                };
+            }
+            const leftPad = isOnlySubKeg ? 8 : (depth * 16 + 4);
+
+            let bulanCells = '';
+            const parentMonthly = new Array(12).fill(0);
+            const parentRealMonthly = new Array(12).fill(0);
+            if (isLeaf) {
+                BULAN_LIST.forEach((b, idx) => {
+                    if (targetIdx !== null && idx !== targetIdx) return;
+                    if (!sipdIsColVisible(b.toLowerCase())) return;
+                    const val = item.pengajuanBulanan ? (item.pengajuanBulanan[idx] || 0) : 0;
+                    const showVal = val > 0 ? formatRupiah(val) : '';
+                    const isLocked = sipdIsBulanLocked(item, idx);
+                    const bgSel = isLocked ? 'bg-emerald-50' : (val > 0 ? 'bg-blue-50/50 focus-within:bg-blue-100/50' : 'bg-white focus-within:bg-slate-50');
+                    const textSel = isLocked ? 'text-emerald-800 font-black' : (val > 0 ? 'text-slate-950 font-black' : 'text-slate-400 placeholder-slate-300');
+                    const lockIcon = isLocked ? `<div class="absolute right-0.5 top-0.5 pointer-events-none"><i data-lucide="lock" class="w-2 h-2 text-emerald-600 opacity-80"></i></div>` : '';
+                    const readonlyAttr = isLocked ? 'readonly' : '';
+                    const cursorCls = isLocked ? 'cursor-not-allowed' : 'cursor-text';
+                    bulanCells += `
+                        <td class="px-1 py-1 w-[95px] border-r border-b ${borderColor} ${bgSel} p-0 align-middle relative">
+                            <input type="text" inputmode="numeric"
+                                placeholder=""
+                                class="w-full h-full bg-transparent outline-none font-mono text-[8px] font-black text-right px-1 py-1 ${textSel} ${cursorCls}"
+                                data-sipd-input="${item.id}-${idx}"
+                                value="${showVal}"
+                                ${readonlyAttr}
+                                ${!isLocked ? 'onfocus="this.select()"' : ''}
+                                ${!isLocked ? `onblur="sipdOnEditBulan('${item.id}', ${idx}, this.value)"` : ''}
+                                ${!isLocked ? `onkeydown="if(event.key==='Enter'){event.preventDefault();sipdOnEditBulan('${item.id}', ${idx}, this.value);this.blur();}"` : ''}
+                            />
+                            ${lockIcon}
+                        </td>`;
+                });
+            } else {
+                const walk = (kids) => {
+                    if (!kids) return;
+                    kids.forEach(k => {
+                        if (!sipdItemVisible(k)) return;
+                        if (k.type === 'rekening') {
+                            const arr = k.pengajuanBulanan;
+                            if (arr && arr.length === 12) for (let i = 0; i < 12; i++) parentMonthly[i] += (Number(arr[i]) || 0);
+                            const kAgg = getAggregatedData(k);
+                            kAgg.monthly.forEach((v, i) => {
+                                parentRealMonthly[i] += (Number(v) || 0);
+                            });
+                        }
+                        if (k.children) walk(k.children);
+                    });
+                };
+                walk(item.children);
+                BULAN_LIST.forEach((b, idx) => {
+                    if (targetIdx !== null && idx !== targetIdx) return;
+                    if (!sipdIsColVisible(b.toLowerCase())) return;
+                    const v = parentMonthly[idx];
+                    bulanCells += `
+                        <td data-sipd-parent-month="${item.id}-${idx}" class="px-1 py-1.5 w-[95px] border-r border-b ${borderColor} bg-white font-mono text-[8px] font-black text-right ${v > 0 ? 'text-slate-950' : 'text-slate-300'}">
+                            ${v > 0 ? formatRupiah(v) : ''}
+                        </td>`;
+                });
+            }
+
+            let rowHtml = '';
+            if (sipdIsColVisible('kode')) {
+                rowHtml += `<td class="px-2 py-1.5 font-mono text-[9px] whitespace-nowrap align-middle border-r border-b ${borderColor} ${style.bg} text-slate-950 font-bold" style="padding-left: ${leftPad}px">
+                    <div class="flex items-center gap-1">
+                        ${(!isLeaf && !isOnlySubKeg) ? `<button onclick="sipdToggleExpand('${item.id}')" class="p-0.5 hover:bg-black/20 rounded flex-shrink-0"><i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-3 h-3"></i></button>` : '<span class="w-3.5 h-3.5 flex-shrink-0"></span>'}
+                        <span class="font-bold uppercase tracking-tight overflow-hidden text-ellipsis">${item.kode}</span>
+                    </div>
+                </td>`;
+            }
+            if (sipdIsColVisible('uraian')) {
+                rowHtml += `<td class="px-3 py-1.5 border-r border-b ${borderColor} ${style.bg} text-slate-950">
+                    <div class="flex flex-col">
+                        <span class="uppercase text-[10px] font-black leading-tight tracking-tight">${item.uraian}</span>
+                        <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span class="text-[6px] font-black uppercase px-1.5 py-0.5 rounded bg-black/10 text-black shadow-sm">${style.label}</span>
+                            ${isLeaf ? `<span class="text-[6px] font-mono font-bold text-black/80">(${pctReal}%)</span>` : ''}
+                        </div>
+                    </div>
+                </td>`;
+            }
+            if (sipdIsColVisible('pagu')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black text-slate-950">
+                    ${formatRupiah(activePagu)}
+                </td>`;
+            }
+            if (sipdIsColVisible('realisasi')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black text-slate-950">
+                    ${formatRupiah(agg.realisasi)}
+                </td>`;
+            }
+            if (sipdIsColVisible('pajak')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black text-slate-950">
+                    ${formatRupiah(agg.pajak)}
+                </td>`;
+            }
+            if (sipdIsColVisible('sisa')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black ${sisa < 0 ? 'text-rose-600' : 'text-slate-950'}">
+                    ${formatRupiah(sisa)}
+                </td>`;
+            }
+
+            rowHtml += bulanCells;
+
+            const bulanIdxAktif = targetIdx !== null ? targetIdx : 0;
+            const realisasiBln = isLeaf ? (agg.monthly?.[bulanIdxAktif] || 0) : (parentRealMonthly[bulanIdxAktif] || 0);
+            const pengajuanBln = isLeaf ? (item.pengajuanBulanan?.[bulanIdxAktif] || 0) : (parentMonthly[bulanIdxAktif] || 0);
+            const sisaSaldo = pengajuanBln - realisasiBln;
+            if (sipdIsColVisible('realisasi_bulanan')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black text-slate-950">
+                    ${formatRupiah(realisasiBln)}
+                </td>`;
+            }
+            if (sipdIsColVisible('pajak_bulanan')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black text-slate-950">
+                    ${formatRupiah(agg.monthlyPajak?.[bulanIdxAktif] || 0)}
+                </td>`;
+            }
+            if (sipdIsColVisible('sisa_saldo')) {
+                rowHtml += `<td class="px-2 py-1.5 border-r border-b ${borderColor} bg-white text-right font-mono text-[9px] font-black ${sisaSaldo < 0 ? 'text-rose-600' : 'text-slate-950'}">
+                    ${formatRupiah(sisaSaldo)}
+                </td>`;
+            }
+
+            // Redaksi Pengajuan hanya jika Sub-Kegiatan & nominal pengajuannya terisi (> 0)
+            let isPengajuanTerisi = false;
+            if (item.type === 'sub_kegiatan') {
+                const paguAktifSub = sipdGetActivePagu(getAggregatedData(item));
+                const targetPengajuan = targetIdx !== null ? (parentMonthly[targetIdx] || 0) : parentMonthly.reduce((a, b) => a + b, 0);
+                isPengajuanTerisi = paguAktifSub > 0 && targetPengajuan > 0;
+            }
+
+            const redaksiPengajuanText = isPengajuanTerisi
+                ? sipdFormatRedaksiPengajuanSubKeg(item, currentProgram, currentKegiatan)
+                : '';
+
+            if (sipdIsColVisible('redaksi_pengajuan')) {
+                if (item.type === 'sub_kegiatan' && redaksiPengajuanText) {
+                    if (!item.nomorPengajuanBulanan || !Array.isArray(item.nomorPengajuanBulanan)) {
+                        item.nomorPengajuanBulanan = new Array(12).fill('');
+                    }
+                    if (!item.nomorSPPBulanan || !Array.isArray(item.nomorSPPBulanan)) {
+                        item.nomorSPPBulanan = new Array(12).fill('');
+                    }
+                    const curBlnIdx = targetIdx !== null ? targetIdx : (blnRedaksi ? sipdBulanIdx(blnRedaksi) : 0);
+                    const nomorText = item.nomorPengajuanBulanan[curBlnIdx] || '';
+                    const nomorSPPText = item.nomorSPPBulanan[curBlnIdx] || '';
+
+                    rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left font-mono text-[8.5px] font-semibold text-slate-900 align-middle relative select-text">
+                        <div class="flex items-start justify-between gap-1 group mb-1">
+                            <span class="tracking-tight select-all text-slate-900 break-words whitespace-normal leading-snug" title="${redaksiPengajuanText}">${redaksiPengajuanText}</span>
+                            <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${redaksiPengajuanText.replace(/'/g, "\\'")}'); showNotif('Redaksi Pengajuan disalin!', 'success');" 
+                                    class="opacity-0 group-hover:opacity-100 p-1 bg-blue-600 hover:bg-blue-700 rounded text-white transition flex-shrink-0" title="Salin Redaksi Pengajuan">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-1.5" onclick="event.stopPropagation()">
+                            <div>
+                                <div class="mb-0.5 text-[6.5px] font-black uppercase tracking-[0.1em] text-slate-600">Nomor Pengajuan</div>
+                                <div class="flex items-center gap-1">
+                                    <input type="text"
+                                        placeholder="Isi Nomor Pengajuan..."
+                                        class="w-full min-w-0 bg-slate-50 text-slate-900 font-mono text-[8.5px] font-bold outline-none px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-cyan-500 shadow-sm placeholder-slate-400"
+                                        value="${nomorText}"
+                                        oninput="sipdOnEditNomorSubKeg('${item.id}', ${curBlnIdx}, this.value)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                                    />
+                                    ${nomorText ? `<button onclick="event.stopPropagation(); navigator.clipboard.writeText('${nomorText.replace(/'/g, "\\'")}'); showNotif('Nomor Pengajuan disalin!', 'success');" class="p-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300 shadow-sm flex-shrink-0 transition" title="Salin Nomor Pengajuan"><i data-lucide="copy" class="w-3 h-3"></i></button>` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="mb-0.5 text-[6.5px] font-black uppercase tracking-[0.1em] text-slate-600">Nomor SPP</div>
+                                <div class="flex items-center gap-1">
+                                    <input type="text"
+                                        placeholder="Isi Nomor SPP..."
+                                        class="w-full min-w-0 bg-slate-50 text-slate-900 font-mono text-[8.5px] font-bold outline-none px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-cyan-500 shadow-sm placeholder-slate-400"
+                                        value="${nomorSPPText}"
+                                        oninput="sipdOnEditNomorSPPSubKeg('${item.id}', ${curBlnIdx}, this.value)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                                    />
+                                    ${nomorSPPText ? `<button onclick="event.stopPropagation(); navigator.clipboard.writeText('${nomorSPPText.replace(/'/g, "\\'")}'); showNotif('Nomor SPP disalin!', 'success');" class="p-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300 shadow-sm flex-shrink-0 transition" title="Salin Nomor SPP"><i data-lucide="copy" class="w-3 h-3"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </td>`;
+                } else {
+                    rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] opacity-40 italic"></td>`;
+                }
+            }
+            if (sipdIsColVisible('redaksi_belanja')) {
+                if (item.type === 'sub_kegiatan') {
+                    const paguAktifSub = sipdGetActivePagu(getAggregatedData(item));
+                    const targetPengajuan = targetIdx !== null ? (parentMonthly[targetIdx] || 0) : parentMonthly.reduce((a, b) => a + b, 0);
+                    const shouldShowBelanja = paguAktifSub > 0 && targetPengajuan > 0;
+
+                    if (!shouldShowBelanja) {
+                        rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-400 italic"></td>`;
+                    } else {
+                        const belanjaText = sipdFormatRedaksiBelanjaSubKeg(item, currentProgram, currentKegiatan) || '';
+                        const curBlnIdx = targetIdx !== null ? targetIdx : (blnRedaksi ? sipdBulanIdx(blnRedaksi) : 0);
+                        const nomorSP2DText = item.nomorSP2DBulanan?.[curBlnIdx] || '';
+
+                        rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-900 align-middle">
+                            <div class="flex items-start justify-between gap-1 group">
+                                <span class="break-words whitespace-normal leading-snug text-slate-900 font-medium" title="${belanjaText}">${belanjaText}</span>
+                                ${belanjaText ? `<button onclick="event.stopPropagation(); navigator.clipboard.writeText('${belanjaText.replace(/'/g, "\\'")}'); showNotif('Redaksi Belanja disalin!', 'success');" class="opacity-0 group-hover:opacity-100 p-1 bg-emerald-600 hover:bg-emerald-700 rounded text-white transition flex-shrink-0" title="Salin Redaksi Belanja"><i data-lucide="copy" class="w-3 h-3"></i></button>` : ''}
+                            </div>
+                            <div class="mt-1.5 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
+                                <div class="mb-0.5 text-[6.5px] font-black uppercase tracking-[0.1em] text-slate-600">Nomor SP2D</div>
+                                <div class="flex items-center gap-1 w-full">
+                                    <input type="text"
+                                        placeholder="Nomor SP2D..."
+                                        class="w-full min-w-0 bg-slate-50 text-slate-900 font-mono text-[8.5px] font-bold outline-none px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-emerald-500 shadow-sm placeholder-slate-400"
+                                        value="${nomorSP2DText}"
+                                        oninput="sipdOnEditNomorSP2DSubKeg('${item.id}', ${curBlnIdx}, this.value)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                                    />
+                                    ${nomorSP2DText ? `<button onclick="event.stopPropagation(); navigator.clipboard.writeText('${nomorSP2DText.replace(/'/g, "\\'")}'); showNotif('Nomor SP2D disalin!', 'success');" class="p-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300 shadow-sm flex-shrink-0 transition" title="Salin Nomor SP2D"><i data-lucide="copy" class="w-3 h-3"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </td>`;
+                    }
+                } else {
+                    rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-400 italic"></td>`;
+                }
+            }
+            if (sipdIsColVisible('redaksi_sts')) {
+                if (item.type === 'sub_kegiatan') {
+                    const paguAktifSub = sipdGetActivePagu(getAggregatedData(item));
+                    const targetPengajuan = targetIdx !== null ? (parentMonthly[targetIdx] || 0) : parentMonthly.reduce((a, b) => a + b, 0);
+                    const shouldShowSTS = paguAktifSub > 0 && targetPengajuan > 0;
+
+                    if (!shouldShowSTS) {
+                        rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-400 italic"></td>`;
+                    } else {
+                        const curBlnIdx = targetIdx !== null ? targetIdx : (blnRedaksi ? sipdBulanIdx(blnRedaksi) : 0);
+                        const realisasiVal = parentRealMonthly[curBlnIdx] || 0;
+                        const pengajuanVal = parentMonthly[curBlnIdx] || 0;
+                        const sisaVal = pengajuanVal - realisasiVal;
+                        const nomorSTSText = item.nomorSTS?.[curBlnIdx] || '';
+                        const stsText = sipdFormatRedaksiSTSSubKeg(item, currentProgram, currentKegiatan, pengajuanVal, realisasiVal, sisaVal);
+
+                        rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-900 align-middle">
+                            <div class="flex items-start justify-between gap-1 group">
+                                <span class="break-words whitespace-normal leading-snug text-slate-900 font-medium" title="${stsText}">${stsText}</span>
+                                ${stsText ? `<button onclick="event.stopPropagation(); navigator.clipboard.writeText('${stsText.replace(/'/g, "\\'")}'); showNotif('Redaksi STS disalin!', 'success');" class="opacity-0 group-hover:opacity-100 p-1 bg-orange-600 hover:bg-orange-700 rounded text-white transition flex-shrink-0" title="Salin Redaksi STS"><i data-lucide="copy" class="w-3 h-3"></i></button>` : ''}
+                            </div>
+                            <div class="mt-1.5 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
+                                <div class="mb-0.5 text-[6.5px] font-black uppercase tracking-[0.1em] text-slate-600">Nomor STS</div>
+                                <div class="flex items-center gap-1 w-full">
+                                    <textarea
+                                        rows="1"
+                                        placeholder="Nomor STS..."
+                                        class="w-full min-w-0 bg-slate-50 text-slate-900 font-mono text-[8.5px] font-bold outline-none px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-orange-500 shadow-sm placeholder-slate-400 resize-none"
+                                        oninput="sipdOnEditNomorSTSSubKeg('${item.id}', ${curBlnIdx}, this.value)"
+                                    >${nomorSTSText}</textarea>
+                                </div>
+                            </div>
+                        </td>`;
+                    }
+                } else {
+                    rowHtml += `<td class="px-2 py-1.5 w-[240px] border-r border-b ${borderColor} bg-white text-left text-[8px] text-slate-400 italic"></td>`;
+                }
+            }
+
+            tr.innerHTML = rowHtml;
+            bodyEl.appendChild(tr);
+
+            if (!isOnlySubKeg && isExpanded && hasChildren) {
+                sipdRenderRows(item.children.filter(c => sipdItemVisible(c)), depth + 1, bodyEl, currentProgram, currentKegiatan);
+            }
+        }
+
+        function sipdCollectMonthlyTotalsFromState() {
+            const monthTotals = new Array(12).fill(0);
+            const pajakTotals = new Array(12).fill(0);
+            const pengajuanTotals = new Array(12).fill(0);
+            let sumPengajuan = 0;
+            const totalUnitType = state.sipd.onlyFilledPengajuan ? 'sub_kegiatan' : 'kegiatan';
+
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (it.type === totalUnitType) {
+                        const agg = getAggregatedData(it);
+                        for (let i = 0; i < 12; i++) {
+                            monthTotals[i] += (Number(agg.monthly?.[i]) || 0);
+                            pajakTotals[i] += (Number(agg.monthlyPajak?.[i]) || 0);
+                            const sumPengajuanBulan = (children, monthIdx) => (children || []).reduce((sum, child) => {
+                                return sum + (child.type === 'rekening' ? (Number(child.pengajuanBulanan?.[monthIdx]) || 0) : sumPengajuanBulan(child.children, monthIdx));
+                            }, 0);
+                            pengajuanTotals[i] += sumPengajuanBulan(it.children, i);
+                        }
+                        sumPengajuan += Array.from({ length: 12 }, (_, i) => {
+                            const sumPengajuanBulan = (children, monthIdx) => (children || []).reduce((sum, child) => {
+                                return sum + (child.type === 'rekening' ? (Number(child.pengajuanBulanan?.[monthIdx]) || 0) : sumPengajuanBulan(child.children, monthIdx));
+                            }, 0);
+                            return sumPengajuanBulan(it.children, i);
+                        }).reduce((sum, value) => sum + value, 0);
+                        return;
+                    }
+                    if (it.type === 'rekening') {
+                        for (let i = 0; i < 12; i++) {
+                            pengajuanTotals[i] += (Number(it.pengajuanBulanan?.[i]) || 0);
+                        }
+                        sumPengajuan += sipdGetTotalPengajuan(it);
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            return { monthTotals, pajakTotals, pengajuanTotals, sumPengajuan };
+        }
+
+        function sipdRenderTotalRow(targetEl) {
+            const filtered = calculateFilteredTotals(state.data.pagu);
+            const totalPagu = sipdGetActivePagu(filtered);
+            const totalReal = filtered.realisasi;
+            const totalSisa = totalPagu - totalReal;
+            const { monthTotals, pajakTotals, pengajuanTotals } = sipdCollectMonthlyTotalsFromState();
+            const blnRedaksi = state.sipd.bulanRedaksi;
+            const targetIdx = blnRedaksi ? sipdBulanIdx(blnRedaksi) : null;
+
+            let bulanTotals = '';
+            monthTotals.forEach((v, idx) => {
+                if (targetIdx !== null && idx !== targetIdx) return;
+                const bKey = BULAN_LIST[idx].toLowerCase();
+                if (!sipdIsColVisible(bKey)) return;
+                const vPeng = pengajuanTotals[idx] || 0;
+                bulanTotals += `<td id="sipd-total-bulan-${idx}" class="px-1 py-2 w-[95px] border-r border-b border-slate-700 bg-slate-900 font-mono text-[9px] font-black text-right text-cyan-300" style="background-color:#0f172a !important; color:#67e8f9 !important;">
+                    ${vPeng > 0 ? formatRupiah(vPeng) : ''}
+                </td>`;
+            });
+
+            let totalCells = '';
+            if (sipdIsColVisible('kode')) {
+                totalCells += `<td class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-center font-black text-white" style="background-color:#0f172a !important; color:#ffffff !important;">TOTAL</td>`;
+            }
+            if (sipdIsColVisible('uraian')) {
+                totalCells += `<td class="px-3 py-2.5 border-r border-b border-slate-700 bg-slate-900 italic font-black text-amber-300" style="background-color:#0f172a !important; color:#fcd34d !important;">ANGGARAN SIPD</td>`;
+            }
+            if (sipdIsColVisible('pagu')) {
+                totalCells += `<td id="sipd-total-pagu" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-white" style="background-color:#0f172a !important; color:#ffffff !important;">${formatRupiah(totalPagu)}</td>`;
+            }
+            if (sipdIsColVisible('realisasi')) {
+                totalCells += `<td id="sipd-total-real" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-emerald-400" style="background-color:#0f172a !important; color:#34d399 !important;">${formatRupiah(totalReal)}</td>`;
+            }
+            if (sipdIsColVisible('pajak')) {
+                totalCells += `<td id="sipd-total-pajak" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-orange-400" style="background-color:#0f172a !important; color:#fb923c !important;">${formatRupiah(filtered.pajak)}</td>`;
+            }
+            if (sipdIsColVisible('sisa')) {
+                const sisaColorStyle = totalSisa < 0 ? 'color:#f87171 !important;' : 'color:#fcd34d !important;';
+                totalCells += `<td id="sipd-total-sisa" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black ${totalSisa < 0 ? 'text-rose-400' : 'text-amber-300'}" style="background-color:#0f172a !important; ${sisaColorStyle}">${formatRupiah(totalSisa)}</td>`;
+            }
+
+            totalCells += bulanTotals;
+
+            const activeMonthIdx = targetIdx !== null ? targetIdx : 0;
+            const totalRealBln = monthTotals[activeMonthIdx] || 0;
+            const totalPengajuanBln = pengajuanTotals[activeMonthIdx] || 0;
+            const totalSisaSaldo = totalPengajuanBln - totalRealBln;
+            if (sipdIsColVisible('realisasi_bulanan')) {
+                totalCells += `<td id="sipd-total-realisasi-bulanan" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-emerald-400" style="background-color:#0f172a !important; color:#34d399 !important;">${formatRupiah(totalRealBln)}</td>`;
+            }
+            if (sipdIsColVisible('pajak_bulanan')) {
+                totalCells += `<td id="sipd-total-pajak-bulanan" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-orange-400" style="background-color:#0f172a !important; color:#fb923c !important;">${formatRupiah(pajakTotals[activeMonthIdx] || 0)}</td>`;
+            }
+            if (sipdIsColVisible('sisa_saldo')) {
+                const sisaBlnColorStyle = totalSisaSaldo < 0 ? 'color:#f87171 !important;' : 'color:#fde68a !important;';
+                totalCells += `<td id="sipd-total-sisa-saldo" class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black ${totalSisaSaldo < 0 ? 'text-rose-400' : 'text-amber-200'}" style="background-color:#0f172a !important; ${sisaBlnColorStyle}">${formatRupiah(totalSisaSaldo)}</td>`;
+            }
+
+            if (sipdIsColVisible('redaksi_pengajuan')) {
+                totalCells += `<td class="px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900" style="background-color:#0f172a !important;"></td>`;
+            }
+            if (sipdIsColVisible('redaksi_belanja')) {
+                totalCells += `<td class="px-2 py-2.5 border-r border-b border-slate-700 bg-emerald-950" style="background-color:#064e3b !important;"></td>`;
+            }
+            if (sipdIsColVisible('redaksi_sts')) {
+                totalCells += `<td class="px-2 py-2.5 border-r border-b border-slate-700 bg-orange-950" style="background-color:#7c2d12 !important;"></td>`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = "bg-slate-900 text-white font-black text-[10px] uppercase sticky bottom-0 z-[40] border-t-2 border-amber-400 shadow-2xl";
+            tr.style.backgroundColor = '#0f172a';
+            tr.innerHTML = totalCells;
+
+            const footEl = document.getElementById('sipd-table-foot');
+            if (footEl) {
+                footEl.innerHTML = '';
+                footEl.appendChild(tr);
+            } else if (targetEl) {
+                targetEl.appendChild(tr);
+            }
+
+            const globalSisa = document.getElementById('global-sisa');
+            if (globalSisa) globalSisa.innerText = formatRupiah(totalSisa);
+        }
+
+        function sipdRefreshTotalRow() {
+            const filtered = calculateFilteredTotals(state.data.pagu);
+            const totalPagu = sipdGetActivePagu(filtered);
+            const totalReal = filtered.realisasi;
+            const totalSisa = totalPagu - totalReal;
+            const { monthTotals, pajakTotals, pengajuanTotals } = sipdCollectMonthlyTotalsFromState();
+            const blnRedaksi = state.sipd.bulanRedaksi;
+            const targetIdx = blnRedaksi ? sipdBulanIdx(blnRedaksi) : null;
+
+            const paguCell = document.getElementById('sipd-total-pagu');
+            const realCell = document.getElementById('sipd-total-real');
+            const sisaCell = document.getElementById('sipd-total-sisa');
+            const realBlnCell = document.getElementById('sipd-total-realisasi-bulanan');
+            const pajakCell = document.getElementById('sipd-total-pajak');
+            const pajakBlnCell = document.getElementById('sipd-total-pajak-bulanan');
+            const sisaSaldoCell = document.getElementById('sipd-total-sisa-saldo');
+            if (paguCell) paguCell.innerText = formatRupiah(totalPagu);
+            if (realCell) realCell.innerText = formatRupiah(totalReal);
+            if (pajakCell) pajakCell.innerText = formatRupiah(filtered.pajak);
+            if (sisaCell) {
+                sisaCell.innerText = formatRupiah(totalSisa);
+                if (totalSisa < 0) {
+                    sisaCell.className = 'px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-rose-400';
+                    sisaCell.style.color = '#f87171';
+                } else {
+                    sisaCell.className = 'px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-amber-300';
+                    sisaCell.style.color = '#fcd34d';
+                }
+            }
+            const activeMonthIdx = targetIdx !== null ? targetIdx : 0;
+            const realBln = monthTotals[activeMonthIdx] || 0;
+            const pengajuanBln = pengajuanTotals[activeMonthIdx] || 0;
+            const sisaSaldo = pengajuanBln - realBln;
+            if (realBlnCell) realBlnCell.innerText = formatRupiah(realBln);
+            if (pajakBlnCell) pajakBlnCell.innerText = formatRupiah(pajakTotals[activeMonthIdx] || 0);
+            if (sisaSaldoCell) {
+                sisaSaldoCell.innerText = formatRupiah(sisaSaldo);
+                if (sisaSaldo < 0) {
+                    sisaSaldoCell.className = 'px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-rose-400';
+                    sisaSaldoCell.style.color = '#f87171';
+                } else {
+                    sisaSaldoCell.className = 'px-2 py-2.5 border-r border-b border-slate-700 bg-slate-900 text-right font-mono text-[11px] font-black text-amber-200';
+                    sisaSaldoCell.style.color = '#fde68a';
+                }
+            }
+            for (let i = 0; i < 12; i++) {
+                if (targetIdx !== null && i !== targetIdx) continue;
+                const el = document.getElementById(`sipd-total-bulan-${i}`);
+                const vPeng = pengajuanTotals[i] || 0;
+                if (el) el.innerText = vPeng > 0 ? formatRupiah(vPeng) : '';
+            }
+            const globalSisa = document.getElementById('global-sisa');
+            if (globalSisa) globalSisa.innerText = formatRupiah(totalSisa);
+        }
+
+        function sipdUpdateModeBadge() {
+            const lbl = document.getElementById('sipd-active-mode-label');
+            const iconEl = document.getElementById('sipd-lock-icon');
+            if (lbl) {
+                const vm = state.viewMode;
+                const text = vm === 'murni' ? 'Murni' : vm === 'efisiensi' ? 'Efisiensi' : vm === 'perbandingan' ? 'Perbandingan' : 'Perubahan';
+                lbl.innerText = text;
+            }
+            if (iconEl) {
+                const iconName = state.isModeLocked ? 'lock' : 'lock-open';
+                iconEl.setAttribute('data-lucide', iconName);
+            }
+        }
+
+        function renderSIPD() {
+            sipdEnsureVisibleColumns();
+
+            const migrasi1 = sipdEnsurePengajuanFields();
+            const migrasi2 = sipdEnsureStatusFields();
+            const migrasi3 = sipdEnsureNomorFields();
+            if (migrasi1 || migrasi2 || migrasi3) sipdSaveDebounce();
+
+            const progEl = document.getElementById('sipd-program');
+            if (!progEl || !progEl.options || progEl.options.length <= 1) sipdInitHierOptions();
+            sipdUpdateModeBadge();
+            sipdCheckResetBtn();
+            sipdRenderHead();
+            const body = document.getElementById('sipd-table-body');
+            const foot = document.getElementById('sipd-table-foot');
+            if (!body) return;
+            body.innerHTML = '';
+            if (foot) foot.innerHTML = '';
+            if (state.data.pagu.length === 0) {
+                body.innerHTML = `<tr><td colspan="30" class="py-20 text-center opacity-20"><i data-lucide="clipboard-list" class="w-12 h-12 mx-auto mb-2"></i><span class="font-black uppercase tracking-[0.5em] text-[10px]">Database Kosong</span></td></tr>`;
+            } else {
+                sipdRenderRows(state.data.pagu, 0, body);
+                sipdRenderTotalRow(foot || body);
+            }
+            sipdUpdatePengajuanBtnUI();
+            sipdUpdateSortBtnUI();
+            lucide.createIcons();
+            console.log(`[SIPD] Render selesai • Mode Pagu: ${state.viewMode}${state.isModeLocked ? ' (DIKUNCI)' : ''}`);
+        }
+
+        function sipdRefreshParentMonthly(bulanIdx) {
+            const walk = (item) => {
+                if (!item) return 0;
+                if (item.type === 'rekening') {
+                    if (!sipdItemVisible(item)) return 0;
+                    return Number(item.pengajuanBulanan?.[bulanIdx]) || 0;
+                }
+                let sum = 0;
+                if (item.children) {
+                    item.children.forEach(child => {
+                        sum += walk(child);
+                    });
+                }
+                const cell = document.querySelector(`[data-sipd-parent-month="${item.id}-${bulanIdx}"]`);
+                if (cell) {
+                    cell.innerText = sum > 0 ? formatRupiah(sum) : '';
+                    const bulanKe = bulanIdx + 1;
+                    const isJanAgu = bulanKe <= 8;
+                    if (sum > 0) {
+                        cell.className = `px-1 py-1.5 w-[95px] border-r border-b border-white/60 bg-inherit font-mono text-[8px] font-black text-right ${isJanAgu ? 'text-sky-200' : 'text-amber-100'}`;
+                    } else {
+                        cell.className = `px-1 py-1.5 w-[95px] border-r border-b border-white/60 bg-inherit font-mono text-[8px] font-black text-right opacity-30`;
+                    }
+                }
+                return sum;
+            };
+            state.data.pagu.forEach(p => walk(p));
+        }
+
+        // --- EDIT HANDLER ---
+        function sipdOnEditBulan(rekeningId, bulanIdx, rawValue) {
+            const rek = sipdFindItem(state.data.pagu, rekeningId);
+            if (!rek || !rek.pengajuanBulanan) return;
+            if (sipdIsBulanLocked(rek, bulanIdx)) return;
+            const num = parseRupiah(rawValue);
+            rek.pengajuanBulanan[bulanIdx] = num;
+
+            const agg = getAggregatedData(rek);
+            const totalPengajuan = sipdGetTotalPengajuan(rek);
+
+            if (totalPengajuan > agg.realisasi + 0.5) {
+                rek.pengajuanBulanan[bulanIdx] = 0; // Dikosongkan kembali
+                const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
+                if (inp) inp.value = '';
+                showNotif(`⚠ Total Pengajuan Januari–Desember (${formatRupiah(totalPengajuan)}) melebihi Realisasi APBD (${formatRupiah(agg.realisasi)})! Input dikosongkan kembali.`, "error");
+            } else {
+                const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
+                if (inp && document.activeElement !== inp) {
+                    inp.value = num > 0 ? formatRupiah(num) : '';
+                }
+            }
+
+            sipdSaveDebounce();
+            sipdRefreshParentMonthly(bulanIdx);
+            sipdRefreshTotalRow();
+        }
+
+        // --- BULAN & AJUKAN ---
+        function sipdOnBulanRedaksiChange(value) {
+            state.sipd.bulanRedaksi = value === 'all' || !value ? null : Number(value);
+            sipdUpdatePengajuanBtnUI();
+            renderSIPD();
+        }
+
+        function sipdResetBulan() {
+            state.sipd.bulanRedaksi = null;
+            const sel = document.getElementById('sipd-bulan-redaksi');
+            if (sel) sel.value = '9';
+            sipdUpdatePengajuanBtnUI();
+            renderSIPD();
+        }
+
+        function sipdSimpanDanAjukan() {
+            const bln = state.sipd.bulanRedaksi;
+            if (!bln) { showNotif("Pilih bulan terlebih dahulu di ComboBox Bulan", "warning"); return; }
+            const idx = sipdBulanIdx(bln);
+            let count = 0;
+            let realisasiMelebihi = 0;
+            const walk = (items) => {
+                items.forEach(it => {
+                    if (it.type === 'rekening') {
+                        const nom = Number(it.pengajuanBulanan?.[idx]) || 0;
+                        if (nom > 0 && it.statusPengajuan[idx] === 'draft') {
+                            const agg = getAggregatedData(it);
+                            const totalPengajuan = sipdGetTotalPengajuan(it);
+                            if (totalPengajuan > agg.realisasi + 0.5) {
+                                it.pengajuanBulanan[idx] = 0; // Dikosongkan kembali
+                                realisasiMelebihi++;
+                            } else {
+                                it.statusPengajuan[idx] = 'diajukan';
+                                count++;
+                            }
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) walk(it.children);
+                });
+            };
+            walk(state.data.pagu);
+            if (count === 0 && realisasiMelebihi === 0) {
+                showNotif(`Tidak ada rekening yang diisi untuk bulan ${BULAN_LIST[idx]} (semua 0 / sudah diajukan)`, "info");
+                return;
+            }
+            sipdSaveDebounce();
+            renderSIPD();
+            if (count > 0) {
+                showNotif(`✅ Bulan ${BULAN_LIST[idx]}: ${count} Rekening berhasil diajukan & dikunci (tidak bisa diedit).`, "success");
+            }
+            if (realisasiMelebihi > 0) {
+                setTimeout(() => showNotif(`⚠ ${realisasiMelebihi} rekening memiliki total pengajuan Januari–Desember melebihi Realisasi APBD — input bulan ini dikosongkan dan tidak diajukan.`, "error"), 400);
+            }
+        }
+
+        // --- REDAKSI DATA LIST ---
+        function sipdGetOrInitRedaksi(bulan) {
+            const key = String(bulan);
+            if (!state.sipd.redaksi[key]) {
+                state.sipd.redaksi[key] = { input_redaksi: '', realisasi_redaksi: '', sts_redaksi: '' };
+            }
+            return state.sipd.redaksi[key];
+        }
+
+        function sipdPreviewRedaksiList(bulan, includeCurrentFilters = false) {
+            const idx = sipdBulanIdx(bulan);
+            const rows = [];
+            const subRedaksiById = new Map();
+            const getSubMonthlyTotals = (subKegiatan) => {
+                let pengajuan = 0;
+                let realisasi = 0;
+                const walk = (items) => {
+                    if (!items) return;
+                    items.forEach(item => {
+                        if (includeCurrentFilters && !sipdItemVisible(item)) return;
+                        if (item.type === 'rekening') {
+                            pengajuan += Number(item.pengajuanBulanan?.[idx]) || 0;
+                            realisasi += Number(getAggregatedData(item).monthly?.[idx]) || 0;
+                        }
+                        if (item.children) walk(item.children);
+                    });
+                };
+                walk(subKegiatan.children);
+                return { pengajuan, realisasi };
+            };
+            const pathWalker = (items, pathArr) => {
+                items.forEach(it => {
+                    const curPath = [...pathArr, it];
+                    if (it.type === 'rekening') {
+                        if (includeCurrentFilters) {
+                            const matchesHierarchy = curPath.every(item => {
+                                const selectedId = state.sipd.filterHier[item.type];
+                                return !selectedId || selectedId === 'all' || item.id === selectedId;
+                            });
+                            if (!matchesHierarchy || !sipdItemVisible(it)) return;
+                        }
+                        const nom = Number(it.pengajuanBulanan?.[idx]) || 0;
+                        if (nom > 0 || sipdHasFilledPagu(it)) {
+                            const agg = getAggregatedData(it);
+                            const pathProgram = curPath.find(p => p.type === 'program');
+                            const pathKeg = curPath.find(p => p.type === 'kegiatan');
+                            const pathSub = curPath.find(p => p.type === 'sub_kegiatan');
+                            if (pathSub && !subRedaksiById.has(pathSub.id)) {
+                                const subAgg = getAggregatedData(pathSub);
+                                const subMonthlyTotals = getSubMonthlyTotals(pathSub);
+                                const subPengajuan = subMonthlyTotals.pengajuan;
+                                const subRealisasi = subMonthlyTotals.realisasi;
+                                const tampilkanRedaksi = sipdGetActivePagu(subAgg) > 0 && subPengajuan > 0;
+                                subRedaksiById.set(pathSub.id, {
+                                    pengajuan: tampilkanRedaksi
+                                        ? sipdFormatRedaksiPengajuanSubKeg(pathSub, pathProgram?.uraian, pathKeg?.uraian)
+                                        : '',
+                                    belanja: tampilkanRedaksi
+                                        ? sipdFormatRedaksiBelanjaSubKeg(pathSub, pathProgram?.uraian, pathKeg?.uraian)
+                                        : '',
+                                    sts: tampilkanRedaksi
+                                        ? sipdFormatRedaksiSTSSubKeg(pathSub, pathProgram?.uraian, pathKeg?.uraian, subPengajuan, subRealisasi, subPengajuan - subRealisasi)
+                                        : ''
+                                });
+                            }
+                            const subRedaksi = pathSub ? subRedaksiById.get(pathSub.id) : null;
+                            rows.push({
+                                subId: pathSub?.id || '',
+                                subKode: pathSub?.kode || '',
+                                kode: it.kode,
+                                uraian: it.uraian,
+                                program: pathProgram ? pathProgram.uraian : '',
+                                kegiatan: pathKeg ? pathKeg.uraian : '',
+                                sub_kegiatan: pathSub ? pathSub.uraian : '',
+                                sumberDana: it.sumberDana || 'DAU',
+                                pelaksana: it.pelaksana || 'TU',
+                                redaksiPengajuan: subRedaksi?.pengajuan || '',
+                                redaksiBelanja: subRedaksi?.belanja || '',
+                                redaksiSTS: subRedaksi?.sts || '',
+                                nomorPengajuan: pathSub?.nomorPengajuanBulanan?.[idx] || '',
+                                pagu: sipdGetActivePagu(agg),
+                                nominal: nom,
+                                status: it.statusPengajuan?.[idx] || 'draft',
+                                realisasi: agg.monthly?.[idx] || 0,
+                                sisa: (sipdGetActivePagu(agg) - agg.realisasi)
+                            });
+                        }
+                    }
+                    if (it.children && Array.isArray(it.children)) pathWalker(it.children, curPath);
+                });
+            };
+            pathWalker(state.data.pagu, []);
+            return rows;
+        }
+
+        // --- MODAL REDAKSI GENERATOR ---
+        function sipdGenerateDefaultInputRedaksi(bulan, rows) {
+            const blnIdx = sipdBulanIdx(bulan);
+            const bulanFull = BULAN_LIST_FULL[blnIdx];
+            const thnIni = new Date().getFullYear();
+            const totalNom = rows.reduce((a, r) => a + r.nominal, 0);
+            const jumlahRek = rows.length;
+
+            const groupByProgram = {};
+            rows.forEach(r => {
+                const key = r.program || 'TANPA PROGRAM';
+                if (!groupByProgram[key]) groupByProgram[key] = { total: 0, items: [] };
+                groupByProgram[key].total += r.nominal;
+                groupByProgram[key].items.push(r);
+            });
+
+            let teks = `\tMenindaklanjuti Peraturan Daerah Kabupaten/Kota Nomor ... Tahun ${thnIni} tentang APBD Tahun Anggaran ${thnIni}, bersama ini kami sampaikan usulan pengajuan penarikan dana untuk pelaksanaan kegiatan pada bulan ${bulanFull} ${thnIni} dengan rincian sebagai berikut:\n\n`;
+            teks += `\tDasar pelaksanaan adalah dokumen pelaksanaan anggaran yang telah ditetapkan. Usulan ini diajukan untuk memenuhi kebutuhan operasional dan pelayanan kepada masyarakat sesuai dengan program prioritas.\n\n`;
+            teks += `\tRINCIAN PENGAJUAN BULAN ${bulanFull.toUpperCase()} ${thnIni}:\n\n`;
+
+            let no = 1;
+            Object.keys(groupByProgram).forEach((namaProg, iProg) => {
+                const g = groupByProgram[namaProg];
+                teks += `${no}. ${namaProg}\n`;
+                teks += `   Jumlah Pengajuan: Rp ${formatRupiah(g.total)} (${terbilang(g.total).trim()} Rupiah)\n`;
+                g.items.forEach((it, i) => {
+                    teks += `   ${String.fromCharCode(97 + i)}. ${it.kegiatan}${it.sub_kegiatan ? ' — ' + it.sub_kegiatan : ''}\n`;
+                    teks += `      Rekening: ${it.kode} - ${it.uraian}\n`;
+                    teks += `      Sumber Dana: ${it.sumberDana}    |    Pelaksana: ${it.pelaksana}\n`;
+                    teks += `      Pagu Aktif: Rp ${formatRupiah(it.pagu)}    |    Sisa: Rp ${formatRupiah(it.sisa)}\n`;
+                    teks += `      Diajukan Bulan Ini: Rp ${formatRupiah(it.nominal)} (${terbilang(it.nominal).trim()} Rupiah)\n\n`;
+                });
+                no++;
+            });
+
+            teks += `\tTOTAL SELURUHNYA: Rp ${formatRupiah(totalNom)} (${terbilang(totalNom).trim()} Rupiah), terdiri dari ${jumlahRek} rekening belanja.\n\n`;
+            teks += `\tDemikian usulan pengajuan ini disampaikan untuk dapat dipergunakan sebagaimana mestinya. Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.\n\n`;
+            return teks;
+        }
+
+        function sipdGenerateDefaultRealisasiRedaksi(bulan, rows) {
+            const blnIdx = sipdBulanIdx(bulan);
+            const bulanFull = BULAN_LIST_FULL[blnIdx];
+            const thnIni = new Date().getFullYear();
+            const rowsWithReal = rows.filter(r => r.realisasi > 0);
+            const totalReal = rowsWithReal.reduce((a, r) => a + r.realisasi, 0);
+            const totalPeng = rows.reduce((a, r) => a + r.nominal, 0);
+            const pct = totalPeng > 0 ? ((totalReal / totalPeng) * 100).toFixed(2) : '0';
+
+            let teks = `\tLAPORAN REALISASI BELANJA BULAN ${bulanFull.toUpperCase()} TAHUN ${thnIni}\n\n`;
+            teks += `\tDengan penuh rasa tanggung jawab, kami sampaikan laporan realisasi belanja pada bulan ${bulanFull} ${thnIni} sesuai dengan pengajuan yang telah disetujui sebelumnya.\n\n`;
+            teks += `\tRINGKASAN REALISASI:\n`;
+            teks += `\t - Total Pengajuan Awal   : Rp ${formatRupiah(totalPeng)}\n`;
+            teks += `\t - Total Realisasi        : Rp ${formatRupiah(totalReal)} (${terbilang(totalReal).trim()} Rupiah)\n`;
+            teks += `\t - Persentase Penyerapan : ${pct}%\n\n`;
+
+            if (rowsWithReal.length === 0) {
+                teks += `\tCATATAN: Belum ada transaksi realisasi belanja yang dicatat untuk bulan ${bulanFull} ${thnIni}.\n\n`;
+            } else {
+                teks += `\tRINCIAN REALISASI PER REKENING:\n\n`;
+                rowsWithReal.forEach((r, i) => {
+                    const pctR = r.nominal > 0 ? ((r.realisasi / r.nominal) * 100).toFixed(1) : '0';
+                    teks += `${i + 1}. ${r.program || ''}\n`;
+                    teks += `   Kegiatan/Sub: ${r.kegiatan}${r.sub_kegiatan ? ' — ' + r.sub_kegiatan : ''}\n`;
+                    teks += `   Rekening: ${r.kode} - ${r.uraian}\n`;
+                    teks += `   Pengajuan  : Rp ${formatRupiah(r.nominal)}\n`;
+                    teks += `   Realisasi  : Rp ${formatRupiah(r.realisasi)} (${terbilang(r.realisasi).trim()} Rupiah)\n`;
+                    teks += `   Serapan    : ${pctR}%\n\n`;
+                });
+            }
+
+            teks += `\tDemikian laporan realisasi ini disampaikan. Apabila terdapat kekurangan dan kelebihan kami mohon dimaklumi dan dapat dikomunikasikan kembali untuk perbaikan selanjutnya.\n\n`;
+            return teks;
+        }
+
+        function sipdFormatRupiahSTS(value) {
+            const v = Number(value || 0);
+            return `Rp. ${formatRupiah(v)},-`;
+        }
+
+        function sipdGenerateDefaultSTSRedaksi(bulan, rows) {
+            const blnIdx = sipdBulanIdx(bulan);
+            const bulanFull = BULAN_LIST_FULL[blnIdx];
+            const thnIni = new Date().getFullYear();
+            const rowsDiajukan = rows.filter(r => Number(r.nominal || 0) > 0);
+            const row = rowsDiajukan[0] || rows[0];
+            const nominal = Number(row?.nominal || 0);
+            const real = Number(row?.realisasi || 0);
+            const sisa = nominal - real;
+
+            const pantiEl = document.getElementById('sipd-kode-panti');
+            const rawKodePanti = state.sipd.kodePanti || (pantiEl ? pantiEl.value : '');
+            let cleanKodePanti = (rawKodePanti && rawKodePanti.trim()) ? rawKodePanti.trim().toUpperCase() : 'PPS012';
+            cleanKodePanti = cleanKodePanti.replace(/^TU-?/i, '').replace(/-+$/, '').trim();
+            if (!cleanKodePanti) cleanKodePanti = 'PPS012';
+
+            const pelaksana = row?.pelaksana || 'TU';
+            const pelaksanaCode = (pelaksana === 'TATA USAHA' || pelaksana === 'LAINNYA' || pelaksana === 'TU') ? 'TU' : String(pelaksana).toUpperCase();
+            const subKeg = row?.sub_kegiatan || row?.uraian || 'Sub Kegiatan';
+
+            return `(${pelaksanaCode}-${cleanKodePanti}-${String(blnIdx + 1).padStart(2, '0')}) Pengesahan SPJ ${pelaksanaCode} PPSDI RAHARJO SRAGEN bulan ${bulanFull} ${thnIni} Sub Kegiatan ${subKeg} Nilai TU isi ${sipdFormatRupiahSTS(nominal)} Nilai SPJ ${sipdFormatRupiahSTS(real)} Nilai Sisa ${sipdFormatRupiahSTS(sisa)}`;
+        }
+
+        // --- MODAL UI ---
+        function sipdCloseRedaksiModal() {
+            const modal = document.getElementById('sipd-redaksi-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modal.innerHTML = '';
+            }
+        }
+
+        function sipdTampilkanModalRedaksi({ jenis, title, icon, iconBg, warnaAksen, initial, rows, bulan }) {
+            const blnIdx = sipdBulanIdx(bulan);
+            const bulanFull = BULAN_LIST_FULL[blnIdx];
+            const modal = document.getElementById('sipd-redaksi-modal');
+            if (!modal) return;
+
+            const totalPengAll = rows.reduce((a, r) => a + r.nominal, 0);
+            const totalRealAll = rows.filter(r => r.realisasi > 0).reduce((a, r) => a + r.realisasi, 0);
+            const totalSisaAll = rows.reduce((a, r) => a + r.sisa, 0);
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl w-full max-w-7xl max-h-[90vh] overflow-hidden shadow-2xl border-[6px] ${warnaAksen} animate-in zoom-in duration-300 flex flex-col">
+                    <div class="${iconBg} p-5 text-white flex justify-between items-center flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-white/20 p-2.5 rounded-xl shadow-lg">
+                                <i data-lucide="${icon}" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-black text-xl uppercase tracking-tighter leading-none">${title}</h3>
+                                <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Bulan ${bulanFull} • ${rows.length} Rekening • Total Pengajuan Rp ${formatRupiah(totalPengAll)}</p>
+                            </div>
+                        </div>
+                        <button onclick="sipdCloseRedaksiModal()" class="p-2 hover:bg-white/20 rounded-xl transition-all">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 grid grid-cols-5 gap-0 overflow-hidden">
+                        <!-- Kiri: Daftar Rekening (col 2) -->
+                        <div class="col-span-2 bg-slate-50 p-4 overflow-y-auto no-scrollbar border-r border-slate-200">
+                            <div class="mb-3">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Ringkasan</h4>
+                                <div class="grid grid-cols-3 gap-1.5 mb-3">
+                                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
+                                        <div class="text-[6px] font-black uppercase text-blue-600 opacity-80 tracking-widest">TOTAL PAGU</div>
+                                        <div class="text-[10px] font-mono font-black text-blue-900 mt-0.5">Rp ${formatRupiah(rows.reduce((a, r) => a + r.pagu, 0))}</div>
+                                    </div>
+                                    <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2 text-center">
+                                        <div class="text-[6px] font-black uppercase text-emerald-600 opacity-80 tracking-widest">REAL</div>
+                                        <div class="text-[10px] font-mono font-black text-emerald-900 mt-0.5">Rp ${formatRupiah(totalRealAll)}</div>
+                                    </div>
+                                    <div class="bg-amber-50 border border-amber-100 rounded-lg p-2 text-center">
+                                        <div class="text-[6px] font-black uppercase text-amber-600 opacity-80 tracking-widest">SISA</div>
+                                        <div class="text-[10px] font-mono font-black text-amber-900 mt-0.5">Rp ${formatRupiah(totalSisaAll)}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Daftar Rekening (${rows.length})</h4>
+                                <button onclick="sipdCopyListRekening('${jenis}')" class="bg-white border border-slate-200 hover:border-slate-400 rounded-md px-2 py-0.5 text-[6px] font-black uppercase text-slate-600 transition-all flex items-center gap-1">
+                                    <i data-lucide="copy" class="w-2.5 h-2.5"></i> Copy
+                                </button>
+                            </div>
+
+                            <div class="space-y-1.5" id="sipd-list-rekening-modal">
+                                ${rows.length === 0 ? `
+                                    <div class="text-center py-10 opacity-40">
+                                        <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i>
+                                        <p class="text-[8px] font-black uppercase tracking-widest">Belum ada rekening yang diisi bulan ini</p>
+                                    </div>
+                                ` : rows.map((r, i) => `
+                                    <div class="bg-white rounded-lg border border-slate-200 p-2 shadow-sm hover:shadow-md hover:border-slate-300 transition-all">
+                                        <div class="flex items-start justify-between gap-1 mb-1">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-[8px] font-black bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">${r.kode}</span>
+                                                    <span class="text-[7px] font-black uppercase text-slate-400 tracking-widest truncate">${r.sumberDana} • ${r.pelaksana}</span>
+                                                </div>
+                                                <div class="text-[10px] font-black text-slate-800 mt-1 leading-tight truncate">${r.uraian}</div>
+                                                <div class="text-[7px] text-slate-500 mt-0.5 truncate">${r.kegiatan}${r.sub_kegiatan ? ' · ' + r.sub_kegiatan : ''}</div>
+                                            </div>
+                                            ${r.status === 'diajukan' || r.status === 'diverifikasi' ? `
+                                                <div class="flex-shrink-0 bg-emerald-100 text-emerald-800 text-[6px] font-black uppercase px-1.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-0.5">
+                                                    <i data-lucide="check-circle-2" class="w-2 h-2"></i> Diajukan
+                                                </div>
+                                            ` : `
+                                                <div class="flex-shrink-0 bg-slate-100 text-slate-600 text-[6px] font-black uppercase px-1.5 py-0.5 rounded-full border border-slate-200">
+                                                    Draft
+                                                </div>
+                                            `}
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-1 mt-2 pt-2 border-t border-slate-100">
+                                            <div>
+                                                <div class="text-[5px] font-black uppercase text-slate-400 tracking-widest">Pagu</div>
+                                                <div class="text-[8px] font-mono font-black text-slate-700">Rp ${formatRupiah(r.pagu)}</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-[5px] font-black uppercase text-emerald-600 tracking-widest">Realisasi</div>
+                                                <div class="text-[8px] font-mono font-black text-emerald-800">Rp ${formatRupiah(r.realisasi)}</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-[5px] font-black uppercase text-amber-600 tracking-widest">Bulan Ini</div>
+                                                <div class="text-[8px] font-mono font-black text-amber-800">Rp ${formatRupiah(r.nominal)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Kanan: Editor Redaksi (col 3) -->
+                        <div class="col-span-3 flex flex-col bg-white p-4 overflow-hidden">
+                            <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Editor Redaksi</h4>
+                                <div class="flex gap-1.5">
+                                    <button onclick="sipdRegenerateRedaksi('${jenis}', ${bulan})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[7px] font-black uppercase transition-all flex items-center gap-1 border border-slate-200">
+                                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Buat Otomatis
+                                    </button>
+                                    <button onclick="sipdCopyRedaksi('${jenis}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[7px] font-black uppercase transition-all flex items-center gap-1 border border-slate-200">
+                                        <i data-lucide="copy" class="w-2.5 h-2.5"></i> Copy Teks
+                                    </button>
+                                    <button onclick="sipdCetakRedaksi('${jenis}', ${bulan})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[7px] font-black uppercase transition-all flex items-center gap-1 border border-slate-200">
+                                        <i data-lucide="printer" class="w-2.5 h-2.5"></i> Cetak
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 border-2 border-slate-200 rounded-xl bg-white shadow-inner overflow-hidden flex flex-col mb-3">
+                                <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
+                                    <div class="text-[8px] font-black uppercase text-slate-600 tracking-widest">Kertas A4 • Margin 1 inci • Font Times New Roman 12pt</div>
+                                    <div class="text-[8px] font-mono text-slate-400"><span id="sipd-redaksi-charcount">0</span> karakter</div>
+                                </div>
+                                <textarea id="sipd-redaksi-textarea" class="redaksi-text flex-1 w-full resize-none p-8"
+                                    oninput="sipdUpdateCharCount()"
+                                    placeholder="Tulis redaksi disini, atau klik tombol 'Buat Otomatis' di kanan atas...">${initial}</textarea>
+                            </div>
+
+                            <div class="flex justify-between items-center flex-shrink-0 gap-2">
+                                <div class="text-[7px] font-bold text-slate-500 max-w-md leading-tight">
+                                    <i data-lucide="info" class="w-3 h-3 inline text-slate-400 mr-1 align-middle"></i>
+                                    Data redaksi disimpan otomatis ke database setiap kali Anda selesai mengetik.
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="sipdCloseRedaksiModal()" class="px-4 py-2 border-2 border-slate-200 rounded-xl text-[8px] font-black uppercase text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 transition-all">
+                                        Tutup
+                                    </button>
+                                    <button onclick="sipdSimpanRedaksi('${jenis}', ${bulan})" class="px-5 py-2 rounded-xl text-[8px] font-black uppercase text-white shadow-lg transition-all flex items-center gap-1.5 ${iconBg} hover:brightness-110">
+                                        <i data-lucide="save" class="w-3 h-3"></i> Simpan & Tutup
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+            sipdUpdateCharCount();
+
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            if (ta) {
+                ta.addEventListener('input', () => {
+                    const r = sipdGetOrInitRedaksi(bulan);
+                    const field = jenis === 'input' ? 'input_redaksi' : jenis === 'realisasi' ? 'realisasi_redaksi' : 'sts_redaksi';
+                    r[field] = ta.value;
+                    state.data.redaksi = state.sipd.redaksi;
+                    sipdSaveDebounce();
+                });
+            }
+        }
+
+        function sipdUpdateCharCount() {
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            const cc = document.getElementById('sipd-redaksi-charcount');
+            if (ta && cc) cc.innerText = formatRupiah(ta.value.length).replace(/\./g, ',');
+        }
+
+        function sipdGetTempRows() { return window._tmpRows || []; }
+
+        function sipdRegenerateRedaksi(jenis, bulan) {
+            const rows = window._tmpRows || sipdPreviewRedaksiList(bulan);
+            let text = '';
+            if (jenis === 'input') text = sipdGenerateDefaultInputRedaksi(bulan, rows);
+            else if (jenis === 'realisasi') text = sipdGenerateDefaultRealisasiRedaksi(bulan, rows);
+            else text = sipdGenerateDefaultSTSRedaksi(bulan, rows);
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            if (ta) {
+                ta.value = text;
+                sipdUpdateCharCount();
+                ta.dispatchEvent(new Event('input'));
+            }
+        }
+
+        function sipdCopyRedaksi() {
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            if (!ta) return;
+            navigator.clipboard?.writeText(ta.value).then(() => showNotif("Teks redaksi disalin ke Clipboard", "success"));
+        }
+
+        function sipdCopyListRekening() {
+            const rows = window._tmpRows || [];
+            if (rows.length === 0) return;
+            const text = rows.map((r, i) =>
+                `${i + 1}. ${r.kode} | ${r.uraian} | Pagu: Rp ${formatRupiah(r.pagu)} | Pengajuan: Rp ${formatRupiah(r.nominal)} | Real: Rp ${formatRupiah(r.realisasi)}`
+            ).join('\n');
+            navigator.clipboard?.writeText(text).then(() => showNotif("Daftar rekening disalin ke Clipboard", "success"));
+        }
+
+        function sipdCetakRedaksi(jenis, bulan) {
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            if (!ta) return;
+            const blnIdx = sipdBulanIdx(bulan);
+            const bulanFull = BULAN_LIST_FULL[blnIdx];
+            const thnIni = new Date().getFullYear();
+            const judul = jenis === 'input' ? 'REDAKSI PENGAJUAN' : jenis === 'realisasi' ? 'REDAKSI REALISASI' : 'SURAT TANGGUNG JAWAB';
+            const w = window.open('', '_blank', 'width=900,height=900');
+            if (!w) { showNotif("Browser memblokir popup. Izinkan popup untuk mencetak.", "warning"); return; }
+            w.document.write(`
+                <!DOCTYPE html><html><head><title>${judul} - ${bulanFull} ${thnIni}</title>
+                <style>
+                    body { font-family: 'Times New Roman', Times, serif; padding: 2.54cm; font-size: 12pt; line-height: 1.6; }
+                    pre { white-space: pre-wrap; font-family: inherit; font-size: inherit; margin: 0; }
+                </style></head><body><pre>${ta.value.replace(/</g, '&lt;')}</pre>
+                <${''}script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),400);};<${''}/${''}script>
+</body></html>`);
+            w.document.close();
+        }
+
+        function sipdSimpanRedaksi(jenis, bulan) {
+            const ta = document.getElementById('sipd-redaksi-textarea');
+            if (!ta) return;
+            const r = sipdGetOrInitRedaksi(bulan);
+            const field = jenis === 'input' ? 'input_redaksi' : jenis === 'realisasi' ? 'realisasi_redaksi' : 'sts_redaksi';
+            r[field] = ta.value;
+            state.data.redaksi = state.sipd.redaksi;
+            saveToSupabase({
+                pagu: state.data.pagu,
+                realisasi: state.data.realisasi,
+                backups: state.data.backups,
+                redaksi: state.sipd.redaksi
+            }).finally(() => {
+                showNotif(`✅ Redaksi ${jenis === 'input' ? 'Pengajuan' : jenis === 'realisasi' ? 'Realisasi' : 'STS'} untuk ${BULAN_LIST_FULL[sipdBulanIdx(bulan)]} berhasil disimpan`, "success");
+                setTimeout(sipdCloseRedaksiModal, 300);
+            });
+        }
+
+        // --- WRAPPERS BUTTON ---
+        function sipdBukaInputRedaksi() {
+            const bln = state.sipd.bulanRedaksi;
+            if (!bln) { showNotif("Pilih bulan terlebih dahulu", "warning"); return; }
+            const r = sipdGetOrInitRedaksi(bln);
+            const rows = sipdPreviewRedaksiList(bln);
+            window._tmpRows = rows;
+            const initial = r.input_redaksi || (rows.length > 0 ? sipdGenerateDefaultInputRedaksi(bln, rows) : '');
+            sipdTampilkanModalRedaksi({
+                jenis: 'input',
+                title: 'Input Redaksi Pengajuan Bulanan',
+                icon: 'pen-line',
+                iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-700',
+                warnaAksen: 'border-blue-500',
+                initial, rows, bulan: bln
+            });
+        }
+
+        function sipdBukaRedaksiRealisasi() {
+            const bln = state.sipd.bulanRedaksi;
+            if (!bln) { showNotif("Pilih bulan terlebih dahulu", "warning"); return; }
+            const r = sipdGetOrInitRedaksi(bln);
+            const rows = sipdPreviewRedaksiList(bln);
+            window._tmpRows = rows;
+            const initial = r.realisasi_redaksi || (rows.length > 0 ? sipdGenerateDefaultRealisasiRedaksi(bln, rows) : '');
+            sipdTampilkanModalRedaksi({
+                jenis: 'realisasi',
+                title: 'Redaksi Realisasi Belanja',
+                icon: 'check-circle-2',
+                iconBg: 'bg-gradient-to-br from-emerald-600 to-teal-700',
+                warnaAksen: 'border-emerald-500',
+                initial, rows, bulan: bln
+            });
+        }
+
+        function sipdBukaRedaksiSTS() {
+            const bln = state.sipd.bulanRedaksi;
+            if (!bln) { showNotif("Pilih bulan terlebih dahulu", "warning"); return; }
+            const r = sipdGetOrInitRedaksi(bln);
+            const rows = sipdPreviewRedaksiList(bln);
+            window._tmpRows = rows;
+            const initial = r.sts_redaksi || (rows.length > 0 ? sipdGenerateDefaultSTSRedaksi(bln, rows) : '');
+            sipdTampilkanModalRedaksi({
+                jenis: 'sts',
+                title: 'Redaksi Surat Tanggung Jawab (STS)',
+                icon: 'stamp',
+                iconBg: 'bg-gradient-to-br from-orange-600 to-red-700',
+                warnaAksen: 'border-orange-500',
+                initial, rows, bulan: bln
+            });
+        }
+
+        // --- EXPORT ---
+        function sipdExportExcel() {
+            try {
+                if (typeof XLSX === 'undefined') { showNotif("Library Excel belum siap, coba lagi dalam beberapa detik", "warning"); return; }
+                const bln = state.sipd.bulanRedaksi;
+                if (!bln) { showNotif("Pilih bulan terlebih dahulu untuk ekspor", "warning"); return; }
+                const idx = sipdBulanIdx(bln);
+                const previewRows = sipdPreviewRedaksiList(bln, true);
+                const rows = state.sipd.onlyFilledPengajuan
+                    ? Array.from(previewRows.reduce((grouped, row) => {
+                        const key = row.subId || row.sub_kegiatan || row.kode;
+                        let subRow = grouped.get(key);
+                        if (!subRow) {
+                            subRow = {
+                                ...row,
+                                kode: row.subKode || row.kode,
+                                uraian: row.sub_kegiatan || row.uraian,
+                                pagu: 0,
+                                realisasi: 0,
+                                sisa: 0,
+                                nominal: 0
+                            };
+                            grouped.set(key, subRow);
+                        }
+                        subRow.pagu += Number(row.pagu) || 0;
+                        subRow.realisasi += Number(row.realisasi) || 0;
+                        subRow.sisa += Number(row.sisa) || 0;
+                        subRow.nominal += Number(row.nominal) || 0;
+                        return grouped;
+                    }, new Map()).values())
+                    : previewRows;
+                const tableHeaders = Array.from(document.querySelectorAll('#sipd-table-head th'));
+                const findRedaksiColumn = (label) => tableHeaders.findIndex(th => th.textContent.toLowerCase().includes(label));
+                const redaksiColumnIndexes = {
+                    pengajuan: findRedaksiColumn('redaksi pengajuan'),
+                    belanja: findRedaksiColumn('redaksi belanja'),
+                    sts: findRedaksiColumn('redaksi sts')
+                };
+                const redaksiTextBySubId = new Map();
+                document.querySelectorAll('#sipd-table-body tr[data-sipd-item-id]').forEach(tr => {
+                    const item = sipdFindItem(state.data.pagu, tr.dataset.sipdItemId);
+                    if (!item || item.type !== 'sub_kegiatan') return;
+                    const readRedaksiCell = (columnIndex) => columnIndex < 0
+                        ? ''
+                        : (tr.cells[columnIndex]?.querySelector('span')?.textContent.trim() || '');
+                    redaksiTextBySubId.set(item.id, {
+                        pengajuan: readRedaksiCell(redaksiColumnIndexes.pengajuan),
+                        belanja: readRedaksiCell(redaksiColumnIndexes.belanja),
+                        sts: readRedaksiCell(redaksiColumnIndexes.sts)
+                    });
+                });
+                const data = [
+                    ['NO', 'KODE REKENING', 'URAIAN REKENING', 'PROGRAM', 'KEGIATAN', 'SUB KEGIATAN', 'SUMBER DANA', 'PELAKSANA', 'PAGU AKTIF', 'REALISASI THN INI', 'SISA PAGU', 'PENGAJUAN BULAN INI', 'REDAKSI PENGAJUAN', 'NOMOR PENGAJUAN', 'REDAKSI BELANJA', 'REDAKSI STS', 'STATUS']
+                ];
+                rows.forEach((r, i) => {
+                    const redaksi = redaksiTextBySubId.get(r.subId) || {};
+                    data.push([i + 1, r.kode, r.uraian, r.program, r.kegiatan, r.sub_kegiatan, r.sumberDana, r.pelaksana, r.pagu, r.realisasi, r.sisa, r.nominal, redaksi.pengajuan || '', r.nomorPengajuan, redaksi.belanja || '', redaksi.sts || '', r.status.toUpperCase()]);
+                });
+                if (data.length === 1) { data.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Tidak ada data']); }
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                ws['!cols'] = [{ wch: 5 }, { wch: 22 }, { wch: 45 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 70 }, { wch: 24 }, { wch: 70 }, { wch: 90 }, { wch: 12 }];
+                ws['!rows'] = ws['!rows'] || [];
+                data.slice(1).forEach((row, rowOffset) => {
+                    const rowIndex = rowOffset + 1;
+                    let maxLines = 1;
+                    [12, 14, 15].forEach(colIndex => {
+                        const cell = ws[XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })];
+                        if (!cell || cell.v === undefined || cell.v === null) return;
+                        const columnWidth = ws['!cols'][colIndex].wch;
+                        const lineCount = String(cell.v).split('\n').reduce((total, line) => {
+                            return total + Math.max(1, Math.ceil(line.length / columnWidth));
+                        }, 0);
+                        maxLines = Math.max(maxLines, lineCount);
+                        cell.s = { alignment: { wrapText: true, vertical: 'top' } };
+                    });
+                    if (maxLines > 1) ws['!rows'][rowIndex] = { hpt: Math.min(maxLines * 15, 300) };
+                });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `SIPD_${BULAN_LIST[idx]}_${new Date().getFullYear()}`);
+                const namaFile = `SIPD_Pengajuan_${BULAN_LIST_FULL[idx]}_${new Date().getFullYear()}.xlsx`;
+                XLSX.writeFile(wb, namaFile);
+                showNotif(`✅ Export Excel berhasil: ${namaFile}`, "success");
+            } catch (e) {
+                console.error(e);
+                showNotif("Gagal export Excel: " + (e.message || ""), "error");
+            }
+        }
+
+        // --- KODE PANTI HANDLER ---
+        function sipdOnKodePantiChange() {
+            const ta = document.getElementById('sipd-kode-panti');
+            const val = ta ? ta.value : '';
+            state.sipd.kodePanti = val;
+            const chk = document.getElementById('sipd-simpan-tetap-panti');
+            if (chk && chk.checked) {
+                localStorage.setItem(`${appId}_kodePanti`, val);
+            }
+            sipdDebounceRender();
+        }
+
+        function sipdOnSimpanTetapChange() {
+            const chk = document.getElementById('sipd-simpan-tetap-panti');
+            const isChecked = chk ? chk.checked : false;
+            localStorage.setItem(`${appId}_simpanTetapPanti`, isChecked ? 'true' : 'false');
+            const ta = document.getElementById('sipd-kode-panti');
+            const val = ta ? ta.value : '';
+            if (isChecked) {
+                localStorage.setItem(`${appId}_kodePanti`, val);
+                showNotif("✅ Kode Panti disimpan tetap (persistent).", "success");
+            } else {
+                localStorage.removeItem(`${appId}_kodePanti`);
+                showNotif("Kode Panti tidak lagi disimpan tetap.", "info");
+            }
+        }
+
+        function sipdInitKodePanti() {
+            const isTetap = localStorage.getItem(`${appId}_simpanTetapPanti`) === 'true';
+            const savedKode = localStorage.getItem(`${appId}_kodePanti`) || '';
+            const chk = document.getElementById('sipd-simpan-tetap-panti');
+            const ta = document.getElementById('sipd-kode-panti');
+            if (chk) chk.checked = isTetap;
+            if (ta && isTetap) {
+                ta.value = savedKode;
+                state.sipd.kodePanti = savedKode;
+            }
+        }
+
+        // --- START ---
+        window.addEventListener('load', () => {
+            sipdInitKodePanti();
+            const now = new Date();
+            const curBulan = String(now.getMonth() + 1);
+            const sel = document.getElementById('sipd-bulan-redaksi');
+            if (sel) sel.value = curBulan;
+            state.sipd.bulanRedaksi = Number(curBulan);
+            init();
+        });
+    </script>
+    <script src="lock_data_guard.js"></script>
+</body>
+
+</html>
