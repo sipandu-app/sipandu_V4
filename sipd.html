@@ -1300,17 +1300,17 @@
 
         function sipdAjukanBulan(bulanIdx) {
             let count = 0;
-            let realisasiMelebihi = 0;
+            let sisaMelebihi = 0;
             const walk = (items) => {
                 items.forEach(it => {
                     if (it.type === 'rekening') {
                         const nom = Number(it.pengajuanBulanan?.[bulanIdx]) || 0;
                         if (nom > 0 && it.statusPengajuan[bulanIdx] === 'draft') {
                             const agg = getAggregatedData(it);
-                            const totalPengajuan = sipdGetTotalPengajuan(it);
-                            if (totalPengajuan > agg.realisasi + 0.5) {
-                                it.pengajuanBulanan[bulanIdx] = 0; // Dikosongkan kembali
-                                realisasiMelebihi++;
+                            const paguAktif = sipdGetActivePagu(agg);
+                            const sisa = paguAktif - agg.realisasi;
+                            if (nom > sisa + 0.5) {
+                                sisaMelebihi++;
                             } else {
                                 it.statusPengajuan[bulanIdx] = 'diajukan';
                                 count++;
@@ -1321,7 +1321,7 @@
                 });
             };
             walk(state.data.pagu);
-            if (count === 0 && realisasiMelebihi === 0) {
+            if (count === 0 && sisaMelebihi === 0) {
                 showNotif(`Tidak ada rekening yang diisi untuk bulan ${BULAN_LIST[bulanIdx]} (semua 0 / sudah diajukan)`, "info");
                 return;
             }
@@ -1330,8 +1330,8 @@
             if (count > 0) {
                 showNotif(`✅ Bulan ${BULAN_LIST_FULL[bulanIdx]}: ${count} Rekening berhasil diajukan & dikunci.`, "success");
             }
-            if (realisasiMelebihi > 0) {
-                setTimeout(() => showNotif(`⚠ ${realisasiMelebihi} rekening memiliki total pengajuan Januari–Desember melebihi Realisasi APBD — input bulan ini dikosongkan dan tidak diajukan.`, "error"), 400);
+            if (sisaMelebihi > 0) {
+                setTimeout(() => showNotif(`⚠ ${sisaMelebihi} pengajuan bulan ini melebihi Sisa Pagu rekening — pengajuan tidak dikunci. Maksimal sebesar Sisa Pagu yang tersedia.`, "error"), 400);
             }
         }
 
@@ -2337,22 +2337,27 @@
             const rek = sipdFindItem(state.data.pagu, rekeningId);
             if (!rek || !rek.pengajuanBulanan) return;
             if (sipdIsBulanLocked(rek, bulanIdx)) return;
+            const nilaiSebelumnya = Number(rek.pengajuanBulanan[bulanIdx]) || 0;
             const num = parseRupiah(rawValue);
             rek.pengajuanBulanan[bulanIdx] = num;
 
             const agg = getAggregatedData(rek);
-            const totalPengajuan = sipdGetTotalPengajuan(rek);
+            const paguAktif = sipdGetActivePagu(agg);
+            const sisa = paguAktif - agg.realisasi;
+            if (num > sisa + 0.5 && num > nilaiSebelumnya) {
+                rek.pengajuanBulanan[bulanIdx] = nilaiSebelumnya;
+                const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
+                if (inp) inp.value = nilaiSebelumnya > 0 ? formatRupiah(nilaiSebelumnya) : '';
+                showNotif(`⚠ Pengajuan bulan ini (${formatRupiah(num)}) melebihi Sisa Pagu rekening (${formatRupiah(sisa)}; ${sipdGetActivePaguLabel()} dikurangi realisasi). Pengajuan bulan lain diabaikan. Nilai sebelumnya dipulihkan.`, "error");
+                sipdSaveDebounce();
+                sipdRefreshParentMonthly(bulanIdx);
+                sipdRefreshTotalRow();
+                return;
+            }
 
-            if (totalPengajuan > agg.realisasi + 0.5) {
-                rek.pengajuanBulanan[bulanIdx] = 0; // Dikosongkan kembali
-                const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
-                if (inp) inp.value = '';
-                showNotif(`⚠ Total Pengajuan Januari–Desember (${formatRupiah(totalPengajuan)}) melebihi Realisasi APBD (${formatRupiah(agg.realisasi)})! Input dikosongkan kembali.`, "error");
-            } else {
-                const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
-                if (inp && document.activeElement !== inp) {
-                    inp.value = num > 0 ? formatRupiah(num) : '';
-                }
+            const inp = document.querySelector(`[data-sipd-input="${rekeningId}-${bulanIdx}"]`);
+            if (inp && document.activeElement !== inp) {
+                inp.value = num > 0 ? formatRupiah(num) : '';
             }
 
             sipdSaveDebounce();
@@ -2380,17 +2385,17 @@
             if (!bln) { showNotif("Pilih bulan terlebih dahulu di ComboBox Bulan", "warning"); return; }
             const idx = sipdBulanIdx(bln);
             let count = 0;
-            let realisasiMelebihi = 0;
+            let sisaMelebihi = 0;
             const walk = (items) => {
                 items.forEach(it => {
                     if (it.type === 'rekening') {
                         const nom = Number(it.pengajuanBulanan?.[idx]) || 0;
                         if (nom > 0 && it.statusPengajuan[idx] === 'draft') {
                             const agg = getAggregatedData(it);
-                            const totalPengajuan = sipdGetTotalPengajuan(it);
-                            if (totalPengajuan > agg.realisasi + 0.5) {
-                                it.pengajuanBulanan[idx] = 0; // Dikosongkan kembali
-                                realisasiMelebihi++;
+                            const paguAktif = sipdGetActivePagu(agg);
+                            const sisa = paguAktif - agg.realisasi;
+                            if (nom > sisa + 0.5) {
+                                sisaMelebihi++;
                             } else {
                                 it.statusPengajuan[idx] = 'diajukan';
                                 count++;
@@ -2401,7 +2406,7 @@
                 });
             };
             walk(state.data.pagu);
-            if (count === 0 && realisasiMelebihi === 0) {
+            if (count === 0 && sisaMelebihi === 0) {
                 showNotif(`Tidak ada rekening yang diisi untuk bulan ${BULAN_LIST[idx]} (semua 0 / sudah diajukan)`, "info");
                 return;
             }
@@ -2410,8 +2415,8 @@
             if (count > 0) {
                 showNotif(`✅ Bulan ${BULAN_LIST[idx]}: ${count} Rekening berhasil diajukan & dikunci (tidak bisa diedit).`, "success");
             }
-            if (realisasiMelebihi > 0) {
-                setTimeout(() => showNotif(`⚠ ${realisasiMelebihi} rekening memiliki total pengajuan Januari–Desember melebihi Realisasi APBD — input bulan ini dikosongkan dan tidak diajukan.`, "error"), 400);
+            if (sisaMelebihi > 0) {
+                setTimeout(() => showNotif(`⚠ ${sisaMelebihi} pengajuan bulan ini melebihi Sisa Pagu rekening — pengajuan tidak dikunci. Maksimal sebesar Sisa Pagu yang tersedia.`, "error"), 400);
             }
         }
 
